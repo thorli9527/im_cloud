@@ -1,0 +1,28 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2024"
+[lib]
+[dependencies]
+mongodb.workspace = true
+actix-session = { workspace = true, features = ["redis-session"] }
+async-trait.workspace = true
+quote.workspace = true
+syn.workspace = true
+futures.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+deadpool-redis.workspace = true
+redis.workspace = true
+actix-web.workspace = true
+thiserror.workspace = true
+log.workspace = true
+anyhow.workspace = true
+env_logger.workspace = true
+walkdir.workspace = true
+zip.workspace = true
+tempfile.workspace = true
+chrono.workspace = true
+hex.workspace = true
+md-5.workspace = true
+uuid.workspace = true

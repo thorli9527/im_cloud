@@ -1,0 +1,39 @@
+[workspace]
+resolver = "2"
+members = ["common", "biz_service", "web_api", "web_job", "web_main", "macro"]
+[workspace.dependencies]
+actix-web = { version = "4.10.2" }
+actix-files = { version = "0.6.6" }
+actix-session = { version = "0.10.1" }
+chrono = { version = "0.4.40" }
+config = { version = "0.15.11" }
+log = { version = "0.4.27" }
+mongodb = { version = "3.2.3", features = ["sync"] }
+mongo_indexed_derive = { version = "2.0.0" }
+serde_json = { version = "1.0.140" }
+futures = { version = "0.3.31" }
+serde = { version = "1.0.219", features = ["derive"] }
+
+redis = { version = "0.29.5", features = ["tokio-comp"] }
+tokio = { version = "1", features = ["full"] }
+
+async-trait = { version = "0.1.88" }
+quote = { version = "1.0.40" }
+syn = { version = "2.0.100" }
+anyhow = { version = "1.0.97" }
+deadpool-redis = { version = "0.20.0", features = ["tokio-comp"] }
+thiserror = { version = "2.0.12" }
+env_logger = { version = "0.11.8" }
+utoipa = { version = "5.3.1" }
+uuid = { version = "1.16.0"}
+strum = { version = "0.27.1" }
+strum_macros = { version = "0.27.1" }
+hex = "0.4.3"
+rust_decimal = { version = "1.37.1" }
+validator = { version = "0.20.0",features = ["derive"] }
+lazy_static = { version = "1.5.0" }
+rustflake = { version = "0.1.1" }
+walkdir = { version = "2.5.0" }
+zip = { version = "2.6.1" }
+tempfile={version = "3.19.1"}
+md-5 = "0.10.6"
