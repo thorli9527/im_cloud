@@ -1,0 +1,15 @@
+[package]
+name = "biz_service"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+common={path = "../common"}
+actix-web.workspace = true
+serde.workspace = true
+mongodb.workspace = true
+mongo_indexed_derive.workspace = true
+utoipa.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
+chrono.workspace = true
