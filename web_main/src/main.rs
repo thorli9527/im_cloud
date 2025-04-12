@@ -17,9 +17,9 @@ use std::clone;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+use web_main::handlers;
 use web_main::handlers::swagger::openapi_json;
 use web_main::result::AppState;
-use web_main::handlers;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

@@ -1,5 +1,7 @@
 use actix_service::{Service, Transform};
 
+use crate::result::AppState;
+use actix_web::dev::{Service, Transform};
 use actix_web::{
     body::EitherBody, dev::{ServiceRequest, ServiceResponse}, web,
     Error,
@@ -10,8 +12,6 @@ use common::{result_error_msg, AppState};
 use futures_util::future::{ok, LocalBoxFuture, Ready};
 use std::rc::Rc;
 use std::task::{Context, Poll};
-use actix_web::dev::{Service, Transform};
-use crate::result::AppState;
 //
 
 /// Authentication Middleware
