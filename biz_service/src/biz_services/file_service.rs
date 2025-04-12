@@ -1,6 +1,6 @@
+use crate::biz_services::ServerRes;
 use crate::entitys::file_entity::FileInfo;
 use common::repository_util::BaseRepository;
-use crate::biz_services::ServerRes;
 
 pub struct FileService {
     pub dao: BaseRepository<FileInfo>,

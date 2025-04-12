@@ -1,7 +1,7 @@
+use crate::redis::redis_template::RedisTemplate;
 use mongodb::Database;
 use serde::Deserialize;
 use std::str::FromStr;
-use crate::redis::redis_template::RedisTemplate;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {

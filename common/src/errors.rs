@@ -1,3 +1,4 @@
+use actix_session::{SessionGetError, SessionInsertError};
 use actix_web::{HttpResponse, ResponseError};
 use deadpool_redis::PoolError;
 use log::error;
@@ -6,7 +7,6 @@ use redis::RedisError;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string;
 use std::{fmt, io};
-use actix_session::{SessionGetError, SessionInsertError};
 use thiserror::Error;
 
 /// HTTP 错误响应结构

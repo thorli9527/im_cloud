@@ -1,6 +1,5 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
-use std::io::prelude::*;
 
 use hex::encode;
 use std::time::{SystemTime, UNIX_EPOCH};

@@ -1,5 +1,5 @@
-use common::config::ServerRes;
 use crate::entitys::path_entity::PathInfo;
+use common::config::ServerRes;
 use common::repository_util::BaseRepository;
 pub struct PathService {
     pub dao: BaseRepository<PathInfo>,

@@ -1,15 +1,12 @@
 use crate::handlers::*;
-use actix_web::{App, HttpResponse, HttpServer, Responder, get};
-use serde::{Deserialize, Serialize};
+use actix_web::{get, HttpResponse, Responder};
 use utoipa::{OpenApi, ToSchema};
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        hello,
         auth_login
     ),
     components(schemas(
-        HelloResponse,
         LoginInfoDto
     )),
     tags(

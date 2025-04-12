@@ -1,10 +1,7 @@
 use crate::result::ResultResponse;
-use actix_session::Session;
-use actix_web::{Responder, web};
+use actix_web::{web, Responder};
 use biz_service::biz_services::user_service::UserService;
 use common::errors::AppError;
-use common::repository_util::Repository;
-use common::util::common_utils::build_id;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -33,10 +30,11 @@ struct PlayStream {
     token: String,
     play_key: String,
 }
-//下载播放流
+
+//下载播放流资源
 //限流
 //限并发
-pub async fn play_stream(dto:web::Json<PlayStream>){
+pub async fn play_stream(play_key:web::Path<String>){
 
 }
 

@@ -1,6 +1,6 @@
+use crate::biz_services::ServerRes;
 use crate::entitys::bucket_entity::BucketInfo;
 use common::repository_util::BaseRepository;
-use crate::biz_services::ServerRes;
 
 pub struct BucketService {
     dao: BaseRepository<BucketInfo>,

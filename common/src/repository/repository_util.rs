@@ -1,13 +1,12 @@
+use crate::config::ServerRes;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
 use mongodb::bson::doc;
-use mongodb::bson::oid::ObjectId;
 use mongodb::options::FindOptions;
-use mongodb::{Collection, bson::Document, error::Result};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use mongodb::{bson::Document, error::Result, Collection};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::cmp::PartialEq;
 use std::marker::PhantomData;
-use crate::config::ServerRes;
 
 pub struct PageResult<T> {
     pub items: Vec<T>,

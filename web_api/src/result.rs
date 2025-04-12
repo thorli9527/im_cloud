@@ -1,10 +1,9 @@
+use common::config::AppConfig;
 use common::query_builder::PageInfo;
 use config::Config;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::fmt::Debug;
 use utoipa::ToSchema;
-use common::config::AppConfig;
 #[derive(Debug,Clone)]
 pub struct AppState {
     pub config: AppConfig,

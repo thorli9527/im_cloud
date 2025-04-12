@@ -1,15 +1,15 @@
-use crate::result::{result, result_data, result_error_msg, AppState, ResultResponse};
+use crate::result::{result, result_data, result_error_msg, ResultResponse};
 use actix_session::Session;
-use actix_web::{post, web, HttpResponse, Responder};
+use actix_web::{post, web, Responder};
 use biz_service::biz_services::user_service::UserService;
 use common::errors::AppError;
 use common::repository_util::Repository;
+use common::util::common_utils::build_id;
 use mongodb::bson;
 use r#macro::QueryFilter;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
-use common::util::common_utils::build_id;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(auth_login);

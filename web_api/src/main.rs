@@ -3,6 +3,9 @@ use actix_web::rt::Runtime;
 use actix_web::{cookie, web, App, HttpServer};
 use biz_service::biz_services;
 use biz_service::biz_services::configure;
+use common::config::{AppConfig, ServerRes};
+use common::errors::AppError;
+use common::redis::redis_template::RedisTemplate;
 use config::Config;
 use deadpool_redis::redis::Client as redisClient;
 use deadpool_redis::{redis::{cmd, FromRedisValue}, Connection, Manager, Pool, PoolConfig, Runtime as RedisRuntime};
@@ -14,9 +17,7 @@ use std::clone;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use common::config::{AppConfig, ServerRes};
-use common::errors::AppError;
-use common::redis::redis_template::RedisTemplate;
+use web_api::handlers;
 use web_api::result::AppState;
 
 #[actix_web::main]

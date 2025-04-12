@@ -1,5 +1,5 @@
-use common::config::ServerRes;
 use crate::entitys::user_entity::UserInfo;
+use common::config::ServerRes;
 use common::repository_util::BaseRepository;
 
 pub struct UserService {

@@ -10,6 +10,8 @@ use common::{result_error_msg, AppState};
 use futures_util::future::{ok, LocalBoxFuture, Ready};
 use std::rc::Rc;
 use std::task::{Context, Poll};
+use actix_web::dev::{Service, Transform};
+use crate::result::AppState;
 //
 
 /// Authentication Middleware
