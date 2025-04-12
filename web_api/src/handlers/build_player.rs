@@ -23,6 +23,7 @@ struct PlayItemResult{
     play_key:String
 }
 //生成播放链接
+//生成的播放链接有过期时效 需读取配置管理
 pub async fn build_play(dto: web::Json<PlatInfo>, user_info: web::Data<UserService>) -> Result<impl Responder, AppError> {
     Ok(web::Json(ResultResponse::ok(vec![PlayItemResult::default()])))
 }
@@ -33,6 +34,8 @@ struct PlayStream {
     play_key: String,
 }
 //下载播放流
+//限流
+//限并发
 pub async fn play_stream(dto:web::Json<PlayStream>){
 
 }
