@@ -32,6 +32,7 @@ pub struct PageResult<T>
 }
 
 
+
 #[derive(Serialize, ToSchema)]
 pub struct ResultResponse<T: Serialize> {
     pub success: bool,

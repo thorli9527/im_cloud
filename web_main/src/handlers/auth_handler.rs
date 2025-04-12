@@ -1,54 +1,64 @@
+use crate::result::{result, result_data, result_error_msg, AppState, ResultResponse};
 use actix_session::Session;
 use actix_web::{post, web, HttpResponse, Responder};
-use actix_web::middleware::Identity;
-use anyhow::anyhow;
-use mongodb::change_stream::session;
-use serde::{Deserialize, Serialize};
-use utoipa::openapi::security::Password;
 use biz_service::biz_services::user_service::UserService;
-use biz_service::entitys::user_entity::UserInfo;
 use common::errors::AppError;
 use common::repository_util::Repository;
-use r#macro::QueryFilter;
 use mongodb::bson;
-use crate::handlers::common_handler::status;
-use crate::result::{result, result_data, result_error_msg, AppState};
+use r#macro::QueryFilter;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use validator::Validate;
+use common::util::common_utils::build_id;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(auth_login);
     cfg.service(auth_logout);
 }
 
-#[derive(QueryFilter, Serialize, Deserialize, Debug)]
-
-struct LoginInfoDto {
+#[derive(QueryFilter, Serialize, Deserialize, Debug,Validate,ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LoginInfoDto {
     #[query(eq)]
+    #[validate(length(min = 5, message = "用户名太短"))]
     pub user_name: Option<String>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,ToSchema)]
 #[serde(rename_all = "camelCase")]
-struct LoginResult{
+pub struct LoginResult{
     login_status:bool,
     token:String,
-
 }
+
+#[utoipa::path(
+    post,
+    path = "/auth/login",
+    request_body = LoginInfoDto,
+    responses(
+        (status = 200, description = "Hello response", body = String)
+    )
+)]
 #[post("/auth/login")]
-async fn auth_login(login_info: web::Json<LoginInfoDto>,
-                    app_state: web::Data<AppState>,
+pub async fn auth_login(dto: web::Json<LoginInfoDto>,
                     session: Session,
                     user_info: web::Data<UserService>,
 ) -> Result<impl Responder, AppError> {
-    let user_info = user_info.dao.find_one(login_info.to_query_doc()).await?;
-    if user_info.is_none(){
-        let value = result_error_msg("username.or.password.error".to_string());
-        return Ok(web::Json(result_data(value)))
+    match dto.validate() {
+        Ok(_) => {
+            let user_info = user_info.dao.find_one(dto.to_query_doc()).await?;
+            if user_info.is_none(){
+                return Ok(web::Json(ResultResponse::<String>::err("用户名或密码错误")))
+            }
+            let token = build_id();
+            session.insert(&token,user_info.unwrap().user_name);
+             return Ok(web::Json(ResultResponse::err("登录成功")))
+        },
+        Err(e) => {
+            return Ok(web::Json(ResultResponse::<String>::err(e.to_string())))
+        },
     }
-    // let id = user_id.into_inner().user_id;
-    // session.insert("user_id", &id).map_err(|e|AppError::Internal(anyhow!("insert userSession error: {}",id)));
-    // session.renew();
-    Ok(web::Json(result_data("d")))
 }
 #[post("/auth/logout")]
 async fn auth_logout(session: Session) -> Result<impl Responder, AppError> {
-    Ok(web::Json(result()))
+    Ok(web::Json(ResultResponse::<String>::err("用户名或密码错误")))
 }

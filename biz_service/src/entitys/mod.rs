@@ -3,3 +3,4 @@ pub mod model;
 pub mod bucket_entity;
 pub mod file_entity;
 pub mod path_entity;
+mod movie_info;

@@ -17,7 +17,8 @@ use std::time::Duration;
 use common::config::{AppConfig, ServerRes};
 use common::errors::AppError;
 use common::redis::redis_template::RedisTemplate;
-use web_main::handlers;
+use web_main::{handlers};
+use web_main::handlers::swagger::openapi_json;
 use web_main::result::AppState;
 
 #[actix_web::main]
@@ -43,6 +44,7 @@ async fn main() -> std::io::Result<()> {
             .configure(|cfg| {
                 handlers::configure(cfg, web_state.clone());
             })
+
     })
     .keep_alive(actix_web::http::KeepAlive::Timeout(
         std::time::Duration::from_secs(600),

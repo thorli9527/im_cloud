@@ -29,7 +29,6 @@ uuid = { version = "1.16.0"}
 strum = { version = "0.27.1" }
 strum_macros = { version = "0.27.1" }
 hex = "0.4.3"
-rust_decimal = { version = "1.37.1" }
 validator = { version = "0.20.0",features = ["derive"] }
 lazy_static = { version = "1.5.0" }
 rustflake = { version = "0.1.1" }
