@@ -687,6 +687,7 @@ dependencies = [
  "syn 2.0.100",
  "tempfile",
  "thiserror 2.0.12",
+ "utoipa",
  "uuid",
  "walkdir",
  "zip",

@@ -26,3 +26,4 @@ chrono.workspace = true
 hex.workspace = true
 md-5.workspace = true
 uuid.workspace = true
+utoipa.workspace = true

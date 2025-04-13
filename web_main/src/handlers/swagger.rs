@@ -1,19 +1,28 @@
 use crate::handlers::*;
+use biz_service::entitys::user_entity::*;
+use crate::handlers::common_handler::UserInfoDto;
+use crate::result::ResultResponse;
 use actix_web::{get, HttpResponse, Responder};
-use utoipa::{OpenApi, ToSchema};
+use mongodb::bson::oid::ObjectId;
+use utoipa::{openapi, OpenApi, ToSchema};
+use crate::handlers::common_handler::__path_status;
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        auth_login
+        auth_login,
+        status
     ),
     components(schemas(
-        LoginInfoDto
+        LoginInfoDto,
+        ResultResponse<UserInfoDto>,
     )),
     tags(
         (name = "登录", description = "Example endpoints")
     )
 )]
 struct ApiDoc;
+
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(openapi_json);
     cfg.service(actix_files::Files::new("/swagger-ui", "./static/swagger-ui").index_file("index.html"))

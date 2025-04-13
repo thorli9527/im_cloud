@@ -9,7 +9,7 @@ use md5::{Digest, Md5};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-pub fn copy_to<A, B>(a: A, b: B) -> B
+pub fn copy_to<A, B>(a: &A, b: &B) -> B
 where
     A: Serialize + for<'de> Deserialize<'de>,
     B: Serialize + for<'de> Deserialize<'de>,
