@@ -41,11 +41,11 @@ pub struct ResultResponse<T: Serialize> {
 }
 impl<T: Serialize> ResultResponse<T> {
     /// 成功响应，带数据
-    pub fn ok(data: T) -> Self {
+    pub fn ok(data: Option<T>) -> Self {
         ResultResponse {
             success: true,
             message: None,
-            data: Some(data),
+            data,
         }
     }
 
@@ -67,3 +67,4 @@ impl<T: Serialize> ResultResponse<T> {
         }
     }
 }
+

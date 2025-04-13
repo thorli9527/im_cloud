@@ -1,7 +1,7 @@
 use mongodb::bson::DateTime;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize,Default)]
 pub struct PathInfo {
     #[serde(rename = "_id")]
     id: String,
@@ -10,6 +10,5 @@ pub struct PathInfo {
     pub path: String,
     pub parent_id: String,
     pub full_path: String,
-
-    pub create_time: DateTime,
+    pub create_time: Option<DateTime>
 }

@@ -2,14 +2,9 @@ use mongodb::bson::DateTime;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize,Default)]
-pub struct BucketInfo {
+pub struct RoleInfo {
     #[serde(rename = "_id")]
-    pub id: String,
-    pub name: String,
-    pub path:String,
-    pub quota: i32,
-    pub current_quota: i32,
-    pub pub_read: bool,
-    pub pub_write: bool,
+    id: String,
+    name:String,
     pub create_time: Option<DateTime>
 }

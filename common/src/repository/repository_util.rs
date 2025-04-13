@@ -7,6 +7,8 @@ use mongodb::{bson::Document, error::Result, Collection};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::cmp::PartialEq;
 use std::marker::PhantomData;
+use mongodb::bson::oid::ObjectId;
+use crate::errors::AppError;
 
 pub struct PageResult<T> {
     pub items: Vec<T>,
@@ -21,7 +23,7 @@ pub enum OrderType {
 }
 #[async_trait]
 pub trait Repository<T> {
-    // async fn find_by_id(&self, id: impl AsRef<str>) -> Result<Option<T>>;
+    async fn find_by_id(&self, id: String) -> Result<Option<T>>;
     async fn insert(&self, entity: &T) -> Result<()>;
     async fn find_one(&self, filter: Document) -> Result<Option<T>>;
     async fn query_all(&self) -> Result<Vec<T>>;
@@ -44,16 +46,16 @@ impl<T: Send + Sync> BaseRepository<T> {
 }
 
 #[async_trait]
-impl<T> Repository<T> for BaseRepository<T>
+impl<T: Send + Sync> Repository<T> for BaseRepository<T>
 where
     T: Serialize + DeserializeOwned + Unpin + Send + Sync,
 {
-    // async fn find_by_id(&self, id: impl AsRef<str>) -> Result<T> {
-    //     let obj_id = ObjectId::parse_str(id).unwrap();
-    //
-    //     let option = self.find_one(doc! { "_id": obj_id }).await?;
-    //     Ok(option)
-    // }
+    async fn find_by_id(&self, id: String) -> Result<Option<T>> {
+        let obj_id = ObjectId::parse_str(id).unwrap();
+
+        let option = self.find_one(doc! { "_id": obj_id }).await?;
+        Ok(option)
+    }
 
     async fn insert(&self, entity: &T) -> Result<()> {
         self.collection.insert_one(entity).await?;

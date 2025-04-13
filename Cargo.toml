@@ -3,6 +3,7 @@ resolver = "2"
 members = ["common", "biz_service", "web_api", "web_job", "web_main", "macro"]
 [workspace.dependencies]
 actix-web = { version = "4.10.2" }
+actix-service = { version = "2.0.3" }
 actix-files = { version = "0.6.6" }
 actix-session = { version = "0.10.1" }
 chrono = { version = "0.4.40" }

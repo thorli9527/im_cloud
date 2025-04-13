@@ -3476,6 +3476,7 @@ name = "web_main"
 version = "0.1.0"
 dependencies = [
  "actix-files",
+ "actix-service",
  "actix-session",
  "actix-web",
  "anyhow",
