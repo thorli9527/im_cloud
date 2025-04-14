@@ -1,6 +1,7 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
+use std::fmt::format;
 use hex::encode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -30,6 +31,13 @@ pub fn build_snow_id() -> i64 {
 pub fn build_md5(content: &str) -> String {
     let mut hasher = Md5::new();
     hasher.update(content);
+    let result = hasher.finalize();
+    let hex_string = encode(result);
+    hex_string
+}
+pub fn build_md5_with_key(content: &str,key:&str) -> String {
+    let mut hasher = Md5::new();
+    hasher.update(format!("{},{}",content,key));
     let result = hasher.finalize();
     let hex_string = encode(result);
     hex_string
