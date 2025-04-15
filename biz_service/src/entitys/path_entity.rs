@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize,Default)]
 pub struct PathInfo {
-    #[serde(rename = "_id")]
     id: String,
     pub bucket_id: String,
     pub root: bool,

@@ -5,3 +5,7 @@ pub async fn build_time()->String{
     let now = chrono::Local::now();
     now.format("%Y-%m-%d %H:%M:%S").to_string()
 }
+pub fn build_now()->i64{
+    let now = chrono::Local::now();
+    now.timestamp_millis()
+}

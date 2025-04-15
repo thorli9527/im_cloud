@@ -1,10 +1,10 @@
 use crate::config::ServerRes;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
-use mongodb::bson::{doc, Bson};
 use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{Bson, doc};
 use mongodb::options::FindOptions;
-use mongodb::{Collection, bson::Document, error::Result, bson};
+use mongodb::{Collection, bson, bson::Document, error::Result};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::cmp::PartialEq;
 use std::marker::PhantomData;
@@ -30,7 +30,9 @@ pub trait Repository<T> {
     async fn query_all(&self) -> Result<Vec<T>>;
     async fn query(&self, filter: Document) -> Result<Vec<T>>;
     async fn update(&self, filter: Document, update: Document) -> Result<u64>;
+    async fn up_property<E: Send + Sync + Serialize>(&self, id: String, property: String, value: E) -> Result<()>;
     async fn delete(&self, filter: Document) -> Result<u64>;
+    async fn delete_by_id(&self, id:String) -> Result<u64>;
     async fn query_by_page(&self, filter: Document, page_size: i64, order_type: Option<OrderType>, sort_field: &str) -> Result<PageResult<T>>;
 }
 
@@ -59,19 +61,19 @@ where
     }
 
     async fn insert(&self, entity: &T) -> Result<()> {
-       let doc= bson::to_document(entity)?;
+        let mut doc = bson::to_document(entity)?;
+        doc.remove("id");
         self.collection.insert_one(doc).await?;
         Ok(())
     }
 
     async fn find_one(&self, filter: Document) -> Result<Option<T>> {
         let result = self.collection.find_one(filter).await?;
-        let value:Option<T>=match result {
-            Some(doc)=> Option::Some(bson::from_document(transform_doc_id(doc))?),
-            _=> Option::None
+        let value: Option<T> = match result {
+            Some(doc) => Option::Some(bson::from_document(transform_doc_id(doc))?),
+            _ => Option::None,
         };
         return Ok(value);
-
     }
 
     async fn query_all(&self) -> Result<Vec<T>> {
@@ -97,10 +99,27 @@ where
         Ok(result.modified_count)
     }
 
+    async fn up_property<E: Send + Sync + Serialize>(&self, id: String, property: String, value: E) -> Result<()> {
+        let filter = doc! {"_id":id};
+        let update = doc! {
+            "$set": {
+                property: bson::to_bson(&value)?
+            }
+        };
+        self.collection.update_one(filter, update).await?;
+        Ok(())
+    }
+
     async fn delete(&self, filter: Document) -> Result<u64> {
         let result = self.collection.delete_many(filter).await?;
         Ok(result.deleted_count)
     }
+
+    async fn delete_by_id(&self, id: String) -> Result<u64> {
+        let result = self.collection.delete_many(doc! {"_id":id}).await?;
+        Ok(result.deleted_count)
+    }
+
 
     async fn query_by_page(&self, filter: Document, page_size: i64, order_type: Option<OrderType>, sort_field: &str) -> Result<PageResult<T>> {
         let mut sort_direction = 0;
@@ -137,8 +156,10 @@ where
             has_prev: if sort_direction < 0 { has_more } else { true },
         })
     }
-}
 
+
+
+}
 
 fn transform_doc_id(mut doc: Document) -> Document {
     if let Some(Bson::ObjectId(oid)) = doc.remove("_id") {

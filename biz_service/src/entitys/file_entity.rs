@@ -7,7 +7,6 @@ use crate::entitys::file_entity::FileTypeEnum::NORMAL;
 
 #[derive(Debug, Clone, Serialize, Deserialize,Default)]
 pub struct FileInfo {
-    #[serde(rename = "_id")]
     id: String,
     pub root: bool,
     pub bucket_id: String,

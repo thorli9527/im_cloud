@@ -4,10 +4,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize,Default)]
 pub struct ConfigInfo {
-    #[serde(rename = "_id")]
-    id: String,
-    name:String,
-    config_type:ConfigTypeEnum,
+    pub id: String,
+    pub name:String,
+    pub config_type:ConfigTypeEnum,
     pub create_time: i64,
 }
 

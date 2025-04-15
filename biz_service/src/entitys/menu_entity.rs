@@ -13,7 +13,6 @@ pub enum MenuTypeEnum {
 }
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MenuInfo {
-    #[serde(rename = "_id")]
     pub id: String,
     pub menu_name: String,
     pub path: String,
