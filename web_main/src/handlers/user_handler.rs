@@ -76,3 +76,23 @@ pub async fn user_del(user_id: web::Path<String>, user_service: web::Data<UserSe
     user_service.dao.delete_by_id(user_id.to_string());
     Ok(web::Json(result()))
 }
+
+#[derive(Serialize, Deserialize, Debug, Validate, ToSchema, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UserPassChange {
+    pub user_id:String,
+    #[validate(length(min = 5, message = "密码太短"))]
+    pub password: Option<String>,
+}
+
+#[post("/user/change/pass")]
+pub async fn user_change_pass(state: web::Data<AppState>, dto: web::Json<UserPassChange>, user_service: web::Data<UserService>) -> Result<impl Responder, AppError> {
+    match &dto.validate() {
+        Ok(_) => {
+            let password = build_md5_with_key(&state.config.sys.md5_key, &dto.password.as_ref().unwrap());
+            user_service.dao.up_property(dto.user_id.clone(), "status".to_string(), password);
+            Ok(web::Json(result()))
+        }
+        Err(e) => return Ok(web::Json(result_error_msg(e.to_string().as_str()))),
+    }
+}

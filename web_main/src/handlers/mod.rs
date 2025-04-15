@@ -11,6 +11,8 @@ pub use bucket_handler::*;
 pub mod file_handler;
 pub mod auth_handler;
 pub mod swagger;
+mod role_handler;
+
 pub use auth_handler::*;
 
 
