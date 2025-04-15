@@ -13,7 +13,7 @@ pub struct UserRoleService {
 
 impl UserRoleService {
     pub fn new(db_res:ServerRes) -> Self {
-        let collection = db_res.db.collection::<UserRole>("user_role");
+        let collection = db_res.db.collection("user_role");
         Self { dao: BaseRepository::new(db_res, collection.clone()) }
     }
 }

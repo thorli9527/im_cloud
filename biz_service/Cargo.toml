@@ -13,3 +13,4 @@ strum.workspace = true
 strum_macros.workspace = true
 chrono.workspace = true
 mongo_indexed_derive = { version = "2.0.0" }
+log = "0.4.27"

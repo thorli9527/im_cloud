@@ -10,7 +10,7 @@ pub struct MenuService {
 
 impl MenuService {
     pub fn new(db_res:ServerRes) -> Self {
-        let collection = db_res.db.collection::<MenuInfo>("menu_info");
+        let collection = db_res.db.collection("menu_info");
         Self { dao: BaseRepository::new(db_res, collection.clone()) }
     }
 }

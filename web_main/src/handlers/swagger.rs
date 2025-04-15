@@ -1,19 +1,21 @@
 use crate::handlers::common_handler::__path_status;
 use crate::handlers::*;
-use crate::result::ResultResponse;
 use actix_web::{HttpResponse, Responder, get};
 use biz_service::entitys::user_entity::*;
 use mongodb::bson::oid::ObjectId;
 use utoipa::{OpenApi, ToSchema, openapi};
+use crate::result::ApiResponse;
+
 #[derive(OpenApi)]
 #[openapi(
     paths(
         auth_login,
-        status
+        status,
     ),
     components(schemas(
         LoginInfoDto,
-        ResultResponse<String>,
+        ApiResponse<String>,
+       ApiResponse<LoginSessionDto>,
     )),
     tags(
         (name = "登录", description = "Example endpoints")

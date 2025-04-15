@@ -17,5 +17,6 @@ pub use auth_handler::*;
 pub fn configure(cfg: &mut web::ServiceConfig, state: web::Data<AppState>) {
     common_handler::configure(cfg);
     auth_handler::configure(cfg);
+    user_handler::configure(cfg);
     swagger::configure(cfg);
 }

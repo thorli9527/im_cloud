@@ -1,15 +1,16 @@
 use crate::config::ServerRes;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
-use mongodb::bson::doc;
+use mongodb::bson::{doc, Bson};
+use mongodb::bson::oid::ObjectId;
 use mongodb::options::FindOptions;
-use mongodb::{bson::Document, error::Result, Collection};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use mongodb::{Collection, bson::Document, error::Result, bson};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::cmp::PartialEq;
 use std::marker::PhantomData;
-use mongodb::bson::oid::ObjectId;
-use crate::errors::AppError;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PageResult<T> {
     pub items: Vec<T>,
     pub has_next: bool,
@@ -27,6 +28,7 @@ pub trait Repository<T> {
     async fn insert(&self, entity: &T) -> Result<()>;
     async fn find_one(&self, filter: Document) -> Result<Option<T>>;
     async fn query_all(&self) -> Result<Vec<T>>;
+    async fn query(&self, filter: Document) -> Result<Vec<T>>;
     async fn update(&self, filter: Document, update: Document) -> Result<u64>;
     async fn delete(&self, filter: Document) -> Result<u64>;
     async fn query_by_page(&self, filter: Document, page_size: i64, order_type: Option<OrderType>, sort_field: &str) -> Result<PageResult<T>>;
@@ -34,46 +36,60 @@ pub trait Repository<T> {
 
 #[allow(dead_code)]
 pub struct BaseRepository<T: Send + Sync> {
-    pub collection: Collection<T>, // 线程安全的数据库连接池
+    pub collection: Collection<Document>, // 线程安全的数据库连接池
     pub db_res: ServerRes,
     _marker: PhantomData<T>,
 }
 
 impl<T: Send + Sync> BaseRepository<T> {
-    pub fn new(db_res: ServerRes, collection: Collection<T>) -> Self {
+    pub fn new(db_res: ServerRes, collection: Collection<Document>) -> Self {
         Self { collection, db_res, _marker: Default::default() }
     }
 }
 
 #[async_trait]
-impl<T: Send + Sync> Repository<T> for BaseRepository<T>
+impl<T: Send + Sync + std::fmt::Debug> Repository<T> for BaseRepository<T>
 where
     T: Serialize + DeserializeOwned + Unpin + Send + Sync,
 {
     async fn find_by_id(&self, id: String) -> Result<Option<T>> {
         let obj_id = ObjectId::parse_str(id).unwrap();
-
         let option = self.find_one(doc! { "_id": obj_id }).await?;
         Ok(option)
     }
 
     async fn insert(&self, entity: &T) -> Result<()> {
-        self.collection.insert_one(entity).await?;
+       let doc= bson::to_document(entity)?;
+        self.collection.insert_one(doc).await?;
         Ok(())
     }
 
     async fn find_one(&self, filter: Document) -> Result<Option<T>> {
         let result = self.collection.find_one(filter).await?;
-        Ok(result)
+        let value:Option<T>=match result {
+            Some(doc)=> Option::Some(bson::from_document(transform_doc_id(doc))?),
+            _=> Option::None
+        };
+        return Ok(value);
+
     }
 
     async fn query_all(&self) -> Result<Vec<T>> {
         let mut cursor = self.collection.find(doc! {}).await?;
-        let mut result = vec![];
+        let mut result = Vec::<T>::new();
         while let Some(doc) = cursor.try_next().await? {
-            result.push(doc);
+            result.push(bson::from_document(transform_doc_id(doc))?);
         }
         Ok(result)
+    }
+
+    async fn query(&self, filter: Document) -> Result<Vec<T>> {
+        let mut cursor = self.collection.find(filter).await?;
+        let mut results: Vec<T> = vec![];
+        while let Some(doc) = cursor.try_next().await? {
+            results.push(bson::from_document(transform_doc_id(doc))?);
+        }
+        return Ok(results);
     }
 
     async fn update(&self, filter: Document, update: Document) -> Result<u64> {
@@ -105,7 +121,7 @@ where
         let mut cursor = self.collection.find(filter).with_options(find_options).await?;
         let mut results: Vec<T> = vec![];
         while let Some(doc) = cursor.try_next().await? {
-            results.push(doc);
+            results.push(bson::from_document(transform_doc_id(doc))?);
         }
 
         if sort_direction < 0 {
@@ -121,4 +137,12 @@ where
             has_prev: if sort_direction < 0 { has_more } else { true },
         })
     }
+}
+
+
+fn transform_doc_id(mut doc: Document) -> Document {
+    if let Some(Bson::ObjectId(oid)) = doc.remove("_id") {
+        doc.insert("id", Bson::String(oid.to_hex()));
+    }
+    doc
 }

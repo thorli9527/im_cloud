@@ -6,5 +6,5 @@ pub struct RoleInfo {
     #[serde(rename = "_id")]
     id: String,
     name:String,
-    pub create_time: Option<DateTime>
+    pub create_time: i64,
 }

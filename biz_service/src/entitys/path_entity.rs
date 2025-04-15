@@ -10,5 +10,5 @@ pub struct PathInfo {
     pub path: String,
     pub parent_id: String,
     pub full_path: String,
-    pub create_time: Option<DateTime>
+    pub create_time: i64,
 }

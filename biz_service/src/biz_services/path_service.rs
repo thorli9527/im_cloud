@@ -7,7 +7,7 @@ pub struct PathService {
 
 impl PathService {
     pub fn new(db_res:ServerRes) -> Self {
-        let collection = db_res.db.collection::<PathInfo>("path_info");
+        let collection = db_res.db.collection("path_info");
         Self { dao: BaseRepository::new(db_res, collection.clone()) }
     }
 }

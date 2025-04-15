@@ -495,6 +495,7 @@ dependencies = [
  "actix-web",
  "chrono",
  "common",
+ "log",
  "mongo_indexed_derive",
  "mongodb",
  "serde",

@@ -7,7 +7,7 @@ use mongodb::bson::DateTime;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use common::util::common_utils::copy_to;
-use crate::result::ResultResponse;
+use crate::result::{result, ApiResponse};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(status);
@@ -16,10 +16,10 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     get,
     path = "/status",
     responses(
-        (status = 200, description = "Hello response", body = ResultResponse<String>)
+        (status = 200, description = "Hello response", body = ApiResponse<String>)
     )
 )]
 #[get("/status")]
 pub async fn status(user_service:web::Data<UserService>) -> Result<impl Responder, AppError> {
-    Ok(web::Json(ResultResponse::<String>::ok(Option::None)))
+    return Ok(web::Json(result()));
 }

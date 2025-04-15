@@ -1,4 +1,4 @@
-use crate::result::{ ResultResponse};
+use crate::result::{result, ApiResponse};
 use actix_web::{get, web, Responder};
 use biz_service::biz_services::file_service::FileService;
 use common::errors::AppError;
@@ -9,5 +9,5 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 
 #[get("/status")]
 pub async fn bucket_list(file_service:web::Data<FileService>) -> Result<impl Responder, AppError> {
-    Ok(web::Json(ResultResponse::<String>::ok(Option::None)))
+    return Ok(web::Json(result()));
 }

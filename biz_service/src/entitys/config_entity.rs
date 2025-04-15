@@ -8,7 +8,7 @@ pub struct ConfigInfo {
     id: String,
     name:String,
     config_type:ConfigTypeEnum,
-    create_time: Option<DateTime>
+    pub create_time: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize,Default)]

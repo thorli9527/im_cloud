@@ -3,7 +3,11 @@ use common::query_builder::PageInfo;
 use config::Config;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use std::option::Option;
+use serde_json::Value;
 use utoipa::ToSchema;
+use common::repository_util::PageResult;
+
 #[derive(Debug,Clone)]
 pub struct AppState {
     pub config: AppConfig,
@@ -21,50 +25,32 @@ impl AppState {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct PageResult<T>
-{
-    pub total: i64,
-    pub data: Vec<T>,
-    pub page_info: PageInfo,
+#[derive(Debug, Serialize, Deserialize,Clone,ToSchema)]
+pub struct ApiResponse<T> {
+    code: String,
+    message: String,
+    data: Option<T>,
+}
+
+impl ApiResponse<String>{
+
 }
 
 
-#[derive(Serialize, ToSchema)]
-pub struct ResultResponse<T: Serialize> {
-    pub success: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<T>,
-}
-impl<T: Serialize> ResultResponse<T> {
-    /// 成功响应，带数据
-    pub fn ok(data: Option<T>) -> Self {
-        ResultResponse {
-            success: true,
-            message: None,
-            data,
-        }
+    pub fn result() -> Value {
+        serde_json::json!({"success":true})
+    }
+    pub fn result_data<T: Serialize + Debug>(data: T) -> Value {
+        return serde_json::json!({"success":true,"data":data});
+    }
+    pub fn result_error_msg(msg: &str) -> Value {
+        serde_json::json!({"success":false,"msg":msg})
     }
 
-    /// 成功响应，自定义消息 + 可选数据
-    pub fn ok_msg(message: impl Into<String>, data: Option<T>) -> Self {
-        ResultResponse {
-            success: true,
-            message: Some(message.into()),
-            data,
-        }
+    pub fn result_warn_msg(msg: &str) -> Value {
+        serde_json::json!({"success":true,"msg":msg})
     }
-
-    /// 失败响应，附带错误消息
-    pub fn err(message: impl Into<String>) -> Self {
-        ResultResponse {
-            success: false,
-            message: Some(message.into()),
-            data: None,
-        }
+    pub fn result_list<T: Serialize + Debug>(list: Vec<T>) -> Value {
+        let value = serde_json::json!({"success":true,"data":list});
+        return value;
     }
-}
-

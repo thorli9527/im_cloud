@@ -17,7 +17,7 @@ pub struct FileInfo {
     pub file_type: FileTypeEnum,
     pub items: Vec<FileItemDto>,
     pub size: i32,
-    pub create_time: Option<DateTime>
+    pub create_time: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

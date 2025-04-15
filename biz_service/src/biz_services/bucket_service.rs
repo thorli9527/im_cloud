@@ -8,7 +8,7 @@ pub struct BucketService {
 
 impl BucketService {
     pub fn new(db_res:ServerRes) -> Self {
-        let collection = db_res.db.collection::<BucketInfo>("bucket_info");
+        let collection = db_res.db.collection("bucket_info");
         Self { dao: BaseRepository::new(db_res, collection.clone()) }
     }
 }

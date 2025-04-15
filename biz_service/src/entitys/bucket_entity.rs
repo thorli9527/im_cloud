@@ -11,5 +11,5 @@ pub struct BucketInfo {
     pub current_quota: i32,
     pub pub_read: bool,
     pub pub_write: bool,
-    pub create_time: Option<DateTime>
+    pub create_time: i64,
 }

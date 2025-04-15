@@ -8,7 +8,7 @@ pub struct FileService {
 
 impl FileService {
     pub fn new(db_res:ServerRes) -> Self {
-        let collection = db_res.db.collection::<FileInfo>("file_info");
+        let collection = db_res.db.collection("file_info");
         Self { dao: BaseRepository::new(db_res, collection.clone()) }
     }
 }
