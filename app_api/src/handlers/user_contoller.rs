@@ -1,3 +1,4 @@
+use std::clone;
 use crate::result::{result, result_data};
 use actix_web::{web, Responder};
 use biz_service::biz_const::redis_const::CLIENT_TOKEN_KEY;
@@ -26,7 +27,7 @@ struct TokenDto {
 pub async fn build_user(dto: web::Json<TokenDto>, auth_header: web::Header<AuthHeader>) -> Result<impl Responder, AppError> {
     let agent_service = AgentService::get();
     let agent = agent_service.find_by_app_key(&auth_header.app_key).await?;
-    let check_state = agent_service.checksum_request(&*auth_header).await?;
+    let (agent,check_state) = agent_service.checksum_request(&*auth_header).await?;
     if !check_state {
         return Err(BizError("signature.error".to_string()));
     }
@@ -50,7 +51,7 @@ pub async fn build_user(dto: web::Json<TokenDto>, auth_header: web::Header<AuthH
 }
 //锁定用户
 pub async fn lock(user_id: web::Path<String>, auth_header: web::Header<AuthHeader>) -> Result<impl Responder, AppError> {
-    let check_state = AgentService::get().checksum_request(&*auth_header).await?;
+    let (agent,check_state) = AgentService::get().checksum_request(&*auth_header).await?;
     if !check_state {
         return Err(BizError("signature.error".to_string()));
     }
@@ -60,7 +61,7 @@ pub async fn lock(user_id: web::Path<String>, auth_header: web::Header<AuthHeade
 }
 
 pub async fn info(user_id: web::Path<String>, auth_header: web::Header<AuthHeader>) -> Result<impl Responder, AppError> {
-    let check_state = AgentService::get().checksum_request(&*auth_header).await?;
+    let (agent,check_state) = AgentService::get().checksum_request(&*auth_header).await?;
     if !check_state {
         return Err(BizError("signature.error".to_string()));
     }
@@ -76,7 +77,7 @@ pub struct UserEnableDto {
 
 //禁用户户
 pub async fn expire(dto: web::Json<UserEnableDto>, auth_header: web::Header<AuthHeader>) -> Result<impl Responder, AppError> {
-    let check_state = AgentService::get().checksum_request(&*auth_header).await?;
+    let (agent,check_state) = AgentService::get().checksum_request(&*auth_header).await?;
     if !check_state {
         return Err(BizError("signature.error".to_string()));
     }
@@ -92,7 +93,7 @@ struct RefreshDto{
 
 }
 pub async fn refresh(dto: web::Json<RefreshDto>, auth_header: web::Header<AuthHeader>) -> Result<impl Responder, AppError> {
-    let check_state = AgentService::get().checksum_request(&*auth_header).await?;
+    let (agent,check_state) = AgentService::get().checksum_request(&*auth_header).await?;
     if !check_state {
         return Err(BizError("signature.error".to_string()));
     }

@@ -901,14 +901,12 @@ impl EmojiType {
 pub enum DeviceType {
     /// 默认未知
     DeviceUnknown = 0,
-    /// 安桌
-    Android = 1,
-    /// 苹果
-    Ios = 2,
+    /// 移动
+    Mobile = 1,
+    /// 桌面
+    Desktop = 2,
     /// WEB
     Web = 3,
-    /// 桌面
-    Desktop = 4,
 }
 impl DeviceType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -918,20 +916,18 @@ impl DeviceType {
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::DeviceUnknown => "DEVICE_UNKNOWN",
-            Self::Android => "ANDROID",
-            Self::Ios => "IOS",
-            Self::Web => "WEB",
+            Self::Mobile => "Mobile",
             Self::Desktop => "DESKTOP",
+            Self::Web => "WEB",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "DEVICE_UNKNOWN" => Some(Self::DeviceUnknown),
-            "ANDROID" => Some(Self::Android),
-            "IOS" => Some(Self::Ios),
-            "WEB" => Some(Self::Web),
+            "Mobile" => Some(Self::Mobile),
             "DESKTOP" => Some(Self::Desktop),
+            "WEB" => Some(Self::Web),
             _ => None,
         }
     }

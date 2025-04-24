@@ -1,4 +1,5 @@
-mod auth_contoller;
+mod user_contoller;
+mod group_controller;
 
 use crate::result::AppState;
 use actix_web::web;

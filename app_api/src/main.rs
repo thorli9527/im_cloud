@@ -1,9 +1,9 @@
-use std::str::FromStr;
 use actix_web::middleware::Logger;
 use actix_web::rt::Runtime;
 use actix_web::{cookie, web, App, HttpServer};
 use app_api::handlers;
 use app_api::result::AppState;
+use biz_service::manager;
 use common::config::{AppConfig, ServerRes};
 use common::errors::AppError;
 use deadpool_redis::{
@@ -14,7 +14,7 @@ use env_logger::Builder;
 use log::{info, warn, LevelFilter};
 use mongodb::options::ClientOptions;
 use mongodb::{Client, Database};
-use biz_service::manager;
+use std::str::FromStr;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

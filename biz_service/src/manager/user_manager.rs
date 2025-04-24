@@ -5,22 +5,21 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use dashmap::{DashMap, DashSet}; // 高性能并发哈希表
+use dashmap::{DashMap, DashSet};
+use dashmap::mapref::multiple::RefMulti;
+// 高性能并发哈希表
 use deadpool_redis::{
-    redis::{from_redis_value, AsyncCommands, RedisResult},
+    redis::AsyncCommands,
     Pool,
 };
-use dashmap::mapref::multiple::RefMulti;
-use mongodb::Database;
 use once_cell::sync::OnceCell;
-use redis::cmd;
+use redis::{cmd, from_redis_value, RedisResult};
+use redis::streams::{StreamReadOptions, StreamReadReply};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Notify;
 use tokio::time::sleep;
 
 use common::errors::AppError;
-use crate::biz_service::client_service::ClientService;
-use crate::manager::init;
 
 // === Constants ===
 const USER_ONLINE_TTL_SECS: u64 = 30;  // 用户在线 TTL
@@ -138,7 +137,6 @@ impl RedisUserManager {
                 }
             }
         });
-
         // 注册全局单例
         manager.init(manager.clone());
         manager
@@ -299,10 +297,91 @@ impl RedisUserManager {
         Ok(())
     }
 
-    // 启动 Stream 消费器（待补充逻辑）
+    // 启动 Redis Stream 消费器，监听用户上下线事件
+    /// 启动 Redis Stream 消费器，监听用户上下线和群组变动事件
+    /// 启动 Redis Stream 消费器，监听用户上下线和群组事件
     pub async fn start_stream_event_consumer(&self) -> Result<(), AppError> {
+        let pool = self.redis_pool.clone();
+        let shards = self.local_online_shards.clone();
+        let groups = self.local_group_map.clone();
+        let node_id = self.node_id;
+        let node_total = self.node_total;
+
+        tokio::spawn(async move {
+            // 初始化消费者组（幂等）
+            if let Ok(mut conn) = pool.get().await {
+                let _ = cmd("XGROUP")
+                    .arg("CREATE")
+                    .arg(STREAM_KEY)
+                    .arg(CONSUMER_GROUP)
+                    .arg("0")
+                    .arg("MKSTREAM")
+                    .query_async::<()>(&mut conn)
+                    .await
+                    .or_else(|e| {
+                        if e.to_string().contains("BUSYGROUP") {
+                            Ok(())
+                        } else {
+                            Err(e)
+                        }
+                    });
+            }
+
+            loop {
+                if let Ok(mut conn) = pool.get().await {
+                    let opts = StreamReadOptions::default()
+                        .group(CONSUMER_GROUP, CONSUMER_NAME)
+                        .count(10)
+                        .block(5000);
+
+                    let result: RedisResult<StreamReadReply> =
+                        conn.xread_options::<_, _, StreamReadReply>(&[STREAM_KEY], &[">"], &opts).await;
+
+                    if let Ok(reply) = result {
+                        for stream in reply.keys {
+                            for entry in stream.ids {
+                                if let Some(payload_value) = entry.map.get("payload") {
+                                    // 解析 Redis value 为 String
+                                    let payload_str: String = match from_redis_value(payload_value) {
+                                        Ok(val) => val,
+                                        Err(e) => {
+                                            eprintln!("[RedisUserManager] ❌ payload 类型错误: {:?}", e);
+                                            continue;
+                                        }
+                                    };
+
+                                    // 解析 JSON -> UserEvent
+                                    match serde_json::from_str::<UserEvent>(&payload_str) {
+                                        Ok(event) => {
+                                            handle_user_event(&event, &shards, &groups, node_id, node_total).await;
+
+                                            // ACK 消息
+                                            let _: RedisResult<()> = conn
+                                                .xack(STREAM_KEY, CONSUMER_GROUP, &[&entry.id])
+                                                .await;
+                                          
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "[RedisUserManager] ❗️事件反序列化失败: {:?}, 内容: {}",
+                                                e, payload_str
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 防止空转 CPU 爆炸
+                sleep(Duration::from_millis(200)).await;
+            }
+        });
+
         Ok(())
     }
+
 
     // 注册为全局单例
     fn init(&self, instance: RedisUserManager) {
@@ -317,3 +396,45 @@ impl RedisUserManager {
 
 // 单例静态变量
 static INSTANCE: OnceCell<Arc<RedisUserManager>> = OnceCell::new();
+async fn handle_user_event(
+    event: &UserEvent,
+    shards: &Vec<DashMap<String, ()>>,
+    groups: &ShardedGroupMap,
+    node_id: usize,
+    node_total: usize,
+) {
+    match event {
+        UserEvent::Online { user_id } => {
+            if is_responsible(user_id, node_id, node_total) {
+                let shard = &shards[hash_user(user_id) % SHARD_COUNT];
+                shard.insert(user_id.clone(), ());
+            }
+        }
+        UserEvent::Offline { user_id } => {
+            if is_responsible(user_id, node_id, node_total) {
+                let shard = &shards[hash_user(user_id) % SHARD_COUNT];
+                shard.remove(user_id);
+            }
+        }
+        UserEvent::GroupJoin { group_id, user_id } => {
+            groups
+                .entry(group_id.clone())
+                .or_insert_with(DashSet::new)
+                .insert(user_id.clone());
+        }
+        UserEvent::GroupLeave { group_id, user_id } => {
+            if let Some(mut group) = groups.get_mut(group_id) {
+                group.remove(user_id);
+            }
+        }
+    }
+}
+#[inline]
+fn hash_user(user_id: &str) -> usize {
+    fxhash::hash32(user_id.as_bytes()) as usize
+}
+
+#[inline]
+fn is_responsible(user_id: &str, node_id: usize, node_total: usize) -> bool {
+    (hash_user(user_id) % node_total) == node_id
+}

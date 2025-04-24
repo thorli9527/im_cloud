@@ -43,13 +43,13 @@ impl AgentService {
         format!("{:x}", hasher.finalize())
     }
 
-    pub async fn checksum_request(&self,auth_header:&AuthHeader)->Result<bool,AppError>{
+    pub async fn checksum_request(&self,auth_header:&AuthHeader)->Result<(AgentInfo,bool),AppError>{
         let agent = self.find_by_app_key(&auth_header.app_key).await?;
         let signature = self.generate_checksum(&agent.app_secret, &auth_header.nonce, auth_header.timestamp);
         if signature != auth_header.signature {
-            return Ok(false);
+            return Ok((agent,false));
         }
-        return Ok(true)
+        return Ok((agent,true))
     }
     /// 初始化单例（仅运行一次）
     pub fn init(db: Database) {

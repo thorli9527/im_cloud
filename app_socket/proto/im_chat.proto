@@ -302,10 +302,9 @@ message AckMessage {
 // 支持的设备类型（枚举）
 enum DeviceType {
     DEVICE_UNKNOWN = 0;    // 默认未知
-    ANDROID = 1;    //安桌
-    IOS = 2;        //苹果
+    Mobile = 1;    //移动
+    DESKTOP = 2;    //桌面
     WEB = 3;        //WEB
-    DESKTOP = 4;    //桌面
 }
 // 客户端连接后发送的认证请求消息
 message AuthRequest {

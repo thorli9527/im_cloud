@@ -1,6 +1,6 @@
 use crate::handlers::agent_handler::*;
-use crate::handlers::common_handler::*;
 use crate::handlers::auth_handler::*;
+use crate::handlers::common_handler::*;
 use crate::result::ApiResponse;
 use actix_web::{get, web, HttpResponse, Responder};
 use biz_service::entitys::agent_entity::AgentInfo;

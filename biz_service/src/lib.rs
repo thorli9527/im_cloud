@@ -1,6 +1,5 @@
 #![feature(unwrap_infallible)]
 
-use deadpool_redis::Pool;
 use mongodb::Database;
 
 pub mod biz_const;

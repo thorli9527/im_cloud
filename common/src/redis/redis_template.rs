@@ -1,11 +1,11 @@
 use crate::errors::AppError;
 use deadpool_redis::Pool;
 use once_cell::sync::OnceCell;
+use redis::AsyncCommands;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::any::TypeId;
 use std::sync::Arc;
-use redis::AsyncCommands;
 
 #[derive(Debug, Clone)]
 pub struct RedisTemplate {
