@@ -24,7 +24,7 @@ pub async fn auth_request(id: &ConnectionId, data: Envelope, auth:AuthRequest) -
         socket_manager.send_to_connection(id,msg).map_err(|_|AppError::SocketError("socket".to_string()))?;
 
         //redis设置用户在线
-        RedisUserManager::get().online(&user.user_id,DeviceType::from(auth.device_type)).await?;
+        RedisUserManager::get().online(&user.user_id,DeviceType::from(auth.device_type as u8)).await?;
     }
     else{
         let msg=build_auth_ack(data.envelope_id,auth.message_id,false,"token.error".to_string());

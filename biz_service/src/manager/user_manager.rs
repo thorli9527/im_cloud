@@ -15,6 +15,8 @@ use deadpool_redis::{
 use once_cell::sync::OnceCell;
 use redis::{cmd, from_redis_value, RedisResult};
 use redis::streams::{StreamReadOptions, StreamReadReply};
+// === Imports ===
+
 use serde::{Deserialize, Serialize};
 use tokio::sync::Notify;
 use tokio::time::sleep;
@@ -22,28 +24,50 @@ use tokio::time::sleep;
 use common::errors::AppError;
 
 // === Constants ===
-const USER_ONLINE_TTL_SECS: u64 = 30;  // 用户在线 TTL
-const STREAM_KEY: &str = "user:events";  // Redis Stream 的 key
-const CONSUMER_GROUP: &str = "user_events_group"; // 消费者组名称
-const CONSUMER_NAME: &str = "user_manager"; // 消费者实例名称
-const SHARD_COUNT: usize = 8; // 本地缓存分片数量
-const MAX_CLEAN_COUNT: usize = 100; // 清理时最多删除的空群组数
+const USER_ONLINE_TTL_SECS: u64 = 30;
+const STREAM_KEY: &str = "user:events";
+const CONSUMER_GROUP: &str = "user_events_group";
+const CONSUMER_NAME: &str = "user_manager";
+const SHARD_COUNT: usize = 8;
+const MAX_CLEAN_COUNT: usize = 100;
+
+// === 设备类型 ===
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[repr(u8)]
+#[serde(rename_all = "snake_case")]
+pub enum DeviceType {
+    Unknown = 0,
+    Mobile = 1,
+    Desktop = 2,
+    Web = 3,
+}
+
+impl From<u8> for DeviceType {
+    fn from(value: u8) -> Self {
+        match value {
+            1 => DeviceType::Mobile,
+            2 => DeviceType::Desktop,
+            3 => DeviceType::Web,
+            _ => DeviceType::Unknown,
+        }
+    }
+}
+
 
 // === 用户事件枚举 ===
-// 用于 Redis Stream 消息传递的事件模型
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum UserEvent {
     GroupLeave { group_id: String, user_id: String },
     GroupJoin { group_id: String, user_id: String },
-    Online { user_id: String },
+    Online { user_id: String, device: DeviceType },
     Offline { user_id: String },
 }
 
 // === 分片群组结构 ===
 #[derive(Debug, Clone)]
 struct ShardedGroupMap {
-    shards: Arc<Vec<DashMap<String, DashSet<String>>>>, // 每个群组是一个 DashSet
+    shards: Arc<Vec<DashMap<String, DashSet<String>>>>,
 }
 
 impl ShardedGroupMap {
@@ -51,33 +75,21 @@ impl ShardedGroupMap {
         let shards = Arc::new((0..SHARD_COUNT).map(|_| DashMap::new()).collect());
         Self { shards }
     }
-
-    // 哈希函数，用于定位 shard
     fn hash(key: &str) -> usize {
         fxhash::hash32(key.as_bytes()) as usize % SHARD_COUNT
     }
-
-    // 获取只读引用
     pub fn get(&self, key: &str) -> Option<dashmap::mapref::one::Ref<String, DashSet<String>>> {
         self.shards[Self::hash(key)].get(key)
     }
-
-    // 获取可变引用
     pub fn get_mut(&self, key: &str) -> Option<dashmap::mapref::one::RefMut<String, DashSet<String>>> {
         self.shards[Self::hash(key)].get_mut(key)
     }
-
-    // 获取或插入 entry
     pub fn entry(&self, key: String) -> dashmap::mapref::entry::Entry<String, DashSet<String>> {
         self.shards[Self::hash(&key)].entry(key)
     }
-
-    // 删除群组缓存
     pub fn remove(&self, key: &str) {
         self.shards[Self::hash(key)].remove(key);
     }
-
-    // 迭代所有缓存项
     pub fn iter(&self) -> impl Iterator<Item = RefMulti<String, DashSet<String>>> + '_ {
         self.shards.iter().flat_map(|shard| shard.iter())
     }
@@ -86,18 +98,17 @@ impl ShardedGroupMap {
 // === Redis 用户管理器 ===
 #[derive(Clone, Debug)]
 pub struct RedisUserManager {
-    redis_pool: Pool, // Redis 连接池
-    local_online_shards: Arc<Vec<DashMap<String, ()>>>, // 本地在线用户缓存分片
-    local_group_map: ShardedGroupMap, // 本地群组成员缓存
-    is_initialized: Arc<AtomicBool>, // 是否初始化完成
-    init_notify: Arc<Notify>, // 初始化完成通知器
-    node_id: usize, // 当前节点编号
-    node_total: usize, // 总节点数（用于分片责任判定）
-    use_local_cache: bool, // 是否使用本地缓存加速
+    redis_pool: Pool,
+    local_online_shards: Arc<Vec<DashMap<String, ()>>>,
+    local_group_map: ShardedGroupMap,
+    is_initialized: Arc<AtomicBool>,
+    init_notify: Arc<Notify>,
+    node_id: usize,
+    node_total: usize,
+    use_local_cache: bool,
 }
 
 impl RedisUserManager {
-    // 初始化新实例，启动后台任务：加载缓存、事件监听、定时清理
     pub fn new(redis_pool: Pool, node_id: usize, node_total: usize, use_local_cache: bool) -> Self {
         let online_shards = (0..SHARD_COUNT).map(|_| DashMap::new()).collect();
         let manager = Self {
@@ -111,7 +122,6 @@ impl RedisUserManager {
             use_local_cache,
         };
 
-        // 后台初始化任务
         let manager_clone = manager.clone();
         tokio::spawn(async move {
             if manager_clone.use_local_cache {
@@ -127,7 +137,6 @@ impl RedisUserManager {
             println!("[RedisUserManager] ✅ 初始化完成");
         });
 
-        // 启动空群组清理器
         let cleaner = manager.clone();
         tokio::spawn(async move {
             loop {
@@ -137,7 +146,7 @@ impl RedisUserManager {
                 }
             }
         });
-        // 注册全局单例
+
         manager.init(manager.clone());
         manager
     }
@@ -174,14 +183,18 @@ impl RedisUserManager {
     }
 
     // 设置用户上线（带事件广播）
-    pub async fn online(&self, user_id: &str) -> Result<(), AppError> {
+    /// 设置用户上线（带事件广播，含设备类型）
+    pub async fn online(&self, user_id: &str, device: DeviceType) -> Result<(), AppError> {
         if self.use_local_cache && self.is_responsible(user_id) {
             self.get_online_shard(user_id).insert(user_id.to_string(), ());
         }
         let mut conn = self.redis_pool.get().await?;
-        let _:()=conn.set_ex(format!("online:user:{}", user_id), "1", USER_ONLINE_TTL_SECS).await?;
-        let payload = serde_json::to_string(&UserEvent::Online { user_id: user_id.to_string() })?;
-        let _:()=conn.xadd(STREAM_KEY, "*", &[("payload", &payload)]).await?;
+        let _: () = conn.set_ex(format!("online:user:{}", user_id), "1", USER_ONLINE_TTL_SECS).await?;
+        let payload = serde_json::to_string(&UserEvent::Online {
+            user_id: user_id.to_string(),
+            device,
+        })?;
+        let _: () = conn.xadd(STREAM_KEY, "*", &[("payload", &payload)]).await?;
         Ok(())
     }
 
@@ -404,10 +417,11 @@ async fn handle_user_event(
     node_total: usize,
 ) {
     match event {
-        UserEvent::Online { user_id } => {
+        UserEvent::Online { user_id, device } => {
             if is_responsible(user_id, node_id, node_total) {
                 let shard = &shards[hash_user(user_id) % SHARD_COUNT];
                 shard.insert(user_id.clone(), ());
+                println!("[UserOnline] user_id = {}, device = {:?}", user_id, device);
             }
         }
         UserEvent::Offline { user_id } => {
@@ -429,6 +443,7 @@ async fn handle_user_event(
         }
     }
 }
+
 #[inline]
 fn hash_user(user_id: &str) -> usize {
     fxhash::hash32(user_id.as_bytes()) as usize
