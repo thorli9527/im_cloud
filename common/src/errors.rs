@@ -1,4 +1,3 @@
-use actix_session::{SessionGetError, SessionInsertError};
 use actix_web::{HttpResponse, ResponseError};
 use deadpool_redis::PoolError;
 use log::error;
@@ -28,6 +27,8 @@ pub enum AppError {
 
     #[error("Unauthorized access")]
     Unauthorized,
+    #[error("biz error: {0}")]
+    BizError(String),
 
     #[error("Forbidden access")]
     Forbidden,
@@ -48,21 +49,19 @@ pub enum AppError {
     // ==== 系统错误 ====
     #[error("MongoDB error: {0}")]
     Mongo(#[from] MongoError),
-
     #[error("Redis error: {0}")]
     Redis(#[from] RedisError),
-    #[error("session error: {0}")]
-    SessionError(#[from] SessionGetError),
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
-
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
-
+    #[error("socket: {0}")]
+    SocketError(String),
     #[error("Internal server error")]
-    Internal(#[from] anyhow::Error),
+    Internal(String),
     #[error("Conversion error")]
     ConversionError,
+    
 }
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
@@ -75,23 +74,23 @@ impl ResponseError for AppError {
             AppError::Conflict => (actix_web::http::StatusCode::CONFLICT, self.to_string()),
             AppError::RateLimited => (actix_web::http::StatusCode::TOO_MANY_REQUESTS, self.to_string()),
             AppError::FileUpload(_) | AppError::ExternalApi(_) => (actix_web::http::StatusCode::BAD_GATEWAY, self.to_string()),
-            AppError::Mongo(e) =>{
+            AppError::Mongo(e) => {
                 error!("{:?}", e);
                 (actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, "Service error".to_string())
             }
-            AppError::Redis(e) =>{
+            AppError::Redis(e) => {
                 error!("{:?}", e);
                 (actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, "Service error".to_string())
             }
-            AppError::Io(e)=>{
+            AppError::Io(e) => {
                 error!("{:?}", e);
                 (actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, "Service error".to_string())
             }
-            AppError::Json(e) =>{
+            AppError::Json(e) => {
                 error!("{:?}", e);
                 (actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, "Service error".to_string())
             }
-            AppError::Internal(e) =>{
+            AppError::Internal(e) => {
                 error!("{:?}", e);
                 (actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, "Service error".to_string())
             }

@@ -1,17 +1,20 @@
 use crate::repository_util::OrderType;
 use mongodb::bson::{doc, Bson, Document};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-
-#[derive(Debug, Serialize, Deserialize, Default,Clone)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PageInfo {
+    #[schema(default = "0")]
     pub index: i32,
+    #[schema(default = "10")]
     pub page_size: i32,
-    pub order_column:String,
-    pub order_type:OrderType,
+    #[schema(default = "id")]
+    pub order_column: String,
+    pub order_type: OrderType,
 }
-#[derive(Debug, Serialize, Deserialize, Default,Clone)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryBuilder {
     clauses: Vec<Document>,

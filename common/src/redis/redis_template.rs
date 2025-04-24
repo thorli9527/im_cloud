@@ -1,12 +1,15 @@
 use crate::errors::AppError;
 use deadpool_redis::Pool;
-use redis::AsyncCommands;
+use once_cell::sync::OnceCell;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::any::TypeId;
+use std::sync::Arc;
+use redis::AsyncCommands;
+
 #[derive(Debug, Clone)]
 pub struct RedisTemplate {
-   pub pool: Pool,
+    pub pool: Pool,
 }
 
 impl RedisTemplate {
@@ -28,6 +31,11 @@ impl RedisTemplate {
             let _: () = conn.set(key.as_ref(), json_value).await?;
         }
         Ok(())
+    }
+    pub async fn exists(&self, key: impl AsRef<str> + redis::ToRedisArgs + std::marker::Send + std::marker::Sync) -> Result<bool, AppError> {
+        let mut conn = self.pool.get().await?;
+        let x = conn.exists(key).await?;
+        Ok(x)
     }
     //<'a, T>(s: &'a str)
 
@@ -81,26 +89,33 @@ impl RedisTemplate {
 
         // 检查 T 是否为 char 类型
         if TypeId::of::<T>() == TypeId::of::<char>() {
-            let result = data
-                .into_iter()
-                .map(|s| s.chars().next().ok_or(AppError::ConversionError))
-                .collect::<Result<Vec<char>, _>>()?;
+            let result = data.into_iter().map(|s| s.chars().next().ok_or(AppError::ConversionError)).collect::<Result<Vec<char>, _>>()?;
 
             // SAFETY: We have already checked that T == char
-            let result = unsafe {
-                std::mem::transmute::<Vec<char>, Vec<T>>(result)
-            };
+            let result = unsafe { std::mem::transmute::<Vec<char>, Vec<T>>(result) };
             Ok(result)
         } else {
             // 对于其他类型，进行 JSON 反序列化
-            let result = data
-                .into_iter()
-                .map(|s| serde_json::from_str(&s).map_err(AppError::from))
-                .collect::<Result<Vec<T>, _>>()?;
+            let result = data.into_iter().map(|s| serde_json::from_str(&s).map_err(AppError::from)).collect::<Result<Vec<T>, _>>()?;
             Ok(result)
         }
     }
+    pub fn init(pool: Pool) {
+        let instance = Self::new(pool);
+        SERVICE
+            .set(Arc::new(instance))
+            .expect("INSTANCE already initialized");
+    }
+
+    /// 获取单例
+    pub fn get() -> Arc<Self> {
+        SERVICE
+            .get()
+            .expect("INSTANCE is not initialized")
+            .clone()
+    }
 }
+static SERVICE: OnceCell<Arc<RedisTemplate>> = OnceCell::new();
 fn value_as_char<T: 'static>(value: &T) -> Option<char> {
     use std::any::TypeId;
     if TypeId::of::<T>() == TypeId::of::<char>() {

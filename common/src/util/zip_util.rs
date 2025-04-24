@@ -8,29 +8,19 @@ use std::fs::File;
 use std::path::Path;
 use walkdir::{DirEntry, WalkDir};
 
-fn zip_dir<T>(
-    it: &mut dyn Iterator<Item = DirEntry>,
-    prefix: &Path,
-    writer: T,
-    method: zip::CompressionMethod,
-) -> anyhow::Result<()>
+fn zip_dir<T>(it: &mut dyn Iterator<Item = DirEntry>, prefix: &Path, writer: T, method: zip::CompressionMethod) -> anyhow::Result<()>
 where
     T: Write + Seek,
 {
     let mut zip = zip::ZipWriter::new(writer);
-    let options = SimpleFileOptions::default()
-        .compression_method(method)
-        .unix_permissions(0o755);
+    let options = SimpleFileOptions::default().compression_method(method).unix_permissions(0o755);
 
     let prefix = Path::new(prefix);
     let mut buffer = Vec::new();
     for entry in it {
         let path = entry.path();
         let name = path.strip_prefix(prefix).unwrap();
-        let path_as_string = name
-            .to_str()
-            .map(str::to_owned)
-            .with_context(|| format!("{name:?} Is a Non UTF-8 Path"))?;
+        let path_as_string = name.to_str().map(str::to_owned).with_context(|| format!("{name:?} Is a Non UTF-8 Path"))?;
 
         if path.is_file() {
             zip.start_file(path_as_string, options)?;

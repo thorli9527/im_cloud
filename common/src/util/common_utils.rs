@@ -1,10 +1,8 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
-use std::fmt::format;
 use hex::encode;
 use std::time::{SystemTime, UNIX_EPOCH};
-
 
 use md5::{Digest, Md5};
 use serde::{Deserialize, Serialize};
@@ -18,15 +16,14 @@ where
     serde_json::from_value(serde_json::to_value(a).unwrap()).unwrap()
 }
 
-
-pub fn build_id() -> String {
+pub fn build_uuid() -> String {
     let uuid = Uuid::new_v4().simple();
     format!("{}", uuid)
 }
 
 pub fn build_snow_id() -> i64 {
     let mut generator = SafeSnowflake::new(1, 1);
-   return generator.generate() as i64;
+    return generator.generate() as i64;
 }
 pub fn build_md5(content: &str) -> String {
     let mut hasher = Md5::new();
@@ -35,15 +32,13 @@ pub fn build_md5(content: &str) -> String {
     let hex_string = encode(result);
     hex_string
 }
-pub fn build_md5_with_key(content: &str,key:&str) -> String {
+pub fn build_md5_with_key(content: &str, key: &str) -> String {
     let mut hasher = Md5::new();
-    hasher.update(format!("{},{}",content,key));
+    hasher.update(format!("{},{}", content, key));
     let result = hasher.finalize();
     let hex_string = encode(result);
     hex_string
 }
-
-
 
 pub struct SafeSnowflake {
     node_id: u64,
@@ -89,6 +84,10 @@ impl SafeSnowflake {
         ((timestamp & 0x1FFFFFFFFFF) << 12) // 41 bits
             | ((self.node_id & 0x1F) << 7)  // 5 bits
             | ((self.worker_id & 0x1F) << 2) // 5 bits
-            | (self.sequence & 0x03)         // 2 bits
+            | (self.sequence & 0x03) // 2 bits
     }
+}
+
+pub fn as_ref_to_string<T: AsRef<str>>(input: T) -> String {
+    input.as_ref().to_string()
 }

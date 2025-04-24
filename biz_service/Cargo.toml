@@ -6,11 +6,24 @@ edition = "2024"
 [dependencies]
 common={path = "../common"}
 actix-web.workspace = true
+actix-redis.workspace = true
 serde.workspace = true
 mongodb.workspace = true
 utoipa.workspace = true
 strum.workspace = true
 strum_macros.workspace = true
+fxhash.workspace = true
 chrono.workspace = true
 mongo_indexed_derive = { version = "2.0.0" }
 log = "0.4.27"
+async-trait = "0.1.88"
+anyhow = "1.0.97"
+once_cell.workspace = true
+deadpool-redis.workspace = true
+moka.workspace = true
+sha1.workspace = true
+redis.workspace = true
+redis-stream.workspace = true
+serde_json = "1.0.140"
+dashmap.workspace = true
+tokio.workspace = true

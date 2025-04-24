@@ -1,0 +1,346 @@
+syntax = "proto3";
+
+package protocol;
+
+message Message {
+    string message_id = 1;        // 消息唯一 ID
+    string sender_id = 2;         // 发送者用户 ID
+    string receiver_id = 3;       // 接收者用户 ID
+    int64 timestamp = 4;          // 消息时间戳（毫秒）
+    MessageType type = 5;         // 消息类型（第一个内容的主类型，可选）
+    ChatScene scene = 6;          // 会话类型（单聊/群聊）
+    repeated MessageContent contents = 10; // 支持多个内容段
+}
+
+message MessageContent {
+    oneof content {
+        TextMessage text = 1;           //文本
+        ImageMessage image = 2;         //图片
+        AudioMessage audio = 3;         //音频
+        VideoMessage video = 4;         //视频
+        LocationMessage location = 5;   //位置
+        FileMessage file = 6;           //文件
+        AVCallMessage av_call = 7;      //音视频通话
+        CustomMessage custom = 8;       //自定义消息
+        EmojiMessage emoji = 9;         //头像
+        RevokeMessage revoke = 10;      //撤回
+        ForwardMessage forward = 11;    //转发
+        QuoteMessage quote = 12;        //引用消息
+    }
+}
+
+
+// 会话类型枚举
+enum ChatScene {
+    CHAT_UNKNOWN = 0; // 未知
+    SINGLE = 1;       // 单聊
+    GROUP = 2;        // 群聊
+}
+
+// 消息类型枚举
+enum MessageType {
+    UNKNOWN = 0; // 未知类型
+    TEXT = 1; // 文本
+    IMAGE = 2; // 图片
+    AUDIO = 3; // 音频
+    VIDEO = 4; // 视频
+    LOCATION = 5; // 位置
+    FILE = 6; // 文件
+    AV_CALL = 7; // 音视频通话
+    NOTIFICATION = 8; // 通知类
+    SYSTEM = 9; // 系统类
+    REMINDER = 10; // 提醒
+    VOIP = 11; // 网络电话
+    CUSTOM = 12; // 自定义
+    EMOJI = 13; // 表情
+    SYSTEM_EVENT = 14; // 系统事件
+    REVOKE = 15; // 撤回消息
+    FORWARD = 16; // 转发消息
+    QUOTE = 17; // 引用消息
+}
+
+// 文本消息
+message TextMessage {
+    string text = 1; // 文本内容
+}
+
+// 图片消息
+message ImageMessage {
+    string url = 1; // 图片地址
+    int32 width = 2; // 宽度
+    int32 height = 3; // 高度
+    string thumbnail_url = 4; // 缩略图地址
+}
+
+// 音频消息
+message AudioMessage {
+    string url = 1; // 音频文件地址
+    int32 duration = 2; // 时长（秒）
+}
+
+// 视频消息
+message VideoMessage {
+    string url = 1; // 视频地址
+    int32 duration = 2; // 时长（秒）
+    int32 width = 3; // 宽度
+    int32 height = 4; // 高度
+    string thumbnail_url = 5; // 视频封面图地址
+}
+
+// 位置信息
+message LocationMessage {
+    double latitude = 1; // 纬度
+    double longitude = 2; // 经度
+    string address = 3; // 地址信息
+    string name = 4; // 地点名称
+}
+
+// 文件消息
+message FileMessage {
+    string file_name = 1; // 文件名
+    string url = 2; // 文件下载地址
+    int64 file_size = 3; // 文件大小（字节）
+    string file_type = 4; // 文件类型 MIME
+}
+
+// 音视频通话消息
+message AVCallMessage {
+    string call_id = 1; // 通话唯一标识
+    bool is_video = 2; // 是否为视频通话
+    CallStatus status = 3; // 通话状态
+    int32 duration = 4; // 通话时长（秒）
+}
+
+// 通话状态
+enum CallStatus {
+    CALLING = 0; // 呼叫中
+    ACCEPTED = 1; // 已接听
+    REJECTED = 2; // 已拒绝
+    MISSED = 3; // 未接听
+    ENDED = 4; // 已结束
+}
+
+
+// 系统消息类型枚举
+enum SystemMessageType {
+    SYS_UNKNOWN = 0; // 未知类型
+    SYS_MAINTENANCE = 1; // 系统维护
+    SYS_UPGRADE = 2; // 系统升级
+    SYS_ALERT = 3; // 警告提醒
+    SYS_NOTICE = 4; // 公告通知
+    SYS_USER_BLOCKED = 5; // 用户封禁
+    SYS_USER_RESTORED = 6; // 用户解封
+    SYS_SERVER_SHUTDOWN = 7; // 服务器下线
+}
+
+// 系统事件消息（扩展）
+message SystemEventMessage {
+    string event_type = 1; // 事件类型（如 user_banned, server_shutdown 等）
+    string description = 2; // 事件描述信息
+    map<string, string> details = 3; // 附加字段（键值对）
+}
+
+// 提醒类型消息（如代办、日程）
+message ReminderMessage {
+    string content = 1; // 提醒内容
+    int64 remind_time = 2; // 提醒时间戳（毫秒）
+}
+
+// 网络电话消息（如拨打记录）
+message VoipMessage {
+    string phone_number = 1; // 电话号码
+    bool incoming = 2; // 是否为来电
+    int32 duration = 3; // 通话时长（秒）
+    CallStatus status = 4; // 通话状态
+}
+
+// 自定义消息
+message CustomMessage {
+    string custom_type = 1; // 自定义类型标识
+    string json_payload = 2; // 自定义内容（JSON 字符串）
+}
+
+// 表情消息
+message EmojiMessage {
+    EmojiType emoji = 1; // 表情类型
+    string custom_emoji_url = 2; // 自定义表情图片地址，仅当 emoji = CUSTOM_EMOJI 时有效
+}
+
+// 撤回消息
+message RevokeMessage {
+    string target_message_id = 1; // 被撤回的消息 ID
+    string operator_id = 2; // 撤回操作者 ID
+    int64 revoke_time = 3; // 撤回时间戳（毫秒）
+}
+
+// 引用消息
+message QuoteMessage {
+    string quoted_message_id = 1; // 引用的消息 ID
+    string quoted_content_preview = 2; // 引用预览内容
+    string quote_text = 3; // 回复的内容
+}
+
+// 转发消息
+message ForwardMessage {
+    string original_message_id = 1; // 原始消息 ID
+    string original_sender_id = 2; // 原始发送者 ID
+    MessageType original_type = 3; // 原始消息类型
+    string summary = 4; // 原始内容摘要
+}
+
+
+// ===== 系统通知类消息结构 =====
+message SystemNotification {
+    string type = 1;        // 通知类型：login, logout, mute, group_update 等
+    string sender = 2;      // 发起方（系统或管理员）
+    string target = 3;      // 被操作对象（用户 ID 或群组 ID）
+    string content = 4;     // 文本内容或 JSON 描述
+    int64 timestamp = 5;    // 时间戳（毫秒）
+    map<string, string> meta = 6; // 扩展字段
+}
+
+
+// ===== 补充系统消息类型结构 =====
+
+// 已读回执（用于单聊或群聊）
+message ReadReceipt {
+    string msg_id = 1;               // 消息 ID
+    repeated string reader_ids = 2;  // 已读用户 ID 列表
+    int64 read_time = 3;             // 最早已读时间戳
+}
+
+// 正在输入通知
+message TypingNotice {
+    string from_user = 1;    // 谁在输入
+    string to_user = 2;      // 输入目标
+    bool is_typing = 3;      // 是否正在输入
+    int64 timestamp = 4;     // 时间戳
+}
+
+// 群成员变更消息
+message GroupMemberChange {
+    string group_id = 1;
+    string operator_id = 2;
+    repeated string affected_users = 3;
+    string change_type = 4;   // add / remove / mute / promote
+    int64 timestamp = 5;
+}
+
+// 群属性变更通知
+message GroupAttributeChange {
+    string group_id = 1;
+    string key = 2;
+    string old_value = 3;
+    string new_value = 4;
+    string operator_id = 5;
+    int64 timestamp = 6;
+}
+
+
+// 表情类型枚举
+enum EmojiType {
+    EMOJI_UNKNOWN = 0; // 未知表情
+    SMILE = 1; // 微笑
+    GRIN = 2; // 咧嘴笑
+    TEARS = 3; // 流泪
+    STUCK_OUT_TONGUE = 4; // 吐舌头
+    SCOWL = 5; // 生气
+    SHY = 6; // 害羞
+    SILENT = 7; // 沉默
+    HORROR = 8; // 惊恐
+    WRONGED = 9; // 委屈
+    CRAZY = 10; // 疯了
+    BEAUTIFUL = 11; // 花痴
+    SNOOZE = 12; // 困倦
+    SLEEP = 13; // 睡觉
+    PIG = 14; // 猪头
+    GOOD = 15; // 赞
+    THANKS = 16; // 感谢
+    STRONG = 17; // 强壮
+    WEAK = 18; // 虚弱
+    HANDSHAKE = 19; // 握手
+    VICTORY = 20; // 胜利
+    HEART = 21; // 爱心
+    BROKEN_HEART = 22; // 心碎
+    THUMBS_UP = 23; // 大拇指
+    THUMBS_DOWN = 24; // 倒拇指
+    CLAP = 25; // 鼓掌
+    QUESTION = 26; // 问号
+    EXCLAMATION = 27; // 感叹号
+    POOP = 28; // 便便
+    MOON = 29; // 月亮
+    SUN = 30; // 太阳
+    CAKE = 31; // 蛋糕
+    GIFT = 32; // 礼物
+    COFFEE = 33; // 咖啡
+    ROSE = 34; // 玫瑰
+    WILTED_ROSE = 35; // 凋谢的玫瑰
+    KISS = 36; // 亲吻
+    HUG = 37; // 拥抱
+    BOMB = 38; // 炸弹
+    KNIFE = 39; // 小刀
+    WATERMELON = 40; // 西瓜
+    BEER = 41; // 啤酒
+    CAR = 42; // 汽车
+    MONEY = 43; // 钱袋
+    LIGHTNING = 44; // 闪电
+    FIRE = 45; // 火焰
+    PRESENT = 46; // 礼品盒
+    MUSIC = 47; // 音乐
+    PHONE = 48; // 电话
+    CUSTOM_EMOJI = 1000; // 自定义表情（通过 URL 指定）
+}
+message Heartbeat {
+
+    int64 timestamp = 1; // 客户端发送时间（可选）
+}
+// 消息确认（ACK）消息
+message AckMessage {
+    string message_id = 1; // 被确认的消息 ID
+    int64 ack_timestamp = 3; // 确认时间戳（毫秒）
+}
+// 支持的设备类型（枚举）
+enum DeviceType {
+    DEVICE_UNKNOWN = 0;    // 默认未知
+    ANDROID = 1;    //安桌
+    IOS = 2;        //苹果
+    WEB = 3;        //WEB
+    DESKTOP = 4;    //桌面
+}
+// 客户端连接后发送的认证请求消息
+message AuthRequest {
+    string message_id = 1;
+    string token = 2;      // 用于身份验证的 token（或 API 密钥）
+    string client_id = 3;  // 客户端标识，可用于区分来源
+    DeviceType device_type = 4; //设备类型
+}
+
+// 服务端回复客户端的认证结果
+message AuthResponse {
+    string message_id = 1;
+    bool success = 2;      // 是否认证成功
+    string message = 3;    // 详细信息，例如错误原因或成功说明
+}
+enum EnvelopeType {
+    CLIENT_TO_SERVER = 0;
+    SERVER_TO_CLIENT = 1;
+    ACK = 2;
+}
+message Envelope {
+    string envelope_id = 1;                                 //封包唯一 ID（可用于链路追踪）
+    EnvelopeType type = 2;                                  //封包类型（决定方向/功能）
+    int64 timestamp = 3;                                    //封包发送时间戳（毫秒）
+    oneof payload {
+        AuthRequest auth_request = 4;                       //认证
+        AuthResponse auth_response = 5;                     //认证响应
+        Message message = 6;                                //聊天消息
+        ReadReceipt read_receipt = 7;                       //消息回执
+        SystemNotification system_notification = 8;         //系统消息
+        TypingNotice typing_notice = 9;                     //正在输入消息
+        GroupMemberChange group_member_change = 10;         //群成员变更消息
+        GroupAttributeChange group_attribute_change = 11;   //群属性变更通知
+        AckMessage ack = 12;                                //新增的 ACK 消息类型
+        Heartbeat heartbeat = 13;
+
+    }
+}
