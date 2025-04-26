@@ -5,7 +5,6 @@ pub mod country_service;
 pub mod user_service;
 pub mod group_service;
 pub mod group_member_service;
-pub mod group_operation_log_service;
 pub mod mq_group_application_service;
 pub mod mq_group_operation_log_service;
 pub mod mq_user_action_service;
@@ -19,7 +18,6 @@ pub fn init_service(db: Database) {
     client_service::ClientService::init(db.clone());
     country_service::CountryService::init(db.clone());
     group_member_service::GroupMemberService::init(db.clone());
-    group_operation_log_service::GroupOperationLogService::init(db.clone());
     group_service::GroupService::init(db.clone());
     user_service::UserService::init(db.clone());
     mq_group_application_service::GroupApplicationService::init(db.clone());

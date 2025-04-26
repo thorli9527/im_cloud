@@ -1,0 +1,43 @@
+use actix_web::{web, Responder};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use biz_service::biz_service::agent_service::AuthHeader;
+use biz_service::biz_service::group_service::GroupService;
+use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
+use biz_service::entitys::mq_group_operation_log::GroupOperationType;
+use common::errors::AppError;
+use common::errors::AppError::BizError;
+use crate::result::result;
+
+/// 转让群组请求体
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferGroupDto {
+    /// 群组 ID
+    pub group_id: String,
+
+    /// 新群主用户 ID
+    pub new_owner_id: String,
+}
+
+
+
+pub async fn group_transfer(
+    dto: web::Json<TransferGroupDto>,
+    auth_header: web::Header<AuthHeader>,
+) -> Result<impl Responder, AppError> {
+    // ✅ 签名校验
+    let (_agent, valid) = biz_service::biz_service::agent_service::AgentService::get()
+        .checksum_request(&*auth_header)
+        .await?;
+    if !valid {
+        return Err(BizError("signature.error".to_string()));
+    }
+
+    // ✅ 调用 GroupService 更新 creator_id
+    GroupService::get()
+        .transfer_ownership(&dto.group_id, &dto.new_owner_id)
+        .await?;
+    GroupOperationLogService::get().add_log(&*dto.group_id, &*dto.new_owner_id, None, GroupOperationType::Transfer).await?;
+    Ok(web::Json(result()))
+}

@@ -121,6 +121,10 @@ impl RedisUserManager {
             node_total,
             use_local_cache,
         };
+        
+        if !use_local_cache{
+            return manager
+        }
 
         let manager_clone = manager.clone();
         tokio::spawn(async move {
@@ -181,6 +185,19 @@ impl RedisUserManager {
             .map(|set| set.iter().map(|id| id.clone()).collect())
             .unwrap_or_default()
     }
+    pub async fn find_member(&self, group_id: &str, user_id: &str) -> Result<bool,AppError> {
+        if self.use_local_cache{
+            let local_has=self.local_group_map.get(group_id)
+                .map(|set| set.contains(user_id))
+                .unwrap_or(false);
+            if local_has{
+                return Ok(local_has);
+            }
+        }
+        let mut conn = self.redis_pool.get().await?;
+        let string = format!("group:{}", group_id);
+        Ok(conn.sismember(string, user_id).await?)
+    }
 
     // 设置用户上线（带事件广播）
     /// 设置用户上线（带事件广播，含设备类型）
@@ -223,9 +240,92 @@ impl RedisUserManager {
     pub async fn add_to_group(&self, group_id: &str, user_id: &str) -> Result<(), AppError> {
         let mut conn = self.redis_pool.get().await?;
         let _:()=conn.sadd(format!("group:{}", group_id), user_id).await?;
-        self.local_group_map.entry(group_id.to_string()).or_insert_with(DashSet::new).insert(user_id.to_string());
+        if self.use_local_cache {
+            self.local_group_map.entry(group_id.to_string()).or_insert_with(DashSet::new).insert(user_id.to_string());
+        }
         let payload = serde_json::to_string(&UserEvent::GroupJoin { group_id: group_id.to_string(), user_id: user_id.to_string() })?;
         let _:()=conn.xadd(STREAM_KEY, "*", &[("payload", &payload)]).await?;
+        Ok(())
+    }
+
+    /// 分页查询群组内成员列表
+    pub async fn list_group_members(
+        &self,
+        group_id: &str,
+        page: u64,
+        size: u64,
+    ) -> Result<Vec<String>, AppError> {
+        // 否则从 Redis
+        let mut conn = self.redis_pool.get().await?;
+        let key = format!("group:{}", group_id);
+        let all_members: Vec<String> = conn.smembers(&key).await.unwrap_or_default();
+        let start = ((page - 1) * size) as usize;
+        let end = (start + size as usize).min(all_members.len());
+
+        if start >= all_members.len() {
+            Ok(vec![])
+        } else {
+            Ok(all_members[start..end].to_vec())
+        }
+    }
+
+    /// 分页查询用户加入的群组列表
+    pub async fn list_user_groups(
+        &self,
+        user_id: &str,
+        page: u64,
+        size: u64,
+    ) -> Result<Vec<String>, AppError> {
+        let mut conn = self.redis_pool.get().await?;
+
+        let key = format!("user:{}:groups", user_id);
+
+        // 1. 拿到所有群组 ID
+        let group_ids: Vec<String> = conn.smembers(&key).await.unwrap_or_default();
+
+        if group_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // 2. 做本地分页
+        let start = ((page - 1) * size) as usize;
+        let end = (start + size as usize).min(group_ids.len());
+
+        if start >= group_ids.len() {
+            Ok(vec![])
+        } else {
+            Ok(group_ids[start..end].to_vec())
+        }
+    }
+
+    /// 解散群组（删除成员并广播事件）
+    pub async fn dismiss_group(&self, group_id: &str) -> Result<(), AppError> {
+        let mut conn = self.redis_pool.get().await?;
+
+        // 获取成员列表（从 Redis）
+        let members: Vec<String> = conn.smembers(format!("group:{}", group_id)).await.unwrap_or_default();
+
+        // 删除 Redis 中的群组 key
+        let _: () = conn.del(format!("group:{}", group_id)).await?;
+        if self.use_local_cache{
+            // 清理本地缓存
+            self.local_group_map.remove(group_id);
+        }
+        // 向每个成员广播 GroupLeave 事件（可选但推荐）
+        for user_id in &members {
+            let event = UserEvent::GroupLeave {
+                group_id: group_id.to_string(),
+                user_id: user_id.to_string(),
+            };
+            let payload = serde_json::to_string(&event)?;
+            let _: () = conn.xadd(STREAM_KEY, "*", &[("payload", &payload)]).await?;
+        }
+
+        println!("[RedisUserManager] 🧨 解散群组 {}，成员数: {}", group_id, members.len());
+
+        // 可选：写日志记录
+        // self.add_log(group_id, operator_user, None, GroupOperationType::Dismiss).await?;
+
         Ok(())
     }
 
@@ -233,8 +333,10 @@ impl RedisUserManager {
     pub async fn remove_from_group(&self, group_id: &str, user_id: &str) -> Result<(), AppError> {
         let mut conn = self.redis_pool.get().await?;
         let _:()=conn.srem(format!("group:{}", group_id), user_id).await?;
-        if let Some(mut group) = self.local_group_map.get_mut(group_id) {
-            group.remove(user_id);
+        if self.use_local_cache {
+            if let Some(mut group) = self.local_group_map.get_mut(group_id) {
+                group.remove(user_id);
+            }
         }
         let payload = serde_json::to_string(&UserEvent::GroupLeave { group_id: group_id.to_string(), user_id: user_id.to_string() })?;
         let _:()=conn.xadd(STREAM_KEY, "*", &[("payload", &payload)]).await?;
@@ -372,7 +474,7 @@ impl RedisUserManager {
                                             let _: RedisResult<()> = conn
                                                 .xack(STREAM_KEY, CONSUMER_GROUP, &[&entry.id])
                                                 .await;
-                                          
+
                                         }
                                         Err(e) => {
                                             eprintln!(

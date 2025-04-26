@@ -15,6 +15,7 @@ use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
+use biz_service::manager::user_manager::RedisUserManager;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Default)]
 #[serde(rename_all = "camelCase")]
@@ -112,3 +113,41 @@ pub async fn refresh(dto: web::Json<RefreshDto>, auth_header: web::Header<AuthHe
     client_service.dao.update(doc! {"_id":client.id}, up_doc).await?;
     Ok(web::Json(result()))
 }
+
+
+
+
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserGroupPageDto {
+    /// 用户 ID
+    pub user_id: String,
+
+    /// 页码（从 1 开始）
+    pub page: u64,
+
+    /// 每页大小
+    pub size: u64,
+}
+
+pub async fn user_group_page(
+    query: web::Json<UserGroupPageDto>,
+    auth_header: web::Header<AuthHeader>,
+) -> Result<impl Responder, AppError> {
+    // 1. 签名校验
+    let (_agent, valid) = biz_service::biz_service::agent_service::AgentService::get()
+        .checksum_request(&*auth_header)
+        .await?;
+    if !valid {
+        return Err(BizError("signature.error".to_string()));
+    }
+
+    // 2. 查询
+    let group_list = RedisUserManager::get()
+        .list_user_groups(&query.user_id, query.page, query.size)
+        .await?;
+
+    // 3. 返回
+    Ok(web::Json(result_data(group_list)))
+}
+
