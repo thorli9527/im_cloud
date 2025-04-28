@@ -21,9 +21,6 @@ pub struct GroupMember {
     /// 群内昵称（可选）
     pub alias: Option<String>,
 
-    /// 禁言截止时间（Unix 毫秒时间戳，可为空）
-    pub mute_until: Option<i64>,
-
     /// 是否禁言（true 禁言 / false 正常）
     pub mute: bool,
 

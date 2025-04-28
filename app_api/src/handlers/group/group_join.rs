@@ -55,7 +55,6 @@ pub async fn group_join(dto: web::Json<GroupJoinDto>, auth_header: web::Header<A
         user_id: dto.user_id.clone(),
         role: GroupRole::Member,
         alias: dto.alias.clone(),
-        mute_until: None,
         mute:false,
         create_time: now,
         update_time: now,

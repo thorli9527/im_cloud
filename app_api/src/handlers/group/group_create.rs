@@ -72,7 +72,6 @@ pub async fn create_group(dto: web::Json<CreateGroupDto>, auth_header: web::Head
         role: GroupRole::Owner,
         alias: None,
         mute:false,
-        mute_until: None,
         create_time: now,
         update_time: now,
     };
@@ -90,7 +89,6 @@ pub async fn create_group(dto: web::Json<CreateGroupDto>, auth_header: web::Head
             role: GroupRole::Member,
             alias: None,
             mute:false,
-            mute_until: None,
             create_time: now,
             update_time: now,
         };

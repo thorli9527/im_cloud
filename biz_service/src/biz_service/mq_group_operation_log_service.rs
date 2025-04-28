@@ -19,7 +19,7 @@ impl GroupOperationLogService {
         let collection = db.collection("group_operation_log");
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
-  
+
     fn build(&self, group_id: impl AsRef<str>, user_id: impl AsRef<str>, operator_id: Option<String>) -> GroupOperationLog {
         let mut log = GroupOperationLog::default();
         log.group_id = as_ref_to_string(group_id);
@@ -47,23 +47,6 @@ impl GroupOperationLogService {
         self.dao.insert(&action_log).await?;
         Ok(())
     }
-    pub async fn add_log_expired_at(&self, group_id: impl AsRef<str>, user_id: impl AsRef<str>, operator_user: Option<String>, action: GroupOperationType,expired_at:Option<i64>) -> Result<(), AppError> {
-        let mut action_log = self.build(group_id, user_id, operator_user);
-        action_log.action = action;
-        match action {
-            GroupOperationType::Mute => {
-                if let Some(end_time) =expired_at {
-                    let mut map = HashMap::new();
-                    map.insert("expired_at".to_string(), end_time.to_string());
-                    action_log.extra_data = Some(map);
-                }
-            }
-            _ => {}
-        }
-        self.dao.insert(&action_log).await?;
-        Ok(())
-    }
-
 
     pub fn init(db: Database) {
         let instance = Self::new(db);
