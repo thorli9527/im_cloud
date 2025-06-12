@@ -1,8 +1,7 @@
-use actix_web::{web, Responder};
-use serde::{Deserialize, Serialize};
-use serde_json::json;
-use utoipa::ToSchema;
-use biz_service::biz_service::agent_service::{AgentService, AuthHeader};
+use crate::handlers::common_handler::status;
+use crate::result::result;
+use actix_web::{web, HttpRequest, Responder};
+use biz_service::biz_service::agent_service::{build_header, AgentService, AuthHeader};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::entitys::group_entity::GroupInfo;
@@ -11,8 +10,12 @@ use common::errors::AppError;
 use common::errors::AppError::BizError;
 use common::repository_util::Repository;
 use common::util::date_util::now;
-use crate::result::result;
-
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use utoipa::ToSchema;
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(status);
+}
 /// 创建群组请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -36,9 +39,9 @@ pub struct CreateGroupDto {
 }
 
 ///// 创建群组接口（签名验证 + 防重复创建）
-pub async fn create_group(dto: web::Json<CreateGroupDto>, auth_header: web::Header<AuthHeader>) -> Result<impl Responder, AppError> {
-    // ✅ 1. 签名验证
-    let (agent, check_state) = AgentService::get().checksum_request(&*auth_header).await?;
+pub async fn create_group(dto: web::Json<CreateGroupDto>,   req: HttpRequest) -> Result<impl Responder, AppError> {
+    let auth_header = build_header(req);
+    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
     if !check_state {
         return Err(BizError("signature.error".to_string()));
     }

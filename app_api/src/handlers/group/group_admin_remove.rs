@@ -1,14 +1,17 @@
-use actix_web::{web, Responder};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-use biz_service::biz_service::agent_service::AuthHeader;
+use crate::handlers::common_handler::status;
+use crate::result::result;
+use actix_web::{web, HttpRequest, Responder};
+use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use common::errors::AppError;
 use common::errors::AppError::BizError;
-use crate::result::result;
-
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(status);
+}
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoveAdminDto {
@@ -21,16 +24,12 @@ pub struct RemoveAdminDto {
 
 pub async fn remove_admin_group(
     dto: web::Json<RemoveAdminDto>,
-    auth_header: web::Header<AuthHeader>,
-) -> Result<impl Responder, AppError> {
-    // 签名校验
-    let (_agent, valid) = biz_service::biz_service::agent_service::AgentService::get()
-        .checksum_request(&*auth_header)
-        .await?;
-    if !valid {
+    req: HttpRequest) -> Result<impl Responder, AppError> {
+    let auth_header = build_header(req);
+    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
+    if !check_state {
         return Err(BizError("signature.error".to_string()));
     }
-
     // 调用 Service 取消管理员
     GroupMemberService::get()
         .remove_admin(&dto.group_id, &dto.user_id)

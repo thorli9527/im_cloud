@@ -1,15 +1,17 @@
-use actix_web::{web, Responder};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-use biz_service::biz_service::agent_service::{AgentService, AuthHeader};
+use crate::result::{result, AppState};
+use actix_web::{web, HttpRequest, Responder};
+use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use common::errors::AppError;
 use common::errors::AppError::BizError;
 use common::repository_util::Repository;
-use crate::result::result;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+pub fn configure(cfg: &mut web::ServiceConfig, state: &web::Data<AppState>) {
 
+}
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SetGroupMuteDto {
@@ -18,9 +20,10 @@ pub struct SetGroupMuteDto {
 }
 
 /// 设置群组全体禁言状态
-pub async fn set_group_mute(dto: web::Json<SetGroupMuteDto>, auth_header: web::Header<AuthHeader>) -> Result<impl Responder, AppError> {
-    let (_agent, valid) = AgentService::get().checksum_request(&*auth_header).await?;
-    if !valid {
+pub async fn set_group_mute(dto: web::Json<SetGroupMuteDto>,   req: HttpRequest) -> Result<impl Responder, AppError> {
+    let auth_header = build_header(req);
+    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
+    if !check_state {
         return Err(BizError("signature.error".to_string()));
     }
     let group_service = GroupService::get();

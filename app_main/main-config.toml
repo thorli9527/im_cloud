@@ -1,6 +1,6 @@
 [database]
 url = "mongodb://localhost:27017"
-db_name="oss"
+db_name="im_cloud"
 [redis]
 url="redis://127.0.0.1:6379/"
 [server]

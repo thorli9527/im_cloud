@@ -1,12 +1,10 @@
 use crate::errors::AppError;
-use deadpool_redis::Pool;
+use deadpool_redis::{redis::AsyncCommands, Pool};
 use once_cell::sync::OnceCell;
-use redis::AsyncCommands;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::any::TypeId;
 use std::sync::Arc;
-
 #[derive(Debug, Clone)]
 pub struct RedisTemplate {
     pub pool: Pool,
@@ -34,7 +32,7 @@ impl RedisTemplate {
     }
     pub async fn exists(&self, key: impl AsRef<str> + redis::ToRedisArgs + std::marker::Send + std::marker::Sync) -> Result<bool, AppError> {
         let mut conn = self.pool.get().await?;
-        let x = conn.exists(key).await?;
+        let x = conn.exists(key.as_ref()).await?;
         Ok(x)
     }
     //<'a, T>(s: &'a str)

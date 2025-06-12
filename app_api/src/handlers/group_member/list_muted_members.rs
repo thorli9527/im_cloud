@@ -1,6 +1,6 @@
-use actix_web::{get, web, Responder};
-use mongodb::bson::doc;
-use biz_service::biz_service::agent_service::{AgentService, AuthHeader};
+use crate::result::{result, result_data, AppState};
+use actix_web::{get, web, HttpRequest, Responder};
+use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
@@ -10,8 +10,10 @@ use common::errors::AppError::BizError;
 use common::repository_util::Repository;
 use common::util::common_utils::as_ref_to_string;
 use common::util::date_util::now;
-use crate::result::{result, result_data};
+use mongodb::bson::doc;
+pub fn configure(cfg: &mut web::ServiceConfig, state: &web::Data<AppState>) {
 
+}
 /// 查询群组内被禁言的成员列表
 #[get("/group/mute/member/list/{group_id}")]
 pub async fn list_muted_members(
@@ -30,10 +32,10 @@ pub async fn list_muted_members(
 /// 取消群组全体禁言
 pub async fn cancel_group_mute(
     group_id: web::Path<String>,
-    auth_header: web::Header<AuthHeader>
-) -> Result<impl Responder, AppError> {
-    let (_agent, valid) = AgentService::get().checksum_request(&*auth_header).await?;
-    if !valid {
+    req: HttpRequest) -> Result<impl Responder, AppError> {
+    let auth_header = build_header(req);
+    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
+    if !check_state {
         return Err(BizError("signature.error".to_string()));
     }
     GroupService::get()

@@ -49,6 +49,24 @@ impl ClientService {
             (_) => return Ok(ClientInfo::default()),
         }
     }
+
+    pub async fn exit_by_user_id(&self, user_id: impl AsRef<str>) -> Result<ClientInfo, AppError> {
+        let result = self.dao.find_one(doc! {"user_id":as_ref_to_string(user_id)}).await?;
+        match result {
+            Some(mut client) => {
+                match client.message_expired_at {
+                    Some(end_time)=>{
+                        if end_time>now(){
+                            client.message_status=true;
+                        }
+                    }
+                    (_)=>{}
+                }
+                return Ok(client);
+            }
+            (_) => return Ok(ClientInfo::default()),
+        }
+    }
     
     pub async fn enable_message(&self, id: impl AsRef<str>)->Result<(), AppError>{
         let object_id = ObjectId::parse_str(as_ref_to_string(id)).unwrap();

@@ -2,11 +2,11 @@
 resolver = "2"
 members = ["common", "biz_service", "app_api", "app_job", "app_main", "macro", "app_socket"]
 [workspace.dependencies]
-actix-web = { version = "4.10.2" }
+actix-web = { version = "4.11.0" }
 actix-service = { version = "2.0.3" }
 actix-files = { version = "0.6.6" }
 actix-redis = { version = "0.13.0" }
-chrono = { version = "0.4.40" }
+chrono = { version = "0.4.41" }
 config = { version = "0.15.11" }
 log = { version = "0.4.27" }
 mongodb = { version = "3.2.3", features = ["sync"] }
@@ -18,7 +18,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 redis = { version = "0.29.5", features = ["tokio-comp"] }
 redis-stream={version = "0.1.2"}
 deadpool-redis = { version = "0.20.0", features = ["tokio-comp"] }
-tokio = { version = "1.44.2", features = ["full"] }
+tokio = { version = "1.45.1", features = ["full"] }
 fxhash = { version = "0.2.1" }
 async-trait = { version = "0.1.88" }
 quote = { version = "1.0.40" }

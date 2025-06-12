@@ -107,7 +107,7 @@ pub async fn auth_info() -> Result<LoginSessionDto, AppError> {
     // if (result.is_some()) {
     //     return Ok(result.unwrap());
     // }
-    return Err(AppError::Unauthorized);
+    return Err(AppError::Unauthorized("auth_error".to_string()));
 }
 #[utoipa::path(
     post,

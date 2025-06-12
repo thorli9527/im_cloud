@@ -95,6 +95,7 @@ where
         return Ok(value);
     }
 
+
     async fn query_all(&self) -> Result<Vec<T>> {
         let mut cursor = self.collection.find(doc! {}).await?;
         let mut result = Vec::<T>::new();
@@ -189,6 +190,7 @@ where
         self.collection.update_one(filter, update).await?;
        return Ok(());
     }
+
 }
 
 fn transform_doc_id(mut doc: Document) -> Document {

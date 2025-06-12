@@ -1,6 +1,5 @@
-use crate::handlers::agent_handler::*;
-use crate::handlers::auth_handler::*;
 use crate::handlers::common_handler::*;
+use crate::handlers::user_contoller::*;
 use crate::result::ApiResponse;
 use actix_web::{get, web, HttpResponse, Responder};
 use biz_service::entitys::agent_entity::AgentInfo;
@@ -10,20 +9,13 @@ use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        auth_login,
-        agent_list,
-        agent_refresh_secret,
-        agent_create,
-        agent_active,
-        agent_refresh_end_time,
         status,
+        build_user,
     ),
     components(schemas(
         PageResult<AgentInfo>,
         ApiResponse<String>,
         AgentInfo,
-        AgentInfoDto,
-        AgentKeyDto,
     )),
     tags(
         (name = "登录", description = "Example endpoints")

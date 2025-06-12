@@ -1,5 +1,7 @@
-use actix_web::{web, Responder};
-use biz_service::biz_service::agent_service::{AgentService, AuthHeader};
+use crate::handlers::common_handler::status;
+use crate::result::result;
+use actix_web::{web, HttpRequest, Responder};
+use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
@@ -8,12 +10,14 @@ use biz_service::manager::user_manager::RedisUserManager;
 use common::errors::AppError;
 use common::errors::AppError::BizError;
 use common::repository_util::Repository;
-use crate::result::result;
-
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(status);
+}
 /// 解散群组接口（签名验证 + 防重复解散）
-pub async fn group_dismiss(group_id: web::Path<String>, auth_header: web::Header<AuthHeader>) -> Result<impl Responder, AppError> {
-    let (_agent, valid) = AgentService::get().checksum_request(&*auth_header).await?;
-    if !valid {
+pub async fn group_dismiss(group_id: web::Path<String>,  req: HttpRequest) -> Result<impl Responder, AppError> {
+    let auth_header = build_header(req);
+    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
+    if !check_state {
         return Err(BizError("signature.error".to_string()));
     }
     let group_service = GroupService::get();
