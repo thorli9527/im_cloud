@@ -63,6 +63,11 @@ pub enum AppError {
     ConversionError,
     
 }
+impl From<anyhow::Error> for AppError {
+    fn from(e: anyhow::Error) -> Self {
+        AppError::Internal(e.to_string())
+    }
+}
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
         let (status, msg) = match self {

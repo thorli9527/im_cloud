@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
     let pool = build_redis_pool(&config);
     let db = init_mongo_db(&config).await;
     biz_service::init_service(db);
-    biz_service::manager::init(pool,config.cache.node_id,config.cache.node_total,true);
+    biz_service::manager::init(pool,true);
     let manager: Arc<SocketManager> = get_socket_manager();
     tokio::spawn(manager::job_manager::start_heartbeat_cleaner(manager, 30)); // 30秒无心跳视为断线
     loop {

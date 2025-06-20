@@ -5,7 +5,6 @@ use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use common::errors::AppError;
-use common::errors::AppError::BizError;
 use common::repository_util::Repository;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -27,18 +26,16 @@ pub struct MuteMemberDto {
     pub mute: bool,
 
 }
-pub async fn mute_member_add(dto: web::Json<MuteMemberDto>,   req: HttpRequest) -> Result<impl Responder, AppError> {
+pub async fn mute_member_add(dto: web::Json<MuteMemberDto>,  
+                             req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
-    if !check_state {
-        return Err(BizError("signature.error".to_string()));
-    }
+    let agent= AgentService::get().check_request(auth_header).await?;
     let mut update_doc=doc! {};
     if dto.mute {
         update_doc.insert("mute", true);
     }
 
     GroupMemberService::get().dao.update(doc! {"group_id":&*dto.group_id,"user_id":&*dto.user_id}, update_doc).await?;
-    GroupOperationLogService::get().add_log(&*dto.group_id, &*dto.user_id, None, GroupOperationType::Mute).await?;
+    GroupOperationLogService::get().add_log(&agent.id,&*dto.group_id, &*dto.user_id, None, GroupOperationType::Mute).await?;
     Ok(web::Json(result()))
 }

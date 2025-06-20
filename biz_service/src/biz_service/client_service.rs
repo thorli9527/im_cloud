@@ -1,12 +1,10 @@
-use crate::biz_const::redis_const::CLIENT_TOKEN_KEY;
 use crate::entitys::client_entity::ClientInfo;
-use common::errors::AppError;
-use common::redis::redis_template::RedisTemplate;
+use crate::manager::common::{DeviceType, UserId};
+use crate::manager::user_redis_manager::{UserManager, UserManagerOpt};
+use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
-use common::util::common_utils::as_ref_to_string;
 use common::util::date_util::now;
 use mongodb::bson::doc;
-use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
@@ -21,79 +19,64 @@ impl ClientService {
         let collection = db.collection("user_profile");
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
-    pub async fn new_data(&self, agent_id: String, user_id: String, name: String, avatar: Option<String>) -> Result<ClientInfo, AppError> {
+    pub async fn new_data(&self, agent_id: String, user_id: &UserId, name: String, avatar: Option<String>) -> Result<ClientInfo> {
         let mut user = ClientInfo::default();
         user.agent_id = agent_id;
         user.name = name;
         user.avatar_url = avatar;
         user.enable = true;
-        user.user_id = user_id;
+        user.user_id = user_id.to_string();
+        user.agent_id_user_id = format!("{}_{}", user.agent_id, user.user_id);
         self.dao.insert(&user).await?;
         Ok(user)
     }
 
-    pub async fn find_by_user_id(&self, user_id: impl AsRef<str>) -> Result<ClientInfo, AppError> {
-        let result = self.dao.find_one(doc! {"user_id":as_ref_to_string(user_id)}).await?;
-        match result {
-            Some(mut client) => {
-                match client.message_expired_at {  
-                    Some(end_time)=>{
-                        if end_time>now(){
-                            client.message_status=true;
-                        }
-                    }
-                    (_)=>{}
-                }
-                return Ok(client);
-            }
-            (_) => return Ok(ClientInfo::default()),
-        }
+    pub async fn find_by_user_id(&self, agent_id: impl AsRef<str>, user_id: &UserId) -> Result<Option<ClientInfo>> {
+        let option = UserManager::get().get_user_info(agent_id.as_ref(), user_id).await?;
+        Ok(option.map(|mut client| {
+            client.message_status = matches!(client.message_expired_at, Some(end) if end > now());
+            client
+        }))
     }
 
-    pub async fn exit_by_user_id(&self, user_id: impl AsRef<str>) -> Result<ClientInfo, AppError> {
-        let result = self.dao.find_one(doc! {"user_id":as_ref_to_string(user_id)}).await?;
-        match result {
-            Some(mut client) => {
-                match client.message_expired_at {
-                    Some(end_time)=>{
-                        if end_time>now(){
-                            client.message_status=true;
-                        }
-                    }
-                    (_)=>{}
-                }
-                return Ok(client);
-            }
-            (_) => return Ok(ClientInfo::default()),
-        }
-    }
-    
-    pub async fn enable_message(&self, id: impl AsRef<str>)->Result<(), AppError>{
-        let object_id = ObjectId::parse_str(as_ref_to_string(id)).unwrap();
-        let filter = doc! {"_id":object_id};
+    pub async fn enable_message(&self, agent_id: &str, user_id: &UserId, status: bool) -> Result<()> {
+        let key = format!("{}_:{}", agent_id, user_id);
+        let filter = doc! {"agent_id_user_id":key};
         let update = doc! {
             "$unset": {
                 "message_expired_at": ""
             },
              "$set": {
-                "message_status": false
+                "message_status": status
             }
         };
         self.dao.collection.update_one(filter, update).await?;
+        let user_manager = UserManager::get();
+        let option = user_manager.get_user_info(agent_id.as_ref(), user_id).await?;
+        if let Some(mut client) = option {
+            client.message_expired_at = None;
+            client.message_status = status;
+            user_manager.sync_user(client).await?
+        }
         Ok(())
     }
 
-    pub async fn verify_token(&self, token: impl AsRef<str> + std::fmt::Display) -> Result<bool, AppError> {
-        let redis_service = RedisTemplate::get();
-        let key = format!("{} {}", CLIENT_TOKEN_KEY, token);
-        let exists = redis_service.exists(key).await?;
-        return Ok(exists);
+    pub async fn verify_token(&self, token: &str) -> Result<bool> {
+         Ok(UserManager::get().verify_token(token).await?)
     }
-    pub async fn find_client_by_token(&self, token: impl AsRef<str> + std::fmt::Display) -> Result<ClientInfo, AppError> {
-        let redis_service = RedisTemplate::get();
-        let key = format!("{} {}", CLIENT_TOKEN_KEY, token);
-        let result = redis_service.get_key_value::<ClientInfo>(key).await?;
-        return Ok(result);
+
+    pub async fn lock(&self,agent_id: &str, user_id: &UserId){
+        
+    }
+    
+    pub async fn build_token(&self,agent_id: &str, user_id: &UserId,device_type: DeviceType) -> Result<()> {
+        let user_manager = UserManager::get();
+        user_manager.build_token(agent_id,user_id,device_type).await?;
+        Ok(())
+    }
+    pub async fn find_client_by_token(&self, token: &str) -> Result<Option<ClientInfo>> {
+        let user_manager = UserManager::get();
+        Ok(user_manager.find_user_by_token(token).await?)
     }
     pub fn init(db: Database) {
         let instance = Self::new(db);

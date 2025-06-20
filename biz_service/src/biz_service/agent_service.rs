@@ -1,6 +1,8 @@
 use crate::biz_service::cache_service::get_agent_cache;
 use crate::entitys::agent_entity::AgentInfo;
+use crate::manager::common::DeviceType;
 use actix_web::HttpRequest;
+use anyhow::Result;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
 use mongodb::bson::doc;
@@ -8,9 +10,9 @@ use mongodb::Database;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
+use std::str::FromStr;
 use std::sync::Arc;
 use utoipa::ToSchema;
-
 
 #[derive(Debug)]
 pub struct AgentService {
@@ -25,7 +27,7 @@ impl AgentService {
         service
     }
 
-    pub async fn find_by_app_key(&self, app_key: impl AsRef<str> + Clone) -> Result<AgentInfo, AppError> {
+    pub async fn find_by_app_key(&self, app_key: impl AsRef<str> + Clone) -> Result<AgentInfo> {
         let cache = get_agent_cache();
         if let Some(agent) = cache.get(app_key.as_ref()) {
             return Ok(agent);
@@ -44,17 +46,17 @@ impl AgentService {
         format!("{:x}", hasher.finalize())
     }
 
-    pub async fn check_request(&self,auth_header:Option<AuthHeader>)->Result<(AgentInfo,bool),AppError>{
+    pub async fn check_request(&self,auth_header:Option<AuthHeader>)->anyhow::Result<AgentInfo>{
         if auth_header.is_none() {
-            return Err(AppError::BizError("signature.error".to_string()));
+            return Err(AppError::BizError("signature.error".to_string()).into());
         }
         let auth_header = auth_header.unwrap();
         let agent = self.find_by_app_key(&auth_header.app_key).await?;
         let signature = self.generate_checksum(&agent.app_secret, &auth_header.nonce, auth_header.timestamp);
         if signature != auth_header.signature {
-            return Ok((agent,false));
+            return Err(AppError::BizError("signature.error".to_string()).into());
         }
-        Ok((agent,true))
+        Ok(agent)
     }
     
     /// 初始化单例（仅运行一次）
@@ -76,13 +78,14 @@ impl AgentService {
 static AGENT_SERVICE: OnceCell<Arc<AgentService>> = OnceCell::new();
 
 
-#[derive(Debug, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Serialize, Deserialize, ToSchema, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthHeader {
     pub app_key: String,
     pub nonce: String,
     pub timestamp: i64,
     pub signature: String,
+    pub device_type: DeviceType,
 }
 
 pub fn build_header(req: HttpRequest) -> Option<AuthHeader> {
@@ -90,11 +93,13 @@ pub fn build_header(req: HttpRequest) -> Option<AuthHeader> {
     let nonce = req.headers().get("nonce")?.to_str().ok()?.to_string();
     let timestamp = req.headers().get("timestamp")?.to_str().ok()?.parse().ok()?;
     let signature = req.headers().get("signature")?.to_str().ok()?.to_string();
+    let device_type = req.headers().get("deviceType")?.to_str().ok()?.to_string();
 
     Some(AuthHeader {
         app_key,
         nonce,
         timestamp,
         signature,
+        device_type:DeviceType::from_str(&device_type).unwrap()
     })
 }

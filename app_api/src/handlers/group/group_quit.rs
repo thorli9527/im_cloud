@@ -1,16 +1,13 @@
 use crate::handlers::common_handler::status;
-use crate::result::result;
-use actix_web::{web, HttpRequest, Responder};
+use crate::result::{result, ApiResponse};
+use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
-use biz_service::biz_service::group_member_service::GroupMemberService;
-use biz_service::biz_service::group_service::GroupService;
-use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
-use biz_service::entitys::mq_group_operation_log::GroupOperationType;
-use biz_service::manager::user_manager::RedisUserManager;
+use biz_service::manager::group_redis_manager::{GroupManager, GroupManagerOpt};
 use common::errors::AppError;
 use common::errors::AppError::BizError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(status);
 }
@@ -27,32 +24,36 @@ pub struct GroupQuitDto {
     pub group_id: String,
 }
 /// 退出群组接口（签名验证 + 防重复退出）
-pub async fn group_quit(dto: web::Json<GroupQuitDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
+#[utoipa::path(
+    post,
+    path = "/group/quit",
+    request_body = GroupQuitDto,
+    summary = "退出群组",
+    params(
+        ("appKey" = String, Header, description = "应用 key"),
+        ("nonce" = String, Header, description = "随机字符串"),
+        ("timestamp" = i64, Header, description = "时间戳"),
+        ("signature" = String, Header, description = "签名")
+    ),
+    responses(
+        (status = 200, description = "群组解散成功", body = ApiResponse<String>)
+    )
+)]
+#[post("/group/quit")]
+pub async fn group_quit(dto: web::Json<GroupQuitDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
-    if !check_state {
-        return Err(BizError("signature.error".to_string()));
-    }
-    let group_service = GroupService::get();
+    let agent = AgentService::get().check_request(auth_header).await?;
+    let group_manager = GroupManager::get();
 
-    let info = group_service.find_by_group_id(&*dto.group_id).await;
-    if info.is_err(){
+    let info = group_manager.get_group_info(&*dto.group_id).await?;
+    if info.is_none() {
         return Err(BizError("group.not.found".to_string()));
     }
-    if let Ok(group) = info {
-        if group.creator_id != dto.user_id {
-            return Err(BizError("user.group.owner".to_string()));
-        }
+    // 检查用户是否是群主
+    let info = info.unwrap();
+    if info.owner_id != dto.user_id {
+        return Err(BizError("user.group.owner".to_string()));
     }
-
-    let member_service = GroupMemberService::get();
-
-    let redis_user_manager = RedisUserManager::get();
-    redis_user_manager.remove_from_group(&dto.group_id, &dto.user_id).await?;
-
-
-    member_service.remove(&dto.group_id, &dto.user_id).await?;
-    //发送消息
-    GroupOperationLogService::get().add_log(&dto.group_id, &dto.user_id, None, GroupOperationType::Quit).await?;
+    group_manager.remove_user_from_group(&dto.group_id, &dto.user_id).await?;
     Ok(web::Json(result()))
 }

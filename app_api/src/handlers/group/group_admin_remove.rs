@@ -1,12 +1,11 @@
 use crate::handlers::common_handler::status;
-use crate::result::result;
-use actix_web::{web, HttpRequest, Responder};
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use crate::result::{ApiResponse, result};
+use actix_web::{HttpRequest, Responder, web, post};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use common::errors::AppError;
-use common::errors::AppError::BizError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -22,18 +21,32 @@ pub struct RemoveAdminDto {
     pub user_id: String,
 }
 
-pub async fn remove_admin_group(
-    dto: web::Json<RemoveAdminDto>,
-    req: HttpRequest) -> Result<impl Responder, AppError> {
+#[utoipa::path(
+    post,
+    path = "/group/admin/remove",
+    request_body = RemoveAdminDto,
+    summary = "取消群组管理员",
+    params(
+        ("appKey" = String, Header, description = "应用 key"),
+        ("nonce" = String, Header, description = "随机字符串"),
+        ("timestamp" = i64, Header, description = "时间戳"),
+        ("signature" = String, Header, description = "签名")
+    ),
+    responses(
+         (status = 200, description = "Hello response", body = ApiResponse<String>)
+    )
+)]
+#[post("/group/admin/remove")]
+pub async fn remove_admin_group(dto: web::Json<RemoveAdminDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
-    if !check_state {
-        return Err(BizError("signature.error".to_string()));
-    }
-    // 调用 Service 取消管理员
-    GroupMemberService::get()
-        .remove_admin(&dto.group_id, &dto.user_id)
-        .await?;
-    GroupOperationLogService::get().add_log(&*dto.group_id, &*dto.user_id, None, GroupOperationType::Demote).await?;
+    let agent = AgentService::get().check_request(auth_header).await?;
+
+    let group_id = &dto.group_id;
+    let user_id = &dto.user_id;
+
+    GroupMemberService::get().remove_admin(group_id, user_id).await?;
+
+    GroupOperationLogService::get().add_log(&agent.id, group_id, user_id, None, GroupOperationType::Demote).await?;
+
     Ok(web::Json(result()))
 }

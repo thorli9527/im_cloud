@@ -28,7 +28,7 @@ async fn main() -> std::io::Result<()> {
     let db = init_mongo_db(&app_state.config).await;
     let pool = build_redis_pool(&app_state.config);
     biz_service::init_service(db);
-    manager::init(pool,0,0,false);
+    manager::init(pool,false);
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())

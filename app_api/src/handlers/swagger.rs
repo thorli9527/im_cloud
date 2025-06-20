@@ -10,7 +10,7 @@ use utoipa::OpenApi;
 #[openapi(
     paths(
         status,
-        build_user,
+        user_create,
     ),
     components(schemas(
         PageResult<AgentInfo>,

@@ -1,7 +1,13 @@
 use deadpool_redis::Pool;
 
 pub mod user_manager;
+pub mod user_redis_manager;
+pub mod group_redis_manager;
+pub mod common;
+pub mod local_group_manager;
 
-pub fn init(pool: Pool,node_id: usize, node_total: usize,use_local_cache: bool) {
-    user_manager::RedisUserManager::new(pool,node_id,node_total,use_local_cache);
+pub fn init(pool: Pool, use_local_cache: bool) {
+    local_group_manager::LocalGroupManager::new();
+    user_redis_manager::UserManager::new(pool.clone(),use_local_cache);
+    group_redis_manager::GroupManager::new(pool.clone(), use_local_cache);
 }

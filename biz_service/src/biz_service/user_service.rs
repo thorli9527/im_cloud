@@ -3,7 +3,6 @@ use common::repository_util::BaseRepository;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-
 #[derive(Debug)]
 pub struct UserService {
     pub dao: BaseRepository<UserInfo>,

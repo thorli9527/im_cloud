@@ -9,6 +9,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 #[utoipa::path(
     get,
     path = "/status",
+    tag = "Common",
+    summary = "Get the status of the service",
     responses(
         (status = 200, description = "Hello response", body = String)
     )

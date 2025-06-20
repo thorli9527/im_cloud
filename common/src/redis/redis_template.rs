@@ -1,9 +1,10 @@
 use crate::errors::AppError;
+use deadpool_redis::redis;
 use deadpool_redis::{redis::AsyncCommands, Pool};
 use once_cell::sync::OnceCell;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use std::any::TypeId;
+use std::any::{Any, TypeId};
 use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct RedisTemplate {
@@ -15,18 +16,30 @@ impl RedisTemplate {
         Self { pool }
     }
 
-    pub async fn set_key_value<T>(&self, key: impl AsRef<str>, value: T) -> Result<(), AppError>
+    pub async fn set_key_value<T>(&self, key: impl AsRef<str>, value: T,time:Option<u64>) -> Result<(), AppError>
     where
         T: Serialize + 'static,
     {
         let mut conn = self.pool.get().await?;
-        if TypeId::of::<T>() == TypeId::of::<char>() {
-            // SAFETY: We just checked that T is char
-            let char_value = unsafe { *(std::ptr::addr_of!(value) as *const char) };
-            let _: () = conn.hset(key.as_ref(), "char_value", char_value.to_string()).await?;
+        // === 选择合适的序列化方式 ===
+        let value_str = if TypeId::of::<T>() == TypeId::of::<char>() {
+            // 安全转换为 char 引用
+            let ch = (&value as &dyn Any)
+                .downcast_ref::<char>()
+                .ok_or_else(|| AppError::Internal("char 类型转换失败".into()))?;
+            ch.to_string()
         } else {
-            let json_value = serde_json::to_string(&value)?;
-            let _: () = conn.set(key.as_ref(), json_value).await?;
+            serde_json::to_string(&value)?
+        };
+        let key = key.as_ref();
+        // === 存入 Redis ===
+        match time {
+            Some(seconds) => {
+                let _: () = conn.set_ex(key, value_str, seconds).await?;
+            }
+            None => {
+                let _: () = conn.set(key, value_str).await?;
+            }
         }
         Ok(())
     }

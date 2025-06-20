@@ -1,6 +1,6 @@
 use crate::handlers::common_handler::status;
-use crate::result::result;
-use actix_web::{web, HttpRequest, Responder};
+use crate::result::{result, ApiResponse};
+use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService, AuthHeader};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
@@ -37,14 +37,29 @@ pub struct CreateGroupDto {
     #[serde(default)]
     pub members: Vec<String>,
 }
-
+#[utoipa::path(
+    post,
+    path = "/group/create",
+    summary = "创建群组",
+    params(
+        ("appKey" = String, Header, description = "应用 key"),
+        ("nonce" = String, Header, description = "随机字符串"),
+        ("timestamp" = i64, Header, description = "时间戳"),
+        ("signature" = String, Header, description = "签名")
+    ),
+    request_body = CreateGroupDto,
+    responses(
+        (status = 200, description = "Hello response", body = ApiResponse<String>)
+    )
+)]
+#[post("/group/create")]
 ///// 创建群组接口（签名验证 + 防重复创建）
-pub async fn create_group(dto: web::Json<CreateGroupDto>,   req: HttpRequest) -> Result<impl Responder, AppError> {
+pub async fn create_group(dto: web::Json<CreateGroupDto>, req: HttpRequest,
+) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
-    if !check_state {
-        return Err(BizError("signature.error".to_string()));
-    }
+    let agent=AgentService::get()
+        .check_request(auth_header)
+        .await?;
 
     // ✅ 2. 服务初始化
     let group_service = GroupService::get();
@@ -58,7 +73,7 @@ pub async fn create_group(dto: web::Json<CreateGroupDto>,   req: HttpRequest) ->
         name: dto.group_name.clone(),
         icon_url: None,
         notice: None,
-        creator_id: dto.user_id.to_string(),
+        owner_id: dto.user_id.to_string(),
         group_type: 0,
         max_members: 500,
         status: 1,

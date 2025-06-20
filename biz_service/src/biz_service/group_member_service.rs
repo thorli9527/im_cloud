@@ -1,4 +1,6 @@
 use crate::entitys::group_member::{GroupMember, GroupRole};
+use crate::manager::common::UserId;
+use anyhow::Result;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::as_ref_to_string;
@@ -25,8 +27,8 @@ impl GroupMemberService {
             .expect("INSTANCE already initialized");
     }
     
-    pub async fn remove(&self, group_id: impl AsRef<str>, user_id: impl AsRef<str>) -> Result<(), AppError> {
-        let filter = doc! {"group_id":as_ref_to_string(group_id),"user_id":as_ref_to_string(user_id)};
+    pub async fn remove(&self, group_id: impl AsRef<str>, user_id: &UserId) -> Result<(), AppError> {
+        let filter = doc! {"group_id":as_ref_to_string(group_id),"user_id":user_id.to_string()};
         self.dao.delete(filter).await?;
         Ok(())
     }

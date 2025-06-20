@@ -5,6 +5,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct GroupOperationLog {
     pub id: String,                                     // 操作记录唯一 ID（可作为 MongoDB _id）
+    pub agent_id: String,                               // 商户 ID
     pub group_id: String,                               // 群组 ID
     pub operator_id: String,                            // 发起操作的用户 ID
     pub action: GroupOperationType,             // 操作类型（使用枚举）

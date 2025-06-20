@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use utoipa::ToSchema;
 #[derive(Debug, Clone,  Serialize, Deserialize, ToSchema, Default)]
 pub struct UserActionLog {
-    pub id: String,                             // 主键
+    pub id: String,  
+    pub agent_id:String,// 商户id
     pub user_id: String,                        // 被操作用户
     pub action: UserActionType,              // 动作类型（使用枚举）
     pub reason: Option<String>,              // 操作原因（如违规内容）

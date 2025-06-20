@@ -1,18 +1,18 @@
 use crate::handlers::common_handler::status;
-use crate::result::result;
-use actix_web::{web, HttpRequest, Responder};
+use crate::result::{result, ApiResponse};
+use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::group_member::{GroupMember, GroupRole};
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
-use biz_service::manager::user_manager::RedisUserManager;
+use biz_service::manager::group_redis_manager::{GroupManager, GroupManagerOpt};
 use common::errors::AppError;
-use common::errors::AppError::BizError;
 use common::repository_util::Repository;
 use common::util::date_util::now;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(status);
 }
@@ -37,20 +37,37 @@ pub struct GroupJoinDto {
 ///
 /// 默认角色为 `Member`
 
+#[utoipa::path(
+    post,
+    path = "/group/join",
+    request_body = GroupJoinDto,
+    summary = "加入群组",
+    params(
+        ("appKey" = String, Header, description = "应用 key"),
+        ("nonce" = String, Header, description = "随机字符串"),
+        ("timestamp" = i64, Header, description = "时间戳"),
+        ("signature" = String, Header, description = "签名")
+    ),
+    responses(
+        (status = 200, description = "群组解散成功", body = ApiResponse<String>)
+    )
+)]
+#[post("/group/join")]
 pub async fn group_join(dto: web::Json<GroupJoinDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
-    if !check_state {
-        return Err(BizError("signature.error".to_string()));
-    }
+    let agent = AgentService::get().check_request(auth_header).await?;
+  
 
-    let redis_user_manager = RedisUserManager::get();
+    let group_manager = GroupManager::get();
     let now = now();
 
-    let exists = redis_user_manager.find_member(&dto.group_id, &dto.user_id).await?;
+    let exists = group_manager.is_user_in_group(&dto.group_id, &dto.user_id).await?;
     if exists {
         return Ok(web::Json(result()));
     }
+
+    //添加用户到组
+    group_manager.add_user_to_group(&dto.group_id, &dto.user_id).await?;
 
     // ✅ 插入成员记录
     let member = GroupMember {
@@ -63,10 +80,10 @@ pub async fn group_join(dto: web::Json<GroupJoinDto>,  req: HttpRequest) -> Resu
         create_time: now,
         update_time: now,
     };
+    //更新用户的群组列表
     GroupMemberService::get().dao.insert(&member).await?;
-    //添加用户到组
-    RedisUserManager::get().add_to_group(&dto.group_id, &dto.user_id).await?;
+
     //发送消息
-    GroupOperationLogService::get().add_log(&dto.group_id, &dto.user_id, None, GroupOperationType::Join).await?;
+    GroupOperationLogService::get().add_log(&agent.id,&dto.group_id, &dto.user_id, None, GroupOperationType::Join).await?;
     Ok(web::Json(result()))
 }

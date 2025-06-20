@@ -1,11 +1,10 @@
-use crate::result::{result, AppState};
-use actix_web::{web, HttpRequest, Responder};
+use crate::result::{result, ApiResponse, AppState};
+use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use common::errors::AppError;
-use common::errors::AppError::BizError;
 use common::repository_util::Repository;
 use common::util::date_util::now;
 use mongodb::bson::doc;
@@ -25,14 +24,28 @@ pub struct WhiteListUserDto {
     pub user_id: String,
 }
 /// 取消指定群成员禁言
+#[utoipa::path(
+    post,
+    path = "/group/member/cancel_mute",
+    request_body = WhiteListUserDto,
+    summary = "取消群成员禁言",
+    params(
+        ("appKey" = String, Header, description = "应用 key"),
+        ("nonce" = String, Header, description = "随机字符串"),
+        ("timestamp" = i64, Header, description = "时间戳"),
+        ("signature" = String, Header, description = "签名")
+    ),
+    responses(
+        (status = 200, description = "取消禁言成功", body = ApiResponse<String>)
+    )
+)]
+#[post("/group/member/cancel_mute")]
 pub async fn cancel_mute_member(
     dto: web::Json<WhiteListUserDto>,
     req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
-    if !check_state {
-        return Err(BizError("signature.error".to_string()));
-    }
+    let agent= AgentService::get().check_request(auth_header).await?;
+  
     GroupMemberService::get()
         .dao
         .update(doc! {"group_id":&*dto.group_id,"user_id":&*dto.user_id},
@@ -43,6 +56,6 @@ pub async fn cancel_mute_member(
             }
         ).await?;
 
-    GroupOperationLogService::get().add_log(&*dto.group_id, &*dto.user_id, None, GroupOperationType::Unmute).await?;
+    GroupOperationLogService::get().add_log(&agent.id,&*dto.group_id, &*dto.user_id, None, GroupOperationType::Unmute).await?;
     Ok(web::Json(result()))
 }

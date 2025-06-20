@@ -1,4 +1,5 @@
 use crate::entitys::group_entity::GroupInfo;
+use anyhow::Result;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::as_ref_to_string;
@@ -6,7 +7,6 @@ use mongodb::bson::doc;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-
 #[derive(Debug)]
 pub struct GroupService {
     pub dao: BaseRepository<GroupInfo>,

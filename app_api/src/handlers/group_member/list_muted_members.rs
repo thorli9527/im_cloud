@@ -6,7 +6,6 @@ use biz_service::biz_service::group_service::GroupService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::mq_group_operation_log::{GroupOperationLog, GroupOperationType};
 use common::errors::AppError;
-use common::errors::AppError::BizError;
 use common::repository_util::Repository;
 use common::util::common_utils::as_ref_to_string;
 use common::util::date_util::now;
@@ -34,10 +33,7 @@ pub async fn cancel_group_mute(
     group_id: web::Path<String>,
     req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let (agent, check_state) = AgentService::get().check_request(auth_header).await?;
-    if !check_state {
-        return Err(BizError("signature.error".to_string()));
-    }
+    let _= AgentService::get().check_request(auth_header).await?;
     GroupService::get()
         .dao
         .up_property(group_id.as_str(), "mute", &false)
