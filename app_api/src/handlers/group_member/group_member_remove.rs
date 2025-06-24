@@ -11,7 +11,7 @@ use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 pub fn configure(cfg: &mut web::ServiceConfig, state: &web::Data<AppState>) {
-    cfg.service(group_member_cancel_mute);
+    cfg.service(group_member_remove);
 }
 /// 添加或移除群组禁言白名单成员的请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
@@ -26,7 +26,7 @@ pub struct WhiteListUserDto {
 /// 取消指定群成员禁言
 #[utoipa::path(
     post,
-    path = "/group/member/cancel_mute",
+    path = "/group/member/remove",
     request_body = WhiteListUserDto,
     summary = "取消群成员禁言",
     tag = "群成员管理",
@@ -40,8 +40,8 @@ pub struct WhiteListUserDto {
         (status = 200, description = "取消禁言成功", body = ApiResponse<String>)
     )
 )]
-#[post("/group/member/cancel_mute")]
-pub async fn group_member_cancel_mute(
+#[post("/group/member/remove")]
+pub async fn group_member_remove(
     dto: web::Json<WhiteListUserDto>,
     req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
@@ -57,6 +57,6 @@ pub async fn group_member_cancel_mute(
             }
         ).await?;
 
-    GroupOperationLogService::get().add_log(&agent.id,&*dto.group_id, &*dto.user_id, None, GroupOperationType::Unmute).await?;
+    GroupOperationLogService::get().add_log(&agent.id,&*dto.group_id, &*dto.user_id, None, GroupOperationType::Quit).await?;
     Ok(web::Json(result()))
 }

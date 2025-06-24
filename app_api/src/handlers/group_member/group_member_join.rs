@@ -46,7 +46,7 @@ pub struct GroupJoinDto {
     path = "/group/member/join",
     request_body = GroupJoinDto,
     summary = "加入群组",
-    tag = "群管理",
+    tag = "群成员管理",
     params(
         ("appKey" = String, Header, description = "应用 key"),
         ("nonce" = String, Header, description = "随机字符串"),

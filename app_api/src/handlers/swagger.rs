@@ -5,6 +5,10 @@ use crate::handlers::group::group_dismiss::*;
 use crate::handlers::group::group_quit::*;
 use crate::handlers::group::group_refresh::*;
 use crate::handlers::group::group_transfer::*;
+use crate::handlers::group_member::group_member_join::*;
+use crate::handlers::group_member::group_member_refresh::*;
+use crate::handlers::group_member::group_member_remove::*;
+use crate::handlers::group_member::group_member_page::*;
 
 use crate::result::ApiResponse;
 use actix_web::{get, web, HttpResponse, Responder};
@@ -15,6 +19,7 @@ use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        //用户-管理
         user_create,
         user_lock,
         user_un_lock,
@@ -22,12 +27,18 @@ use utoipa::OpenApi;
         user_info,
         user_expire,
 
-        //群管理
+        //群-管理
         group_create,
         group_dismiss,
         group_quit,
         group_refresh,
         group_transfer,
+
+        //群-成员-管理
+        group_member_join,
+        group_member_refresh,
+        group_member_remove,
+        group_member_page,
     ),
     components(schemas(
         PageResult<AgentInfo>,

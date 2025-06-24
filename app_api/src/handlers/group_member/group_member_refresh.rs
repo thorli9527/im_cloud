@@ -51,7 +51,7 @@ impl Default for GroupMemberRefreshDto {
     path = "/group/member/refresh",
     request_body = GroupMemberRefreshDto,
     summary = "刷新群组成员",
-    tag = "群管理-成员管理",
+    tag = "群成员管理",
     params(
         ("appKey" = String, Header, description = "应用 key"),
         ("nonce" = String, Header, description = "随机字符串"),
