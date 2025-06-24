@@ -18,7 +18,7 @@ im_cloud/
 ├── app_api         # 对外 REST/gRPC 接口服务
 ├── app_socket      # 长连接管理模块（如 TCP/WebSocket 服务端）
 ├── app_job         # 异步任务/定时任务执行器
-├── app_main        # 项目主入口，整合模块调度
+├── app_main        # 项目后台管理端，整合业务调度
 ├── biz_service     # 业务逻辑处理封装
 ├── common          # 公共工具库，如日志、配置、错误处理
 ├── macro           # Rust 宏定义，用于简化服务注册等
