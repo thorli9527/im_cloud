@@ -6,7 +6,6 @@
 
 - 🦀 使用 Rust 实现，内存安全，性能强大
 - 📦 多模块架构：支持 API 接入、消息调度、后台任务、长连接服务等功能解耦
-- 🧩 设计灵感来源于分布式 IM 架构，如 [im-cloud（PHP）](https://github.com/brewlin/im-cloud)
 - ☁️ 未来支持多协议（TCP/WebSocket/gRPC）、Redis 中间件、任务队列、集群调度等功能
 
 ---
