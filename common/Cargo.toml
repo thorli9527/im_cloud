@@ -25,3 +25,4 @@ md-5.workspace = true
 uuid.workspace = true
 utoipa.workspace = true
 once_cell = "1.21.3"
+config =  { workspace = true }

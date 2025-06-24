@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use validator::Validate;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, ToSchema,Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum MessageSegment {
     /// 纯文本内容
@@ -85,7 +87,12 @@ impl Default for MessageSegment {
         }
     }
 }
-
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq,ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ChatTargetType {
+    Single = 0,
+    Group = 1,
+}
 /// 群聊消息类型，用于顶层标记消息所属主类别
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -122,21 +129,32 @@ pub struct UserMessage{
     /// 所属商户
     pub agent_id:String,
     /// 所属用户id
-    pub user_id: String,
-    /// 发送者用户 ID
-    pub sender_id: String,
+    pub from: String,
+    ///  ID
+    pub to: String,
     /// 消息复合内容（支持结构化消息段）
     pub content: Vec<Segment>,
     pub created_time: i64,                    // 创建时间（Unix 秒时间戳）
     pub updated_time: i64,                    // 最后更新时间（Unix 秒时间戳）
-    /// 对应序号（用于顺序拉取）
-    pub seq: i64,
     /// 是否被撤回
     pub revoked: bool,
     /// 是否为系统消息（可用于区分人工发送和自动提示）
     pub is_system: bool,
+    /// 是否已发送到 MQ
+    pub sync_mq_status: bool,
+    /// 是否已送达客户端（如 WebSocket 成功推送）
+    pub delivered: bool,
+    /// 阅读时间戳（Unix 秒时间戳，可选）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub read_time: Option<i64>,
 }
-
+#[derive(Debug, Deserialize, Serialize, ToSchema,Validate)]
+#[serde(rename_all = "camelCase")]
+pub struct SegmentDto{
+    /// 消息段类型及内容
+    #[serde(flatten)]
+    pub body: MessageSegment,
+}
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GroupMessage {
     /// 全局唯一消息 ID（如雪花 ID）
@@ -144,9 +162,9 @@ pub struct GroupMessage {
     /// 所属商户
     pub agent_id:String,
     /// 所属群组 ID
-    pub group_id: String,
+    pub to: String,
     /// 发送者用户 ID
-    pub sender_id: String,
+    pub from: String,
     /// 消息复合内容（支持结构化消息段）
     pub content: Vec<Segment>,
     /// 创建时间（Unix 秒时间戳）
@@ -155,11 +173,12 @@ pub struct GroupMessage {
     pub update_time: i64,
     /// 群内顺序号（用于顺序拉取）
     pub seq: i64,
+    /// 是否已发送到 MQ
+    pub sync_mq_status: bool,
     /// 是否被撤回
     pub revoked: bool,
     /// 是否为系统消息（可用于区分人工发送和自动提示）
     pub is_system: bool,
-
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone,Default)]

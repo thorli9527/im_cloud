@@ -10,10 +10,12 @@ pub mod mq_group_operation_log_service;
 pub mod mq_user_action_service;
 pub mod mq_message_group_service;
 pub mod mq_message_user_service;
+mod kafka_service;
 
 use mongodb::Database;
+use common::config::KafkaConfig;
 
-pub fn init_service(db: Database) {
+pub fn init_service(db: Database, kafka_config: KafkaConfig) {
     agent_service::AgentService::init(db.clone());
     client_service::ClientService::init(db.clone());
     country_service::CountryService::init(db.clone());
@@ -25,5 +27,6 @@ pub fn init_service(db: Database) {
     mq_user_action_service::UserActionLogService::init(db.clone());
     mq_message_group_service::GroupMessageService::init(db.clone());
     mq_message_user_service::UserMessageService::init(db.clone());
+    kafka_service::KafkaService::init(kafka_config);
 }
 

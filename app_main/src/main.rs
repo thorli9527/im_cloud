@@ -26,21 +26,20 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    AppConfig::init(&"main-config.toml".to_string());
     // 读取配置文件
-    let app_state = AppState::new();
+    let app_cfg = AppConfig::get();
     //初始化日志
-    init_log(&app_state.config);
-    let address_and_port = format!("{}:{}", &app_state.config.server.host, &app_state.config.server.port);
+    init_log(&app_cfg.clone());
+    let address_and_port = format!("{}:{}", &app_cfg.server.host, &app_cfg.server.port);
     warn!("Starting server on {}", address_and_port);
-    let web_state = web::Data::new(app_state.clone());
-    let pool = build_redis_pool(&app_state.config);
-    biz_service::init_service(init_mongo_db(&app_state.config).await);
+    biz_service::init_service(init_mongo_db(&app_cfg).await, app_cfg.kafka.clone());
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
             // 配置 控制器
             .configure(|cfg| {
-                handlers::configure(cfg, web_state.clone());
+                handlers::configure(cfg);
             })
     })
     .keep_alive(actix_web::http::KeepAlive::Timeout(std::time::Duration::from_secs(600))) // 允许 10 分钟超时

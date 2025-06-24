@@ -27,6 +27,7 @@ pub enum OrderType {
 pub trait Repository<T> {
     async fn find_by_id(&self, id: impl AsRef<str> + std::marker::Send) -> Result<Option<T>>;
     async fn insert(&self, entity: &T) -> Result<()>;
+    async fn insert_many(&self, entities: &[T])-> Result<()>;
     async fn find_one(&self, filter: Document) -> Result<Option<T>>;
     async fn query_all(&self) -> Result<Vec<T>>;
     async fn query(&self, filter: Document) -> Result<Vec<T>>;
@@ -73,6 +74,32 @@ where
         }
         doc.remove("id");
         self.collection.insert_one(doc).await?;
+        Ok(())
+    }
+
+    async fn insert_many(&self, entities: &[T])-> Result<()> {
+        if entities.is_empty() {
+            return Ok(());
+        }
+
+        let mut docs = Vec::with_capacity(entities.len());
+
+        for entity in entities {
+            let mut doc = bson::to_document(entity)?;
+
+            if let Some(Bson::String(id_str)) =
+                doc.get_str("id").ok().map(str::to_string).map(Bson::String)
+            {
+                if let Ok(object_id) = ObjectId::parse_str(&id_str) {
+                    doc.insert("_id", object_id);
+                }
+            }
+
+            doc.remove("id");
+            docs.push(doc);
+        }
+
+        self.collection.insert_many(docs).await?;
         Ok(())
     }
 

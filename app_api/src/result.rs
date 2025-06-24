@@ -9,22 +9,6 @@ use std::fmt::Debug;
 use std::option::Option;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone)]
-pub struct AppState {
-    pub config: AppConfig,
-}
-
-impl AppState {
-    pub fn new() -> Self {
-        let config = Config::builder()
-            .add_source(config::File::with_name("api-config.toml").required(true))
-            .add_source(config::Environment::with_prefix("APP").separator("_"))
-            .build()
-            .expect("Failed to build configuration");
-        let cfg = config.try_deserialize::<AppConfig>().expect("Failed to deserialize configuration");
-        Self { config: cfg }
-    }
-}
 
 pub fn result_data<T: Serialize + Debug>(data: T) -> Value {
     return serde_json::json!({"success":true,"data":data});

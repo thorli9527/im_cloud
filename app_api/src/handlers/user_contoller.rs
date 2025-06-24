@@ -1,4 +1,4 @@
-use crate::result::{result, result_data, ApiResponse, AppState};
+use crate::result::{result, result_data, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_const::redis_const::CLIENT_TOKEN_KEY;
 use biz_service::biz_service::agent_service::{build_header, AgentService};
@@ -20,7 +20,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 use common::redis::redis_template::RedisTemplate;
 
-pub fn configure(cfg: &mut web::ServiceConfig, state: &web::Data<AppState>) {
+pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_create);
     cfg.service(user_lock);
     cfg.service(user_info);

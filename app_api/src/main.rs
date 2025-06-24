@@ -2,7 +2,6 @@ use actix_web::middleware::Logger;
 use actix_web::rt::Runtime;
 use actix_web::{cookie, web, App, HttpServer};
 use app_api::handlers;
-use app_api::result::AppState;
 use biz_service::manager;
 use common::config::{AppConfig, ServerRes};
 use common::errors::AppError;
@@ -19,22 +18,22 @@ use std::str::FromStr;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // 读取配置文件
-    let app_state = AppState::new();
+     AppConfig::init(&"api-config.toml".to_string());
+    let app_cfg = AppConfig::get();
     //初始化日志
-    init_log(&app_state.config);
-    let address_and_port = format!("{}:{}", &app_state.config.server.host, &app_state.config.server.port);
+    init_log(&app_cfg);
+    let address_and_port = format!("{}:{}", &app_cfg.server.host, &app_cfg.server.port);
     warn!("Starting server on {}", address_and_port);
-    let web_state = web::Data::new(app_state.clone());
-    let db = init_mongo_db(&app_state.config).await;
-    let pool = build_redis_pool(&app_state.config);
-    biz_service::init_service(db);
+    let db = init_mongo_db(&app_cfg).await;
+    let pool = build_redis_pool(&app_cfg);
+    biz_service::init_service(db,app_cfg.kafka.clone());
     manager::init(pool,false);
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
             // 配置 控制器
             .configure(|cfg| {
-                handlers::configure(cfg, web_state.clone());
+                handlers::configure(cfg);
             })
     })
     .keep_alive(actix_web::http::KeepAlive::Timeout(std::time::Duration::from_secs(600))) // 允许 10 分钟超时

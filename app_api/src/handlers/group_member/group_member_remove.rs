@@ -1,4 +1,4 @@
-use crate::result::{result, ApiResponse, AppState};
+use crate::result::{result, ApiResponse,};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;
@@ -10,7 +10,7 @@ use common::util::date_util::now;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-pub fn configure(cfg: &mut web::ServiceConfig, state: &web::Data<AppState>) {
+pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(group_member_remove);
 }
 /// 添加或移除群组禁言白名单成员的请求体

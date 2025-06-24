@@ -9,6 +9,7 @@ pub mod group_member;
 pub mod mq_user_action;
 pub mod mq_group_operation_log;
 pub mod mq_message_info;
+mod read_index;
 
 use mongodb::bson::oid::ObjectId;
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};

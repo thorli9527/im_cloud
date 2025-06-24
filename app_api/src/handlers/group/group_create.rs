@@ -13,6 +13,8 @@ use common::util::date_util::now;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
+use common::util::common_utils::build_uuid;
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(group_create);
 }
@@ -23,10 +25,6 @@ pub struct CreateGroupDto {
     /// 群主用户 ID
     #[schema(example = "user_123")]
     pub user_id: String,
-
-    /// 群组唯一 ID
-    #[schema(example = "group_001")]
-    pub group_id: String,
 
     /// 群名称
     #[schema(example = "Rust爱好者交流群")]
@@ -65,10 +63,11 @@ pub async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
     let group_service = GroupService::get();
     let member_service = GroupMemberService::get();
     let now = now();
+    let group_id = build_uuid();
     // ✅ 3. 创建群组
     let group = GroupInfo {
-        id:"".to_string(),
-        group_id: dto.group_id.clone(),
+        id:group_id.clone(),
+        group_id: group_id.clone(),
         agent_id: agent.id.clone(),
         name: dto.group_name.clone(),
         avatar: None,
@@ -86,7 +85,7 @@ pub async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
     // ✅ 4. 添加群主
     let owner = GroupMember {
         id:"".to_string(),
-        group_id: dto.group_id.clone(),
+        group_id:group_id.clone(),
         user_id: dto.user_id.clone(),
         role: GroupRole::Owner,
         alias: None,
@@ -103,7 +102,7 @@ pub async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
         }
         let member = GroupMember {
             id:"".to_string(),
-            group_id: dto.group_id.clone(),
+            group_id: group_id.clone(),
             user_id: user_id.clone(),
             role: GroupRole::Member,
             alias: None,

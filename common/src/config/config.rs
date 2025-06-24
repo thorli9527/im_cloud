@@ -1,15 +1,44 @@
+use std::sync::Arc;
 // use crate::redis::redis_template::RedisTemplate;
 use mongodb::Database;
+use once_cell::sync::OnceCell;
 use serde::Deserialize;
-
+use crate::repository_util::BaseRepository;
+use config::Config;
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
     pub database: DatabaseConfig,
     pub redis: RedisConfig,
     pub server: ServerConfig,
     pub sys: SysConfig,
-    pub cache:CacheConfig
+    pub cache:CacheConfig,
+    pub kafka: KafkaConfig,
 }
+
+
+impl AppConfig{
+
+    pub fn new(file:&String) -> Self {
+        let config = Config::builder()
+            .add_source(config::File::with_name(file).required(true))
+            .add_source(config::Environment::with_prefix("APP").separator("_"))
+            .build()
+            .expect("Failed to build configuration");
+        let cfg = config.try_deserialize::<AppConfig>().expect("Failed to deserialize configuration");
+        return cfg;
+    }
+    pub fn init(file:&String) {
+        let instance = Self::new(&file);
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
+    }
+
+    /// 获取单例
+    pub fn get() -> Arc<Self> {
+        INSTANCE.get().expect("INSTANCE is not initialized").clone()
+    }
+    //强制下线
+}
+static INSTANCE: OnceCell<Arc<AppConfig>> = OnceCell::new();
 #[derive(Debug, Deserialize, Clone)]
 pub struct CacheConfig{
     pub node_id: usize,
@@ -42,5 +71,12 @@ pub struct ServerConfig {
 #[derive(Debug, Clone)]
 pub struct ServerRes {
     pub db: Database,
-    // pub redis_template: RedisTemplate,
 }
+#[derive(Debug, Deserialize, Clone)]
+pub struct KafkaConfig {
+    pub brokers: String,
+    pub topic_single: String,
+    pub topic_group: String,
+}
+
+

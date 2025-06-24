@@ -43,3 +43,5 @@ once_cell = { version = "1.21.3" }
 moka = { version = "0.12.10", default-features = false, features = ["sync"] }
 sha1 = { version = "0.10.6" }
 dashmap = { version = "6.1.0" }
+
+rdkafka = { version = "0.37.0", features = ["tokio","cmake-build"] }

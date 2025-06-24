@@ -1,4 +1,4 @@
-use crate::result::{result_data, ApiResponse, AppState};
+use crate::result::{result_data, ApiResponse,};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::manager::group_redis_manager::{GroupManager, GroupManagerOpt};
@@ -6,7 +6,7 @@ use common::errors::AppError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-pub fn configure(cfg: &mut web::ServiceConfig, state: &web::Data<AppState>) {
+pub fn configure(cfg: &mut web::ServiceConfig) {
 
 }
 /// 拉取群组成员分页查询请求体

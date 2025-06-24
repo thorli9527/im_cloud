@@ -1,0 +1,44 @@
+use tokio::net::TcpListener;
+use common::config::KafkaConfig;
+use crate::handle_connection;
+use crate::manager::socket_manager::{get_socket_manager};
+use std::sync::Arc;
+use crate::handle_connection::handle_connection;
+use crate::kafka::kafka_consumer;
+
+/// 启动 TCP 服务 + Kafka 消费任务
+pub async fn start_server(listener: TcpListener, kafka_cfg: KafkaConfig) -> anyhow::Result<()> {
+    let socket_manager = get_socket_manager(); // ✅ 获取全局 SocketManager 单例
+
+    // ✅ 启动 Kafka 消费者（非阻塞）
+    {
+        let kafka_manager = Arc::clone(&socket_manager);
+        tokio::spawn(async move {
+            log::info!("🚀 Kafka 消费任务启动中...");
+            if let Err(e) = kafka_consumer::start_consumer(kafka_cfg, kafka_manager).await {
+                log::error!("❌ Kafka 消费失败: {:?}", e);
+            }
+        });
+    }
+
+    log::info!("✅ TCP 服务器已启动，开始监听连接...");
+
+    loop {
+        match listener.accept().await {
+            Ok((stream, addr)) => {
+                log::info!("📡 新连接建立 [{}]", addr);
+
+                tokio::spawn(async move {
+                    if let Err(e) = handle_connection(stream).await {
+                        log::error!("❌ 连接处理失败 [{}]: {:?}", addr, e);
+                    } else {
+                        log::info!("🔌 连接处理完成 [{}]", addr);
+                    }
+                });
+            }
+            Err(e) => {
+                log::error!("❌ TCP 连接接收失败: {:?}", e);
+            }
+        }
+    }
+}

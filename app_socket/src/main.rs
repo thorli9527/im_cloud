@@ -12,6 +12,7 @@ use mongodb::{Client, Database};
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use app_socket::server::start_server;
 
 /// 写通道类型，用于发送 protobuf 编码好的消息
 
@@ -19,27 +20,19 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = init_cfg();
+    AppConfig::init(&"socket-config.toml".to_string());
+    let config = AppConfig::get();
     //初始化日志
     init_log(&config);
     let bind_cfg = format!("{}:{}", &config.server.host, &config.server.port);
     let listener = TcpListener::bind(bind_cfg).await?;
     let pool = build_redis_pool(&config);
     let db = init_mongo_db(&config).await;
-    biz_service::init_service(db);
+    biz_service::init_service(db, config.kafka.clone());
     biz_service::manager::init(pool,true);
     let manager: Arc<SocketManager> = get_socket_manager();
-    tokio::spawn(manager::job_manager::start_heartbeat_cleaner(manager, 30)); // 30秒无心跳视为断线
-    loop {
-        let (stream, addr) = listener.accept().await?;
-        println!("📡 接收到连接：{}", addr);
-
-        tokio::spawn(async move {
-            if let Err(e) = handle_connection(stream).await {
-                eprintln!("❌ 处理连接失败: {:?}", e);
-            }
-        });
-    }
+    tokio::spawn(manager::job_manager::start_heartbeat_cleaner(manager.clone(), 30)); // 30秒无心跳视为断线
+    start_server(listener, config.kafka.clone()).await
 }
 
 pub fn build_redis_pool(config: &AppConfig) -> Pool {
@@ -56,14 +49,7 @@ pub fn build_redis_pool(config: &AppConfig) -> Pool {
     cfg.create_pool(Some(deadpool_redis::Runtime::Tokio1)).expect("Failed to create Redis connection pool")
 }
 
-pub fn init_cfg() -> AppConfig {
-    let config = Config::builder()
-        .add_source(config::File::with_name("socket-config.toml").required(true))
-        .add_source(config::Environment::with_prefix("APP").separator("_"))
-        .build()
-        .expect("Failed to build configuration");
-    return config.try_deserialize::<AppConfig>().expect("Failed to deserialize configuration");
-}
+
 
 pub fn init_log(config: &AppConfig) -> Result<(), AppError> {
     let mut builder = env_logger::Builder::new();
