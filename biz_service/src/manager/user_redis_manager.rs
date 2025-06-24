@@ -368,9 +368,10 @@ impl UserManager {
         &self.local_online_shards[(hash as usize) % SHARD_COUNT]
     }
 
-    fn init(&self, instance: UserManager) {
+    pub fn init(&self, instance: UserManager) {
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
+    
     /// 获取全局实例（未初始化会 panic）
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("UserManager is not initialized").clone()

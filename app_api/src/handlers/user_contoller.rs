@@ -7,9 +7,9 @@ use biz_service::biz_service::mq_user_action_service::UserActionLogService;
 use biz_service::entitys::client_entity::ClientInfo;
 use biz_service::manager::group_redis_manager::{GroupManager, GroupManagerOpt};
 use biz_service::manager::user_redis_manager::{UserManager, UserManagerOpt};
+use common::redis::redis_template::ValueOps;
 use common::errors::AppError;
 use common::errors::AppError::BizError;
-use common::redis::redis_template::RedisTemplate;
 use common::repository_util::Repository;
 use common::util::common_utils::{as_ref_to_string, build_uuid};
 use common::util::date_util::time_to_str;
@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
 use validator::Validate;
+use common::redis::redis_template::RedisTemplate;
 
 pub fn configure(cfg: &mut web::ServiceConfig, state: &web::Data<AppState>) {
     cfg.service(user_create);
@@ -62,12 +63,13 @@ pub async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<i
     let string = &dto.uid.clone();
     let user_manager = UserManager::get();
     let user_option:Option<ClientInfo>= user_manager.get_user_info(&agent.id, string).await?;
-    let redis_service = RedisTemplate::get();
+    let redis_template = RedisTemplate::get();
     if user_option.is_some() {
         let user:ClientInfo=user_option.unwrap();
         let token_id = build_uuid();
         let key = format!("{}{}", CLIENT_TOKEN_KEY, &token_id);
-        redis_service.set_key_value(key, user.clone(),Some(30*60)).await?;
+        let value_option = redis_template.ops_for_value();
+        let _= value_option.set(&key, &user.clone(), Some(30 * 60)).await?;
         let value = json!({"user_id":user.user_id,"token":token_id,"avatarUrl":user.avatar});
        return  Ok(web::Json(result_data(value)))
     }

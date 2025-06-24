@@ -1,4 +1,4 @@
-use crate::redis::redis_template::RedisTemplate;
+// use crate::redis::redis_template::RedisTemplate;
 use mongodb::Database;
 use serde::Deserialize;
 
@@ -42,5 +42,5 @@ pub struct ServerConfig {
 #[derive(Debug, Clone)]
 pub struct ServerRes {
     pub db: Database,
-    pub redis_template: RedisTemplate,
+    // pub redis_template: RedisTemplate,
 }

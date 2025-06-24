@@ -1,15 +1,18 @@
 use crate::entitys::group_entity::GroupInfo;
+use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 use crate::manager::common::UserId;
 use crate::manager::local_group_manager::{LocalGroupManager, LocalGroupManagerOpt};
 use crate::manager::user_redis_manager::{UserManager, UserManagerOpt};
 use anyhow::Result;
 use async_trait::async_trait;
 use dashmap::DashSet;
-use deadpool_redis::{redis::{cmd, AsyncCommands}, Pool as RedisPool};
+use deadpool_redis::{
+    Pool as RedisPool, Pool,
+    redis::{AsyncCommands, cmd},
+};
 use once_cell::sync::OnceCell;
-use std::sync::Arc;
 use serde_json::to_string;
-use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
+use std::sync::Arc;
 
 /// 群组管理器
 #[derive(Debug, Clone)]
@@ -20,19 +23,15 @@ pub struct GroupManager {
 }
 
 impl GroupManager {
-    pub fn new(pool: RedisPool, use_local_cache: bool) -> Self {
+    fn new(pool: RedisPool, use_local_cache: bool) -> Self {
         let local_group_manager = LocalGroupManager::get();
-        let instance = Self {
-            pool,
-            local_group_manager,
-            use_local_cache,
-        };
-        GroupManager::init(instance.clone());
-        instance
+        Self { pool, local_group_manager, use_local_cache }
     }
 
-    pub fn init(instance: Self) {
-        INSTANCE.set(Arc::new(instance)).expect("GroupManager already initialized");
+
+    pub fn init(pool: Pool, use_local_cache: bool) {
+        let instance = Self::new(pool,use_local_cache);
+        INSTANCE.set(Arc::new(instance)).expect("AgentService already initialized");
     }
 
     pub fn get() -> Arc<Self> {
@@ -58,9 +57,9 @@ static INSTANCE: OnceCell<Arc<GroupManager>> = OnceCell::new();
 pub trait GroupManagerOpt: Send + Sync {
     async fn create_group(&self, info: GroupInfo) -> Result<()>;
     async fn dismiss_group(&self, group_id: &str) -> Result<()>;
-    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId, mute: Option<bool>,alian:&str,group_role: &GroupRole) -> Result<()>;
+    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alian: &str, group_role: &GroupRole) -> Result<()>;
     async fn remove_user_from_group(&self, group_id: &str, user_id: &UserId) -> Result<()>;
-    async fn group_member_refresh(&self, group_id: &str, user_id: &UserId, mute: Option<bool>,alias:&Option<String>,role:&Option<GroupRole>) -> Result<()>;
+    async fn group_member_refresh(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &Option<String>, role: &Option<GroupRole>) -> Result<()>;
     async fn get_group_info(&self, group_id: &str) -> Result<Option<GroupInfo>>;
     async fn get_group_members(&self, group_id: &str) -> Result<Vec<UserId>>;
     ///判断用户是否在群组中
@@ -70,12 +69,7 @@ pub trait GroupManagerOpt: Send + Sync {
     async fn is_user_in_group(&self, group_id: &str, user_id: &UserId) -> Result<bool>;
     async fn get_online_group_members(&self, group_id: &str) -> Result<Vec<UserId>>;
     async fn get_offline_group_members(&self, group_id: &str) -> Result<Vec<UserId>>;
-    async fn get_group_members_by_page(
-        &self,
-        group_id: &str,
-        page: usize,
-        page_size: usize,
-    ) -> Result<Vec<UserId>> ;
+    async fn get_group_members_by_page(&self, group_id: &str, page: usize, page_size: usize) -> Result<Vec<UserId>>;
 }
 
 #[async_trait]
@@ -123,29 +117,17 @@ impl GroupManagerOpt for GroupManager {
         Ok(())
     }
 
-    async fn add_user_to_group(
-        &self,
-        group_id: &str,
-        user_id: &UserId,
-        mute: Option<bool>,
-        alias: &str,
-        group_role: &GroupRole,
-    ) -> Result<()> {
+    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &str, group_role: &GroupRole) -> Result<()> {
         // 本地缓存
         if self.use_local_cache {
-            self.local_group_manager
-                .add_user(group_id, user_id, mute, alias, group_role);
+            self.local_group_manager.add_user(group_id, user_id, mute, alias, group_role);
         }
 
         let mut conn = self.pool.get().await?;
 
         // 1. 添加成员 ID 到成员集合
         let member_set_key = Self::key_group_members(group_id);
-        let _: () = cmd("SADD")
-            .arg(&member_set_key)
-            .arg(user_id)
-            .query_async(&mut conn)
-            .await?;
+        let _: () = cmd("SADD").arg(&member_set_key).arg(user_id).query_async(&mut conn).await?;
 
         // 2. 写入元信息 JSON 到成员元信息 Hash
         let meta = GroupMemberMeta {
@@ -158,22 +140,11 @@ impl GroupManagerOpt for GroupManager {
         };
         let json = serde_json::to_string(&meta)?;
         let meta_hash_key = Self::key_group_member_meta(group_id);
-        let _: () = cmd("HSET")
-            .arg(&meta_hash_key)
-            .arg(user_id)
-            .arg(json)
-            .query_async(&mut conn)
-            .await?;
+        let _: () = cmd("HSET").arg(&meta_hash_key).arg(user_id).arg(json).query_async(&mut conn).await?;
 
         Ok(())
-    }async fn group_member_refresh(
-        &self,
-        group_id: &str,
-        user_id: &UserId,
-        mute: Option<bool>,
-        alias: &Option<String>,
-        role: &Option<GroupRole>,
-    ) -> Result<()> {
+    }
+    async fn group_member_refresh(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &Option<String>, role: &Option<GroupRole>) -> Result<()> {
         let mut conn = self.pool.get().await?;
         let key = Self::key_group_members(group_id);
         let meta_key = Self::key_group_member_meta(group_id);
@@ -183,16 +154,11 @@ impl GroupManagerOpt for GroupManager {
 
         // 2. 本地缓存更新
         if self.use_local_cache {
-            self.local_group_manager
-                .refresh_user(group_id, user_id, mute.clone(), alias, role.clone());
+            self.local_group_manager.refresh_user(group_id, user_id, mute.clone(), alias, role.clone());
         }
 
         // 3. 读取原有 meta 并更新
-        let raw: Option<String> = cmd("HGET")
-            .arg(&meta_key)
-            .arg(&user_id)
-            .query_async(&mut conn)
-            .await?;
+        let raw: Option<String> = cmd("HGET").arg(&meta_key).arg(&user_id).query_async(&mut conn).await?;
 
         if let Some(json) = raw {
             let mut meta: GroupMemberMeta = serde_json::from_str(&json)?;
@@ -210,12 +176,7 @@ impl GroupManagerOpt for GroupManager {
             }
 
             let updated = serde_json::to_string(&meta)?;
-            let _: () = cmd("HSET")
-                .arg(&meta_key)
-                .arg(&user_id)
-                .arg(&updated)
-                .query_async(&mut conn)
-                .await?;
+            let _: () = cmd("HSET").arg(&meta_key).arg(&user_id).arg(&updated).query_async(&mut conn).await?;
         }
 
         Ok(())
@@ -226,19 +187,11 @@ impl GroupManagerOpt for GroupManager {
 
         // Step 1: 移除 Redis 中的成员关系
         let key = Self::key_group_members(group_id);
-        let _: () = cmd("SREM")
-            .arg(&key)
-            .arg(&user_id)
-            .query_async(&mut conn)
-            .await?;
+        let _: () = cmd("SREM").arg(&key).arg(&user_id).query_async(&mut conn).await?;
 
         // Step 2: 移除 Redis 中的成员元数据
         let meta_key = Self::key_group_member_meta(group_id);
-        let _: () = cmd("HDEL")
-            .arg(&meta_key)
-            .arg(&user_id)
-            .query_async(&mut conn)
-            .await?;
+        let _: () = cmd("HDEL").arg(&meta_key).arg(&user_id).query_async(&mut conn).await?;
 
         // Step 3: 本地缓存移除（如启用）
         if self.use_local_cache {
@@ -250,7 +203,6 @@ impl GroupManagerOpt for GroupManager {
 
         Ok(())
     }
-
 
     async fn get_group_info(&self, group_id: &str) -> Result<Option<GroupInfo>> {
         if self.use_local_cache {
@@ -281,11 +233,7 @@ impl GroupManagerOpt for GroupManager {
     }
 
     async fn get_online_group_members(&self, group_id: &str) -> Result<Vec<UserId>> {
-        let agent_id = self
-            .get_group_info(group_id)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("Group not found: {}", group_id))?
-            .agent_id;
+        let agent_id = self.get_group_info(group_id).await?.ok_or_else(|| anyhow::anyhow!("Group not found: {}", group_id))?.agent_id;
 
         let members = self.get_group_members(group_id).await?;
         let user_mgr = UserManager::get();
@@ -300,11 +248,7 @@ impl GroupManagerOpt for GroupManager {
     }
 
     async fn get_offline_group_members(&self, group_id: &str) -> Result<Vec<UserId>> {
-        let agent_id = self
-            .get_group_info(group_id)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("Group not found: {}", group_id))?
-            .agent_id;
+        let agent_id = self.get_group_info(group_id).await?.ok_or_else(|| anyhow::anyhow!("Group not found: {}", group_id))?.agent_id;
 
         let members = self.get_group_members(group_id).await?;
         let user_mgr = UserManager::get();
@@ -318,18 +262,12 @@ impl GroupManagerOpt for GroupManager {
 
         Ok(result)
     }
-    async  fn get_group_members_by_page(
-        &self,
-        group_id: &str,
-        page: usize,
-        page_size: usize,
-    ) -> Result<Vec<UserId>> {
+    async fn get_group_members_by_page(&self, group_id: &str, page: usize, page_size: usize) -> Result<Vec<UserId>> {
         let members = self.get_group_members(group_id).await?;
         let start = page * page_size;
         let end = start + page_size;
         Ok(members.into_iter().skip(start).take(page_size).collect())
     }
-
 
     async fn is_user_in_group(&self, group_id: &str, user_id: &UserId) -> Result<bool> {
         // 2. Redis 兜底判断
@@ -339,12 +277,8 @@ impl GroupManagerOpt for GroupManager {
         // 3. 命中 Redis 后写入本地缓存，避免下次重复查询
         if exists {
             let shard = self.local_group_manager.get_group_members_shard(group_id);
-            shard
-                .entry(group_id.to_string())
-                .or_insert_with(DashSet::new)
-                .insert(user_id.to_string());
+            shard.entry(group_id.to_string()).or_insert_with(DashSet::new).insert(user_id.to_string());
         }
         Ok(exists)
     }
-
 }

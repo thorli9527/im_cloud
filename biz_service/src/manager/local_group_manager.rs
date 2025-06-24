@@ -5,6 +5,7 @@ use dashmap::{DashMap, DashSet};
 use once_cell::sync::OnceCell;
 use std::hash::Hash;
 use std::sync::Arc;
+use deadpool_redis::Pool;
 use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 
 const SHARD_COUNT: usize = 16;
@@ -68,20 +69,18 @@ pub trait LocalGroupManagerOpt: Send + Sync {
     async fn is_user_in_group(&self, group_id: &str, user_id: &UserId) -> bool;
 }
 impl LocalGroupManager {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let group_members_shards_map = Arc::new((0..SHARD_COUNT).map(|_| DashMap::new()).collect());
         let group_members_meta_map = Arc::new((0..SHARD_COUNT).map(|_| DashMap::new()).collect());
         let user_to_groups_shards = Arc::new((0..SHARD_COUNT).map(|_| DashMap::new()).collect());
         let group_info_map = Arc::new(DashMap::new());
 
-        let result = Self {
+        Self {
             group_info_map,
             group_members_shards_map,
             group_members_meta_map,
             user_to_groups_shards,
-        };
-        result.init(result.clone());
-        result
+        }
     }
 
     /// 清理所有成员为空的群组（仅本地缓存）
@@ -123,8 +122,10 @@ impl LocalGroupManager {
     }
 
     // 注册为全局单例
-    fn init(&self, instance: LocalGroupManager) {
-        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
+
+    pub fn init() {
+        let instance = Self::new();
+        INSTANCE.set(Arc::new(instance)).expect("AgentService already initialized");
     }
 
     // 获取全局实例

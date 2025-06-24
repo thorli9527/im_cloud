@@ -43,7 +43,6 @@ pub async fn group_transfer(
     req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
-    // ✅ 调用 GroupService 更新 creator_id
     GroupService::get()
         .transfer_ownership(&dto.group_id, &dto.new_owner_id)
         .await?;
