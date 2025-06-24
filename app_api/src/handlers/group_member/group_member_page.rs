@@ -27,6 +27,7 @@ pub struct GroupMemberPageDto {
     post,
     path = "/group/member/page",
     request_body = GroupMemberPageDto,
+    tag = "群成员管理",
     summary = "分页查询群组成员",
     params(
         ("appKey" = String, Header, description = "应用 key"),

@@ -1,5 +1,11 @@
 use crate::handlers::common_handler::*;
 use crate::handlers::user_contoller::*;
+use crate::handlers::group::group_create::*;
+use crate::handlers::group::group_dismiss::*;
+use crate::handlers::group::group_quit::*;
+use crate::handlers::group::group_refresh::*;
+use crate::handlers::group::group_transfer::*;
+
 use crate::result::ApiResponse;
 use actix_web::{get, web, HttpResponse, Responder};
 use biz_service::entitys::agent_entity::AgentInfo;
@@ -9,8 +15,19 @@ use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        status,
         user_create,
+        user_lock,
+        user_un_lock,
+        user_refresh,
+        user_info,
+        user_expire,
+
+        //群管理
+        group_create,
+        group_dismiss,
+        group_quit,
+        group_refresh,
+        group_transfer,
     ),
     components(schemas(
         PageResult<AgentInfo>,
@@ -18,7 +35,7 @@ use utoipa::OpenApi;
         AgentInfo,
     )),
     tags(
-        (name = "登录", description = "Example endpoints")
+        (name = "im-swagger-api", description = "Example endpoints")
     )
 )]
 struct ApiDoc;

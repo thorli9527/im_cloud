@@ -16,6 +16,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 #[utoipa::path(
     post,
     path = "/group/dismiss/{group_id}",
+    summary = "解散群组",
+    tag = "群管理",
     params(
         ("appKey" = String, Header, description = "应用 key"),
         ("nonce" = String, Header, description = "随机字符串"),

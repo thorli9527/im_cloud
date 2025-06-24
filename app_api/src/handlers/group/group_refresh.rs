@@ -11,7 +11,7 @@ use common::repository_util::Repository;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(status);
+    cfg.service(group_refresh);
 }
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -23,11 +23,21 @@ struct GroupRefreshDto {
     /// 群组名称
     #[schema(example = "Rust爱好者交流群")]
     pub group_name: String,
+    /// 群组头像 URL
+    /// #[schema(example = "https://example.com/group_avatar.png")]
+    pub group_avatar: Option<String>,
+    ///群组简介
+    #[schema(example = "这是一个关于 Rust 编程语言的交流群。")]
+    pub group_description: Option<String>,
+    /// 群组公告
+    /// #[schema(example = "欢迎加入 Rust 爱好者交流群！请遵守群规。")]
+    pub group_announcement: Option<String>,
 }
 #[utoipa::path(
     post,
     path = "/group/refresh",
     request_body = GroupRefreshDto,
+    tag = "群管理",
     summary = "修改群组名称",
     params(
         ("appKey" = String, Header, description = "应用 key"),

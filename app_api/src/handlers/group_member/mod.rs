@@ -3,13 +3,13 @@ use actix_web::web;
 
 mod group_member_page;
 mod group_mute_all;
-mod mute_member_add;
-mod list_muted_members;
-mod cancel_mute_member;
+mod group_member_remove;
+pub mod group_member_join;
+pub mod group_member_refresh;
+
 pub fn configure(cfg: &mut web::ServiceConfig, state: &web::Data<AppState>) {
-    cancel_mute_member::configure(cfg,state);
+    group_member_remove::configure(cfg, state);
     group_member_page::configure(cfg,state);
     group_mute_all::configure(cfg,state);
-    mute_member_add::configure(cfg,state);
-    list_muted_members::configure(cfg,state);
+    group_mute_all::configure(cfg,state);
 }

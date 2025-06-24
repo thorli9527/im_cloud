@@ -1,4 +1,3 @@
-use crate::handlers::common_handler::status;
 use crate::result::{result, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
@@ -14,23 +13,33 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(status);
+    cfg.service(group_member_refresh);
 }
 /// 加入群组请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct GroupJoinDto {
-    /// 用户 ID
-    #[schema(example = "user_123")]
-    pub user_id: String,
-
+pub struct GroupMemberRefreshDto {
     /// 群组 ID
     #[schema(example = "group_001")]
     pub group_id: String,
-
+    /// 用户 ID
+    #[schema(example = "user_123")]
+    pub user_id: String,
     /// 群内昵称（可选）
     #[schema(example = "铁汁")]
     pub alias: Option<String>,
+    /// 角色（可选，默认为 Member）
+    pub role: Option<GroupRole>,
+}
+impl Default for GroupMemberRefreshDto {
+    fn default() -> Self {
+        GroupMemberRefreshDto {
+            user_id: "".to_string(),
+            group_id: "".to_string(),
+            alias: None,
+            role: None,
+        }
+    }
 }
 
 /// 加入群组接口（签名验证 + 防重复加入）
@@ -39,9 +48,10 @@ pub struct GroupJoinDto {
 
 #[utoipa::path(
     post,
-    path = "/group/join",
-    request_body = GroupJoinDto,
-    summary = "加入群组",
+    path = "/group/member/refresh",
+    request_body = GroupMemberRefreshDto,
+    summary = "刷新群组成员",
+    tag = "群管理-成员管理",
     params(
         ("appKey" = String, Header, description = "应用 key"),
         ("nonce" = String, Header, description = "随机字符串"),
@@ -52,8 +62,8 @@ pub struct GroupJoinDto {
         (status = 200, description = "群组解散成功", body = ApiResponse<String>)
     )
 )]
-#[post("/group/join")]
-pub async fn group_join(dto: web::Json<GroupJoinDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
+#[post("/group/member/refresh")]
+pub async fn group_member_refresh(dto: web::Json<GroupMemberRefreshDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
   
@@ -67,7 +77,7 @@ pub async fn group_join(dto: web::Json<GroupJoinDto>,  req: HttpRequest) -> Resu
     }
 
     //添加用户到组
-    group_manager.add_user_to_group(&dto.group_id, &dto.user_id).await?;
+    group_manager.group_member_refresh(&dto.group_id, &dto.user_id,Option::None,&dto.alias,&dto.role).await?;
 
     // ✅ 插入成员记录
     let member = GroupMember {

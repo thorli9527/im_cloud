@@ -39,7 +39,9 @@ struct TokenDto {
 #[utoipa::path(
     post,
     path = "/user/create",
+    tag = "用户管理",
     summary = "创建用户",
+
     params(
         ("appKey" = String, Header, description = "应用 key"),
         ("nonce" = String, Header, description = "随机字符串"),
@@ -66,7 +68,7 @@ pub async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<i
         let token_id = build_uuid();
         let key = format!("{}{}", CLIENT_TOKEN_KEY, &token_id);
         redis_service.set_key_value(key, user.clone(),Some(30*60)).await?;
-        let value = json!({"user_id":user.user_id,"token":token_id,"avatarUrl":user.avatar_url});
+        let value = json!({"user_id":user.user_id,"token":token_id,"avatarUrl":user.avatar});
        return  Ok(web::Json(result_data(value)))
     }
 
@@ -80,6 +82,7 @@ pub async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<i
 #[utoipa::path(
     post,
     path = "/user/lock/{user_id}",
+    tag = "用户管理",
     summary = "锁定用户",
     params(
         ("appKey" = String, Header, description = "应用 key"),
@@ -101,10 +104,41 @@ pub async fn user_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<i
     //发送用户lock Mq
     Ok(web::Json(result()))
 }
+
+#[utoipa::path(
+    post,
+    path = "/user/user_un_lock/{user_id}",
+    tag = "用户管理",
+    summary = "锁定用户",
+    params(
+        ("appKey" = String, Header, description = "应用 key"),
+        ("nonce" = String, Header, description = "随机字符串"),
+        ("timestamp" = i64, Header, description = "时间戳"),
+        ("signature" = String, Header, description = "签名")
+    ),
+    request_body = TokenDto,
+    responses(
+        (status = 200, description = "Hello response", body = ApiResponse<String>)
+    )
+)]
+#[post("/user/user_un_lock/{user_id}")]
+pub async fn user_un_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder,AppError> {
+    if user_id.is_empty() {
+        return Err(BizError("user.id.empty".to_string()).into());
+    }
+    let user_id = user_id.into_inner();
+    let auth_header = build_header(req);
+    let agent=AgentService::get().check_request(auth_header).await?;
+    let action_log_service = UserActionLogService::get();
+    action_log_service.un_block(&agent.id, &user_id, "系统强制锁定", "", Option::None).await?;
+    //发送用户lock Mq
+    Ok(web::Json(result()))
+}
 #[utoipa::path(
     post,
     path = "/user/info/{user_id}",
     request_body = TokenDto,
+    tag = "用户管理",
     summary = "获取用户信息",
     params(
         ("appKey" = String, Header, description = "应用 key"),
@@ -126,7 +160,7 @@ pub async fn user_info(user_id: web::Path<String>, req: HttpRequest) -> Result<i
         return Err(BizError("user.not.exist".to_string()).into());
     }
     let client = client_option.unwrap();
-    let value = json!({"user_name":client.name,"avatarUrl":client.avatar_url,"avatarUrl":client.avatar_url,"create_time":time_to_str(client.create_time)});
+    let value = json!({"user_name":client.name,"avatarUrl":client.avatar,"avatarUrl":client.avatar,"create_time":time_to_str(client.create_time)});
     Ok(web::Json(result_data(value)))
 }
 #[derive(Serialize, Deserialize, Debug, Validate, ToSchema, Clone)]
@@ -148,6 +182,7 @@ pub struct UserEnableDto {
     post,
     path = "/user/expire",
     summary = "禁用用户",
+    tag = "用户管理",
     params(
         ("appKey" = String, Header, description = "应用 key"),
         ("nonce" = String, Header, description = "随机字符串"),
@@ -172,12 +207,13 @@ pub async fn user_expire(dto: web::Json<UserEnableDto>, req: HttpRequest) -> Res
 pub struct RefreshDto {
     uid: String,
     name: Option<String>,
-    avatar_url: Option<String>,
+    avatar: Option<String>,
 }
 #[utoipa::path(
     post,
     path = "/user/refresh",
     summary = "刷新用户信息",
+    tag = "用户管理",
     params(
         ("appKey" = String, Header, description = "应用 key"),
         ("nonce" = String, Header, description = "随机字符串"),
@@ -208,10 +244,10 @@ pub async fn user_refresh(dto: web::Json<RefreshDto>, req: HttpRequest) -> Resul
         up_doc.insert("name", as_ref_to_string(name));
         client.name = name.to_string();
     }
-    if let Some(url) = &dto.avatar_url {
+    if let Some(url) = &dto.avatar {
         up_doc.insert("avatar_url", as_ref_to_string(url));
     }
-    client.avatar_url= dto.avatar_url.clone();
+    client.avatar= dto.avatar.clone();
     client_service.dao.update(doc! {"_id":client.id.clone()}, up_doc).await?;
     user_manager.sync_user(client.clone()).await?;
     Ok(web::Json(result()))
@@ -232,6 +268,7 @@ pub struct UserGroupPageDto {
 #[utoipa::path(
     post,
     path = "/user/group/page",
+    tag = "用户管理",
     summary = "拉取用户群组分页查询",
     params(
         ("appKey" = String, Header, description = "应用 key"),

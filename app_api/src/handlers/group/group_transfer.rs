@@ -26,6 +26,7 @@ pub struct TransferGroupDto {
     path = "/group/transfer",
     request_body = TransferGroupDto,
     summary = "转让群组所有权",
+    tag = "群管理",
     params(
         ("appKey" = String, Header, description = "应用 key"),
         ("nonce" = String, Header, description = "随机字符串"),

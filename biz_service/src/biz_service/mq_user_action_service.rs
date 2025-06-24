@@ -131,28 +131,28 @@ impl UserActionLogService {
         Ok(())
     }
 
-    pub async fn login(&self, agent_id:&str,user_id: UserId, remark: &str, reason: &str, operator_user: Option<&str>) -> Result<()> {
+    pub async fn login(&self, agent_id:&str,user_id: &UserId, remark: &str, reason: &str, operator_user: Option<&str>) -> Result<()> {
         let mut action_log = self.build(agent_id,user_id, remark, reason, operator_user);
         action_log.action = UserActionType::Login;
         self.dao.insert(&action_log).await?;
         Ok(())
     }
 
-    pub async fn warn(&self, agent_id:&str,user_id:UserId, remark: &str, reason: &str, operator_user: Option<&str>) -> Result<()> {
+    pub async fn warn(&self, agent_id:&str,user_id:&UserId, remark: &str, reason: &str, operator_user: Option<&str>) -> Result<()> {
         let mut action_log = self.build(agent_id,user_id, remark, reason, operator_user);
         action_log.action = UserActionType::Warn;
         self.dao.insert(&action_log).await?;
         Ok(())
     }
 
-    pub async fn block(&self, agent_id:&str,user_id: &str, remark: &str, reason: &str, operator_user: Option<&str>) -> Result<()> {
+    pub async fn block(&self, agent_id:&str,user_id: &UserId, remark: &str, reason: &str, operator_user: Option<&str>) -> Result<()> {
         let mut action_log = self.build(agent_id,user_id, remark, reason, operator_user);
         action_log.action = UserActionType::Block;
         self.dao.insert(&action_log).await?;
         Ok(())
     }
 
-    pub async fn un_block(&self, agent_id:&str,user_id: UserId, remark: impl AsRef<str>, reason: impl AsRef<str>, operator_user: Option<String>) -> Result<()> {
+    pub async fn un_block(&self, agent_id:&str,user_id: &UserId, remark: impl AsRef<str>, reason: impl AsRef<str>, operator_user: Option<String>) -> Result<()> {
         let mut action_log = self.build(agent_id,user_id, remark, reason, operator_user);
         action_log.action = UserActionType::Unblock;
         self.dao.insert(&action_log).await?;

@@ -10,7 +10,7 @@ use common::repository_util::Repository;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 pub fn configure(cfg: &mut web::ServiceConfig, state: &web::Data<AppState>) {
-
+    cfg.service(group_mute_all);
 }
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -21,6 +21,7 @@ pub struct SetGroupMuteDto {
 #[utoipa::path(
     post,
     path = "/group/mute",
+    tag = "群成员管理",
     request_body = SetGroupMuteDto,
     summary = "设置群组全体禁言",
     params(
@@ -34,7 +35,7 @@ pub struct SetGroupMuteDto {
     )
 )]
 #[post("/group/mute")]
-pub async fn set_group_mute(dto: web::Json<SetGroupMuteDto>,   req: HttpRequest) -> Result<impl Responder, AppError> {
+pub async fn group_mute_all(dto: web::Json<SetGroupMuteDto>,   req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent= AgentService::get().check_request(auth_header).await?;
     let group_service = GroupService::get();

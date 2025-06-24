@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::entitys::client_entity::ClientInfo;
 use crate::entitys::group_entity::GroupInfo;
 use crate::manager::common::{DeviceType, UserId, SHARD_COUNT};
@@ -16,6 +17,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::sleep;
+use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 
 const MAX_CLEAN_COUNT: usize = 100;
 const USER_ONLINE_TTL_SECS: u64 = 30;
@@ -27,9 +29,9 @@ const CONSUMER_NAME: &str = "user_manager";
 #[serde(tag = "type", rename_all = "snake_case")]
 enum UserEvent {
     GroupLeave { group_id: String, user_id: UserId },
-    GroupJoin { group_id: String, user_id: UserId },
-    Online { user_id: UserId, device: crate::manager::common::DeviceType },
-    Offline { user_id: UserId, device: crate::manager::common::DeviceType },
+    GroupJoin { group_id: String, user_id: UserId,mute: Option<bool>, alias: String, role: GroupRole },
+    Online { user_id: UserId, device:DeviceType },
+    Offline { user_id: UserId, device:DeviceType },
 }
 
 /// 全局用户管理器
@@ -197,7 +199,7 @@ impl UserManager {
 
             for key in keys {
                 if let Some(key) = key.strip_prefix("online:user:") {
-                    let parts: Vec<&str> = key.split(':').collect(); // agent:<aid>:<uid>:<device>
+                    let parts: Vec<&str> = key.split(':').collect();
                     if parts.len() >= 4 {
                         let user_id = parts[2].to_string();
                         let device_type: u8 = parts[3].parse().unwrap_or(0);
@@ -231,13 +233,14 @@ impl UserManager {
                     self.local_group_manager.init_group(info);
                 }
             }
+
             if next_cursor == 0 {
                 break;
             }
             cursor = next_cursor;
         }
 
-        // ----------------- 加载群组成员列表 -----------------
+        // ----------------- 加载群组成员和成员元信息 -----------------
         let mut cursor = 0u64;
         loop {
             let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
@@ -252,8 +255,30 @@ impl UserManager {
             for key in keys {
                 if let Some(group_id) = key.strip_prefix("group:member:") {
                     let members: Vec<String> = conn.smembers(&key).await.unwrap_or_default();
+
+                    // 获取成员元信息哈希表
+                    let meta_key = format!("group:meta:{}", group_id);
+                    let metas: HashMap<String, String> = conn.hgetall(&meta_key).await.unwrap_or_default();
+
                     for uid in members {
-                        self.local_group_manager.add_user(group_id, &uid);
+                        if let Some(meta_json) = metas.get(&uid) {
+                            if let Ok(meta) = serde_json::from_str::<GroupMemberMeta>(meta_json) {
+                                // 使用完整信息添加成员到本地缓存
+                                self.local_group_manager.add_user(
+                                    group_id,
+                                    &uid,
+                                    Some(meta.mute),
+                                    meta.alias.as_deref().unwrap_or(""),
+                                    &meta.role,
+                                );
+                            } else {
+                                // fallback: 没有 meta 结构，使用默认 role/alias/mute
+                                self.local_group_manager.add_user(group_id, &uid, None, "", &GroupRole::Member);
+                            }
+                        } else {
+                            // fallback: meta 不存在
+                            self.local_group_manager.add_user(group_id, &uid, None, "", &GroupRole::Member);
+                        }
                     }
                 }
             }
@@ -491,8 +516,9 @@ async fn handle_user_event(event: &UserEvent, shards: &Vec<DashMap<UserId, Devic
             // let shard = &shards[hash_user(user_id) % SHARD_COUNT];
             // shard.remove(user_id);
         }
-        UserEvent::GroupJoin { group_id, user_id } => {
-            groups.add_user(&group_id, &user_id);
+        UserEvent::GroupJoin { group_id,  user_id,mute,  alias ,role   } => {
+            let current_mute = mute.unwrap_or(false);
+            groups.add_user(&group_id, &user_id,Option::Some(current_mute),&alias,&role );
         }
         UserEvent::GroupLeave { group_id, user_id } => {
             groups.remove_user(&group_id, &user_id);

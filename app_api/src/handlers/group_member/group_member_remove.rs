@@ -11,7 +11,7 @@ use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 pub fn configure(cfg: &mut web::ServiceConfig, state: &web::Data<AppState>) {
-    
+    cfg.service(group_member_cancel_mute);
 }
 /// 添加或移除群组禁言白名单成员的请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
@@ -29,6 +29,7 @@ pub struct WhiteListUserDto {
     path = "/group/member/cancel_mute",
     request_body = WhiteListUserDto,
     summary = "取消群成员禁言",
+    tag = "群成员管理",
     params(
         ("appKey" = String, Header, description = "应用 key"),
         ("nonce" = String, Header, description = "随机字符串"),
@@ -40,7 +41,7 @@ pub struct WhiteListUserDto {
     )
 )]
 #[post("/group/member/cancel_mute")]
-pub async fn cancel_mute_member(
+pub async fn group_member_cancel_mute(
     dto: web::Json<WhiteListUserDto>,
     req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);

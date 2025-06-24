@@ -1,21 +1,17 @@
 use actix_web::web;
+use crate::handlers::group_member::group_member_join;
 
-mod group_create;
-mod group_join;
-mod group_quit;
-mod group_dismiss;
-mod group_refresh;
-mod group_transfer;
-mod group_admin_add;
-mod group_admin_remove;
+pub mod group_create;
+pub mod group_quit;
+pub mod group_dismiss;
+pub mod group_refresh;
+pub mod group_transfer;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     group_create::configure(cfg);
-    group_join::configure(cfg);
+    group_member_join::configure(cfg);
     group_quit::configure(cfg);
     group_dismiss::configure(cfg);
     group_refresh::configure(cfg);
     group_transfer::configure(cfg);
-    group_admin_add::configure(cfg);
-    group_admin_remove::configure(cfg);
 }

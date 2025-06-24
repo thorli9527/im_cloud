@@ -5,6 +5,7 @@ use dashmap::{DashMap, DashSet};
 use once_cell::sync::OnceCell;
 use std::hash::Hash;
 use std::sync::Arc;
+use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 
 const SHARD_COUNT: usize = 16;
 // === 分片群组结构 ===
@@ -12,9 +13,9 @@ const SHARD_COUNT: usize = 16;
 pub struct LocalGroupManager {
     group_info_map: Arc<DashMap<String, GroupInfo>>,
     group_members_shards_map: Arc<Vec<DashMap<String, DashSet<String>>>>,
+    group_members_meta_map: Arc<Vec<DashMap<String, DashMap<String, GroupMemberMeta>>>>,
     user_to_groups_shards: Arc<Vec<DashMap<String, DashSet<String>>>>,
 }
-
 pub trait LocalGroupManagerOpt: Send + Sync {
     /// 初始化群组
     fn init_group(&self, group_info: GroupInfo);
@@ -27,11 +28,20 @@ pub trait LocalGroupManagerOpt: Send + Sync {
     /// 添加用户到群组
     /// # group_id: 群组ID
     /// # user_id: 用户ID
-    fn add_user(&self, group_id: &str, user_id: &str);
+    /// # alias: 群内昵称
+    /// # group_role: 群组角色
+    fn add_user(&self, group_id: &str, user_id: &UserId, mute: Option<bool>,alias:&str, group_role: &GroupRole);
+
+    /// 刷新用户信息
+    /// # group_id: 群组ID
+    /// # user_id: 用户ID
+    /// # alias: 群内昵称
+    /// # role: 群组角色
+    fn refresh_user(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &Option<String>, role: Option<GroupRole>);
     /// 移除用户从群组
     /// # group_id: 群组ID
     /// # user_id: 用户ID
-    fn remove_user(&self, group_id: &str, user_id: &str);
+    fn remove_user(&self, group_id: &str, user_id: &UserId);
     /// 获取群组用户列表
     /// # 返回用户ID列表
     /// # group_id: 群组ID
@@ -60,12 +70,14 @@ pub trait LocalGroupManagerOpt: Send + Sync {
 impl LocalGroupManager {
     pub fn new() -> Self {
         let group_members_shards_map = Arc::new((0..SHARD_COUNT).map(|_| DashMap::new()).collect());
+        let group_members_meta_map = Arc::new((0..SHARD_COUNT).map(|_| DashMap::new()).collect());
         let user_to_groups_shards = Arc::new((0..SHARD_COUNT).map(|_| DashMap::new()).collect());
         let group_info_map = Arc::new(DashMap::new());
 
         let result = Self {
             group_info_map,
             group_members_shards_map,
+            group_members_meta_map,
             user_to_groups_shards,
         };
         result.init(result.clone());
@@ -104,6 +116,11 @@ impl LocalGroupManager {
         let idx = (hash as usize) % SHARD_COUNT;
         &self.user_to_groups_shards[idx]
     }
+    fn get_group_meta_shard(&self, group_id: &str) -> &DashMap<String, DashMap<String, GroupMemberMeta>> {
+        let hash = fxhash::hash64(group_id.as_bytes());
+        let idx = (hash as usize) % SHARD_COUNT;
+        &self.group_members_meta_map[idx]
+    }
 
     // 注册为全局单例
     fn init(&self, instance: LocalGroupManager) {
@@ -131,29 +148,113 @@ impl LocalGroupManagerOpt for LocalGroupManager {
         self.group_info_map.remove(group_id);
     }
 
-    fn add_user(&self, group_id: &str, user_id: &str) {
-        let shard = self.get_group_members_shard(group_id);
-        shard
-            .entry(group_id.to_string())
-            .or_insert_with(DashSet::new)
-            .insert(user_id.to_string());
 
-        let user_shard = self.get_user_to_groups_shards(user_id);
-        user_shard
-            .entry(user_id.to_string())
+    fn add_user(
+        &self,
+        group_id: &str,
+        user_id: &UserId,
+        mute: Option<bool>,
+        alias: &str,
+        group_role: &GroupRole,
+    ) {
+        let group_id = group_id.to_string();
+        let user_id = user_id.to_string();
+
+        // 1. 加入群组成员列表
+        self.get_group_members_shard(&group_id)
+            .entry(group_id.clone())
             .or_insert_with(DashSet::new)
-            .insert(group_id.to_string());
+            .insert(user_id.clone());
+
+        // 2. 加入用户到群组反向索引
+        self.get_user_to_groups_shards(&user_id)
+            .entry(user_id.clone())
+            .or_insert_with(DashSet::new)
+            .insert(group_id.clone());
+
+        // 3. 写入群成员元信息（只在首次添加时插入）
+        let meta_shard = self.get_group_meta_shard(&group_id);
+        let meta_map = meta_shard
+            .entry(group_id.clone())
+            .or_insert_with(DashMap::new);
+
+        meta_map.entry(user_id.clone()).or_insert_with(|| GroupMemberMeta {
+            id: format!("{}_{}", group_id, user_id),
+            group_id,
+            user_id,
+            role: group_role.clone(),
+            alias: Some(alias.to_string()),
+            mute: mute.unwrap_or(false),
+        });
     }
 
-    fn remove_user(&self, group_id: &str, user_id: &str) {
-        let shard = self.get_group_members_shard(group_id);
-        if let Some(set) = shard.get(group_id) {
-            set.remove(user_id);
+    fn refresh_user(
+        &self,
+        group_id: &str,
+        user_id: &UserId,
+        mute: Option<bool>,
+        alias: &Option<String>,
+        role: Option<GroupRole>,
+    ) {
+        let group_id = group_id.to_string();
+        let user_id = user_id.to_string();
+
+        // 1. 添加用户到群成员列表
+        self.get_group_members_shard(&group_id)
+            .entry(group_id.clone())
+            .or_insert_with(DashSet::new)
+            .insert(user_id.clone());
+
+        // 2. 添加群组到用户映射
+        self.get_user_to_groups_shards(&user_id)
+            .entry(user_id.clone())
+            .or_insert_with(DashSet::new)
+            .insert(group_id.clone());
+
+        // 3. 如果 alias、role、mute 都为空，直接跳过 meta 更新
+        if alias.is_none() && role.is_none() && mute.is_none() {
+            return;
         }
 
-        let user_shard = self.get_user_to_groups_shards(user_id);
-        if let Some(set) = user_shard.get(user_id) {
-            set.remove(group_id);
+        // 4. 仅在 meta 存在时更新字段
+        if let Some(group_map) = self.get_group_meta_shard(&group_id).get(&group_id) {
+            if let Some(mut meta) = group_map.get_mut(&user_id) {
+                if let Some(alias_str) = alias {
+                    meta.alias = Some(alias_str.clone());
+                }
+                if let Some(new_role) = role {
+                    meta.role = new_role;
+                }
+                if let Some(mute_flag) = mute {
+                    meta.mute = mute_flag;
+                }
+            }
+        }
+    }
+
+
+
+
+    fn remove_user(&self, group_id: &str, user_id: &UserId) {
+        let group_id = group_id.to_string();
+        let user_id = user_id.to_string();
+
+        // 1. 移除群组 -> 用户 映射
+        let shard = self.get_group_members_shard(&group_id);
+        if let Some(set) = shard.get(&group_id) {
+            set.remove(&user_id);
+        }
+
+        // 2. 移除用户 -> 群组 映射
+        let user_shard = self.get_user_to_groups_shards(&user_id);
+        if let Some(set) = user_shard.get(&user_id) {
+            set.remove(&group_id);
+        }
+
+        // 3. 移除元信息缓存
+        let meta_shard = self.get_group_meta_shard(&group_id);
+        if let Some(meta_map) = meta_shard.get(&group_id) {
+            meta_map.remove(&user_id);
         }
     }
 

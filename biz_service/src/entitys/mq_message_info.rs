@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -77,7 +78,13 @@ pub enum MessageSegment {
         payload: serde_json::Value,
     },
 }
-
+impl Default for MessageSegment {
+    fn default() -> Self {
+        MessageSegment::Text {
+            text: String::new(),
+        }
+    }
+}
 
 /// 群聊消息类型，用于顶层标记消息所属主类别
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -118,10 +125,8 @@ pub struct UserMessage{
     pub user_id: String,
     /// 发送者用户 ID
     pub sender_id: String,
-    /// 消息类型标记（方便数据库索引/前端展示）
-    pub message_type: MessageType,
     /// 消息复合内容（支持结构化消息段）
-    pub content: GroupMessageContent,
+    pub content: Vec<Segment>,
     pub created_time: i64,                    // 创建时间（Unix 秒时间戳）
     pub updated_time: i64,                    // 最后更新时间（Unix 秒时间戳）
     /// 对应序号（用于顺序拉取）
@@ -142,10 +147,8 @@ pub struct GroupMessage {
     pub group_id: String,
     /// 发送者用户 ID
     pub sender_id: String,
-    /// 消息类型标记（方便数据库索引/前端展示）
-    pub message_type: MessageType,
     /// 消息复合内容（支持结构化消息段）
-    pub content: GroupMessageContent,
+    pub content: Vec<Segment>,
     /// 创建时间（Unix 秒时间戳）
     pub create_time: i64,
     /// 最后更新时间（Unix 秒时间戳）
@@ -158,7 +161,21 @@ pub struct GroupMessage {
     pub is_system: bool,
 
 }
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct GroupMessageContent {
-    pub segments: Vec<MessageSegment>,
+
+#[derive(Debug, Serialize, Deserialize, Clone,Default)]
+pub struct Segment{
+    /// 消息段类型及内容
+    #[serde(flatten)]
+    pub body: MessageSegment,
+    /// ID，用于局部标记、编辑等
+    pub segment_id: String,
+    /// 在消息中的顺序编号（用于前端排布）
+    pub seq_in_msg: u64,
+    /// 是否为编辑后的段
+    pub edited: bool,
+    /// 是否允许客户端渲染
+    pub visible: bool,
+    /// 通用扩展字段
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<HashMap<String, serde_json::Value>>,
 }

@@ -23,7 +23,7 @@ impl ClientService {
         let mut user = ClientInfo::default();
         user.agent_id = agent_id;
         user.name = name;
-        user.avatar_url = avatar;
+        user.avatar = avatar;
         user.enable = true;
         user.user_id = user_id.to_string();
         user.agent_id_user_id = format!("{}_{}", user.agent_id, user.user_id);

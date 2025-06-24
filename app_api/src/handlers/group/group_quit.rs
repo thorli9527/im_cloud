@@ -1,4 +1,3 @@
-use crate::handlers::common_handler::status;
 use crate::result::{result, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
@@ -9,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(status);
+    cfg.service(group_quit);
 }
 /// 加入群组请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
@@ -27,6 +26,7 @@ pub struct GroupQuitDto {
 #[utoipa::path(
     post,
     path = "/group/quit",
+    tag = "群管理",
     request_body = GroupQuitDto,
     summary = "退出群组",
     params(
@@ -42,7 +42,7 @@ pub struct GroupQuitDto {
 #[post("/group/quit")]
 pub async fn group_quit(dto: web::Json<GroupQuitDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let agent = AgentService::get().check_request(auth_header).await?;
+    let _ = AgentService::get().check_request(auth_header).await?;
     let group_manager = GroupManager::get();
 
     let info = group_manager.get_group_info(&*dto.group_id).await?;

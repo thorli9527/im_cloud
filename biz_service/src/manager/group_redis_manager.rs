@@ -8,6 +8,8 @@ use dashmap::DashSet;
 use deadpool_redis::{redis::{cmd, AsyncCommands}, Pool as RedisPool};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use serde_json::to_string;
+use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 
 /// 群组管理器
 #[derive(Debug, Clone)]
@@ -44,6 +46,9 @@ impl GroupManager {
     fn key_group_members(group_id: &str) -> String {
         format!("group:member:{}", group_id)
     }
+    fn key_group_member_meta(group_id: &str) -> String {
+        format!("group:member:meta:{}", group_id)
+    }
 }
 
 static INSTANCE: OnceCell<Arc<GroupManager>> = OnceCell::new();
@@ -53,8 +58,9 @@ static INSTANCE: OnceCell<Arc<GroupManager>> = OnceCell::new();
 pub trait GroupManagerOpt: Send + Sync {
     async fn create_group(&self, info: GroupInfo) -> Result<()>;
     async fn dismiss_group(&self, group_id: &str) -> Result<()>;
-    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId) -> Result<()>;
+    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId, mute: Option<bool>,alian:&str,group_role: &GroupRole) -> Result<()>;
     async fn remove_user_from_group(&self, group_id: &str, user_id: &UserId) -> Result<()>;
+    async fn group_member_refresh(&self, group_id: &str, user_id: &UserId, mute: Option<bool>,alias:&Option<String>,role:&Option<GroupRole>) -> Result<()>;
     async fn get_group_info(&self, group_id: &str) -> Result<Option<GroupInfo>>;
     async fn get_group_members(&self, group_id: &str) -> Result<Vec<UserId>>;
     ///判断用户是否在群组中
@@ -90,32 +96,126 @@ impl GroupManagerOpt for GroupManager {
 
         Ok(())
     }
-    
+
     async fn dismiss_group(&self, group_id: &str) -> Result<()> {
         let mut conn = self.pool.get().await?;
-        let key = Self::key_group_info(group_id);
 
-        let _: () = conn.del(&key).await?;
+        // 1. 删除群组信息键
+        let group_info_key = Self::key_group_info(group_id);
+        let _: () = conn.del(&group_info_key).await?;
 
+        // 2. 删除群成员集合
+        let members_key = Self::key_group_members(group_id);
+        let _: () = conn.del(&members_key).await?;
+
+        // 3. 删除群成员元信息（例如 alias、role、mute 等）
+        let meta_key = Self::key_group_member_meta(group_id);
+        let _: () = conn.del(&meta_key).await?;
+
+        // 4. 同步本地缓存
         if self.use_local_cache {
             self.local_group_manager.remove_group(group_id);
         }
 
-        // 删除群成员
-        let members_key = Self::key_group_members(group_id);
-        let _: () = conn.del(&members_key).await?;
+        // 5. 可选：发送群解散广播
+        // self.broadcast_group_dismissed(group_id).await?;
 
         Ok(())
     }
 
-    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId) -> Result<()> {
+    async fn add_user_to_group(
+        &self,
+        group_id: &str,
+        user_id: &UserId,
+        mute: Option<bool>,
+        alias: &str,
+        group_role: &GroupRole,
+    ) -> Result<()> {
+        // 本地缓存
+        if self.use_local_cache {
+            self.local_group_manager
+                .add_user(group_id, user_id, mute, alias, group_role);
+        }
+
+        let mut conn = self.pool.get().await?;
+
+        // 1. 添加成员 ID 到成员集合
+        let member_set_key = Self::key_group_members(group_id);
+        let _: () = cmd("SADD")
+            .arg(&member_set_key)
+            .arg(user_id)
+            .query_async(&mut conn)
+            .await?;
+
+        // 2. 写入元信息 JSON 到成员元信息 Hash
+        let meta = GroupMemberMeta {
+            id: format!("{}_{}", group_id, user_id),
+            group_id: group_id.to_string(),
+            user_id: user_id.to_string(),
+            role: group_role.clone(),
+            alias: Some(alias.to_string()),
+            mute: mute.unwrap_or(false),
+        };
+        let json = serde_json::to_string(&meta)?;
+        let meta_hash_key = Self::key_group_member_meta(group_id);
+        let _: () = cmd("HSET")
+            .arg(&meta_hash_key)
+            .arg(user_id)
+            .arg(json)
+            .query_async(&mut conn)
+            .await?;
+
+        Ok(())
+    }async fn group_member_refresh(
+        &self,
+        group_id: &str,
+        user_id: &UserId,
+        mute: Option<bool>,
+        alias: &Option<String>,
+        role: &Option<GroupRole>,
+    ) -> Result<()> {
         let mut conn = self.pool.get().await?;
         let key = Self::key_group_members(group_id);
+        let meta_key = Self::key_group_member_meta(group_id);
 
+        // 1. 保证成员存在于群组集合
         let _: () = cmd("SADD").arg(&key).arg(&user_id).query_async(&mut conn).await?;
 
+        // 2. 本地缓存更新
         if self.use_local_cache {
-            self.local_group_manager.add_user(group_id, &user_id);
+            self.local_group_manager
+                .refresh_user(group_id, user_id, mute.clone(), alias, role.clone());
+        }
+
+        // 3. 读取原有 meta 并更新
+        let raw: Option<String> = cmd("HGET")
+            .arg(&meta_key)
+            .arg(&user_id)
+            .query_async(&mut conn)
+            .await?;
+
+        if let Some(json) = raw {
+            let mut meta: GroupMemberMeta = serde_json::from_str(&json)?;
+
+            if let Some(new_alias) = alias {
+                meta.alias = Some(new_alias.clone());
+            }
+
+            if let Some(new_role) = role {
+                meta.role = new_role.clone();
+            }
+
+            if let Some(mute_flag) = mute {
+                meta.mute = mute_flag;
+            }
+
+            let updated = serde_json::to_string(&meta)?;
+            let _: () = cmd("HSET")
+                .arg(&meta_key)
+                .arg(&user_id)
+                .arg(&updated)
+                .query_async(&mut conn)
+                .await?;
         }
 
         Ok(())
@@ -123,16 +223,34 @@ impl GroupManagerOpt for GroupManager {
 
     async fn remove_user_from_group(&self, group_id: &str, user_id: &UserId) -> Result<()> {
         let mut conn = self.pool.get().await?;
+
+        // Step 1: 移除 Redis 中的成员关系
         let key = Self::key_group_members(group_id);
+        let _: () = cmd("SREM")
+            .arg(&key)
+            .arg(&user_id)
+            .query_async(&mut conn)
+            .await?;
 
-        let _: () = cmd("SREM").arg(&key).arg(&user_id).query_async(&mut conn).await?;
+        // Step 2: 移除 Redis 中的成员元数据
+        let meta_key = Self::key_group_member_meta(group_id);
+        let _: () = cmd("HDEL")
+            .arg(&meta_key)
+            .arg(&user_id)
+            .query_async(&mut conn)
+            .await?;
 
+        // Step 3: 本地缓存移除（如启用）
         if self.use_local_cache {
-            self.local_group_manager.remove_user(group_id, &user_id);
+            self.local_group_manager.remove_user(group_id, user_id);
         }
-        //发消息
+
+        // Step 4: 广播用户退出消息（可选）
+        // self.broadcast_user_left(group_id, user_id).await?;
+
         Ok(())
     }
+
 
     async fn get_group_info(&self, group_id: &str) -> Result<Option<GroupInfo>> {
         if self.use_local_cache {
@@ -178,7 +296,6 @@ impl GroupManagerOpt for GroupManager {
                 result.push(uid.clone());
             }
         }
-
         Ok(result)
     }
 

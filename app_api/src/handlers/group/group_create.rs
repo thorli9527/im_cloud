@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(status);
+    cfg.service(group_create);
 }
 /// 创建群组请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
@@ -41,6 +41,7 @@ pub struct CreateGroupDto {
     post,
     path = "/group/create",
     summary = "创建群组",
+    tag = "群管理",
     params(
         ("appKey" = String, Header, description = "应用 key"),
         ("nonce" = String, Header, description = "随机字符串"),
@@ -53,8 +54,7 @@ pub struct CreateGroupDto {
     )
 )]
 #[post("/group/create")]
-///// 创建群组接口（签名验证 + 防重复创建）
-pub async fn create_group(dto: web::Json<CreateGroupDto>, req: HttpRequest,
+pub async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent=AgentService::get()
@@ -71,8 +71,9 @@ pub async fn create_group(dto: web::Json<CreateGroupDto>, req: HttpRequest,
         group_id: dto.group_id.clone(),
         agent_id: agent.id.clone(),
         name: dto.group_name.clone(),
-        icon_url: None,
-        notice: None,
+        avatar: None,
+        description: None,
+        announcement: None,
         owner_id: dto.user_id.to_string(),
         group_type: 0,
         max_members: 500,

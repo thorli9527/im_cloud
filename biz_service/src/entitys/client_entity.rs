@@ -34,11 +34,12 @@ pub struct ClientInfo {
     pub id: String,      // 用户id
     pub name:String,     //用户名
     pub user_id: String, //客户端用户id
+    pub alias:String,    //客户端用户昵称
     pub enable: bool,    //用户启用状态                   封号
     pub lock:bool,          //用户锁定 不能登录
     pub agent_id: String,                               // 商户id
     pub agent_id_user_id: String, // 商户ID+user_id 组合唯一标识
-    pub avatar_url: Option<String>,                     // 头像 URL
+    pub avatar: Option<String>,                     // 头像 URL
     pub allow_add_friend: FriendPolicy,                 // 加好友策略
     pub profile_fields: HashMap<String, String>,// 用户基本信息
     pub extend_fields: Option<HashMap<String, String>>, // 字段扩展
