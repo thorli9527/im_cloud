@@ -1,11 +1,11 @@
-use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Serialize};
-use std::collections::HashMap;
-use std::sync::Arc;
 use anyhow::Result;
+use async_trait::async_trait;
 use deadpool_redis::redis::Pipeline;
 use deadpool_redis::{redis, Pool};
 use once_cell::sync::OnceCell;
+use serde::{de::DeserializeOwned, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
 /// RedisTemplate 是 Redis 操作的统一入口点，封装了连接池并提供 Value/List/Hash 操作接口
 #[derive(Clone,Debug)]
 pub struct RedisTemplate {

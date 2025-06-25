@@ -1,4 +1,3 @@
-use crate::result::AppState;
 use actix_web::web;
 
 pub mod common_handler;

@@ -5,6 +5,7 @@ use actix_web::{cookie, web, App, HttpServer};
 use app_main::handlers;
 use app_main::handlers::swagger::openapi_json;
 use app_main::result::AppState;
+use biz_service::biz_service::kafka_service::KafkaService;
 use biz_service::manager;
 use common::config::{AppConfig, ServerRes};
 use common::errors::AppError;
@@ -23,7 +24,6 @@ use std::clone;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use biz_service::biz_service::kafka_service::KafkaService;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

@@ -1,5 +1,5 @@
-use actix_web::web;
 use crate::handlers::group_member::group_member_join;
+use actix_web::web;
 
 pub mod group_create;
 pub mod group_quit;

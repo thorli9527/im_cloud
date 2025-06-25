@@ -1,4 +1,3 @@
-use crate::handlers::common_handler::status;
 use crate::result::{result, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
@@ -7,12 +6,12 @@ use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogS
 use biz_service::entitys::group_member::{GroupMember, GroupRole};
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use biz_service::manager::group_redis_manager::{GroupManager, GroupManagerOpt};
+use biz_service::manager::user_redis_manager::{UserManager, UserManagerOpt};
 use common::errors::AppError;
 use common::repository_util::Repository;
 use common::util::date_util::now;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use biz_service::manager::user_redis_manager::{UserManager, UserManagerOpt};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(group_member_join);

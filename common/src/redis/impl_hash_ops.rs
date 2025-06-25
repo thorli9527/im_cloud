@@ -1,6 +1,5 @@
-use deadpool_redis::redis::cmd;
-use super::*;
 use anyhow::Error;
+use deadpool_redis::redis::cmd;
 
 #[async_trait]
 impl HashOps for HashOperations {

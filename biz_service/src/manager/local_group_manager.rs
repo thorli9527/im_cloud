@@ -1,12 +1,11 @@
 use crate::entitys::group_entity::GroupInfo;
+use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 use crate::manager::common::UserId;
 use crate::manager::user_redis_manager::{UserManager, UserManagerOpt};
 use dashmap::{DashMap, DashSet};
 use once_cell::sync::OnceCell;
 use std::hash::Hash;
 use std::sync::Arc;
-use deadpool_redis::Pool;
-use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 
 const SHARD_COUNT: usize = 16;
 // === 分片群组结构 ===

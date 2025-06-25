@@ -1,7 +1,6 @@
 #![feature(unwrap_infallible)]
 
 use mongodb::Database;
-use common::config::KafkaConfig;
 
 pub mod biz_const;
 pub mod biz_service;

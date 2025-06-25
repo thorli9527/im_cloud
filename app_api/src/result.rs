@@ -1,8 +1,6 @@
 use actix_web::body::BoxBody;
 use actix_web::http::header;
 use actix_web::{HttpRequest, HttpResponse, Responder};
-use common::config::AppConfig;
-use config::Config;
 use serde::Serialize;
 use serde_json::Value;
 use std::fmt::Debug;

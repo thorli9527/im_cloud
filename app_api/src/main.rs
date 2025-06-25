@@ -2,6 +2,7 @@ use actix_web::middleware::Logger;
 use actix_web::rt::Runtime;
 use actix_web::{cookie, web, App, HttpServer};
 use app_api::handlers;
+use biz_service::biz_service::kafka_service::KafkaService;
 use biz_service::manager;
 use common::config::{AppConfig, ServerRes};
 use common::errors::AppError;
@@ -14,7 +15,6 @@ use log::{info, warn, LevelFilter};
 use mongodb::options::ClientOptions;
 use mongodb::{Client, Database};
 use std::str::FromStr;
-use biz_service::biz_service::kafka_service::KafkaService;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

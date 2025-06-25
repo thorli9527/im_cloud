@@ -1,4 +1,4 @@
-use crate::result::{result, ApiResponse,};
+use crate::result::{result, ApiResponse, };
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;

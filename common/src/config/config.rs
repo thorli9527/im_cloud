@@ -1,10 +1,9 @@
-use std::sync::Arc;
+use config::Config;
 // use crate::redis::redis_template::RedisTemplate;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use crate::repository_util::BaseRepository;
-use config::Config;
+use std::sync::Arc;
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
     pub database: DatabaseConfig,

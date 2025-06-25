@@ -7,11 +7,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use dashmap::DashSet;
 use deadpool_redis::{
-    Pool as RedisPool, Pool,
-    redis::{AsyncCommands, cmd},
+    redis::{cmd, AsyncCommands}, Pool as RedisPool,
+    Pool,
 };
 use once_cell::sync::OnceCell;
-use serde_json::to_string;
 use std::sync::Arc;
 
 /// 群组管理器

@@ -1,5 +1,3 @@
-
-
 use crate::kafka::kafka_consumer::*;
 use crate::manager::socket_manager::{get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta};
 use crate::pb::protocol::envelope::Payload;

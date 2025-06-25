@@ -1,9 +1,9 @@
-use app_socket::handler::handle_connection;
 use app_socket::manager;
 use app_socket::manager::socket_manager::{get_socket_manager, SocketManager};
+use app_socket::server::start_server;
+use biz_service::biz_service::kafka_service::KafkaService;
 use common::config::AppConfig;
 use common::errors::AppError;
-use config::Config;
 use deadpool_redis::{Pool, PoolConfig};
 use futures::StreamExt;
 use log::LevelFilter;
@@ -12,8 +12,6 @@ use mongodb::{Client, Database};
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use app_socket::server::start_server;
-use biz_service::biz_service::kafka_service::KafkaService;
 
 /// 写通道类型，用于发送 protobuf 编码好的消息
 

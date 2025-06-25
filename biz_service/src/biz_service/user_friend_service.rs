@@ -1,9 +1,9 @@
 use crate::entitys::user_friend::{FriendSourceType, FriendStatus, UserFriend};
 use crate::manager::common::UserId;
 use crate::manager::user_redis_manager::{UserManager, UserManagerOpt};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
-use mongodb::{Database, bson::doc};
+use mongodb::{bson::doc, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 

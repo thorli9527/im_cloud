@@ -7,9 +7,10 @@ use biz_service::biz_service::mq_user_action_service::UserActionLogService;
 use biz_service::entitys::client_entity::ClientInfo;
 use biz_service::manager::group_redis_manager::{GroupManager, GroupManagerOpt};
 use biz_service::manager::user_redis_manager::{UserManager, UserManagerOpt};
-use common::redis::redis_template::ValueOps;
 use common::errors::AppError;
 use common::errors::AppError::BizError;
+use common::redis::redis_template::RedisTemplate;
+use common::redis::redis_template::ValueOps;
 use common::repository_util::Repository;
 use common::util::common_utils::{as_ref_to_string, build_uuid};
 use common::util::date_util::time_to_str;
@@ -18,7 +19,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
 use validator::Validate;
-use common::redis::redis_template::RedisTemplate;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_create);

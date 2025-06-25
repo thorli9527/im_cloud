@@ -1,10 +1,10 @@
-use std::sync::Arc;
-use dashmap::DashMap;
+use anyhow::{anyhow, Result};
 use bytes::Bytes;
+use dashmap::DashMap;
 use once_cell::sync::OnceCell;
-use uuid::Uuid;
 use serde::Deserialize;
-use anyhow::{Result, anyhow};
+use std::sync::Arc;
+use uuid::Uuid;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};

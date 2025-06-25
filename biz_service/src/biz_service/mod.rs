@@ -13,9 +13,7 @@ pub mod mq_user_action_service;
 pub mod user_service;
 pub mod user_friend_service;
 
-use crate::biz_service::kafka_service::KafkaService;
 use actix_web::body::MessageBody;
-use common::config::KafkaConfig;
 use mongodb::Database;
 
 pub  fn init_service(db: Database)  {

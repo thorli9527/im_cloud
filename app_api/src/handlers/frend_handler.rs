@@ -1,12 +1,12 @@
-use crate::result::{ApiResponse, result, result_data};
-use actix_web::{HttpRequest, Responder, post, web};
-use biz_service::biz_service::agent_service::{AgentService, build_header};
+use crate::result::{result, result_data, ApiResponse};
+use actix_web::{post, web, HttpRequest, Responder};
+use biz_service::biz_service::agent_service::{build_header, AgentService};
+use biz_service::entitys::user_friend::FriendSourceType;
 use biz_service::manager::user_redis_manager::{UserManager, UserManagerOpt};
 use common::errors::AppError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
-use biz_service::entitys::user_friend::FriendSourceType;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(friend_add);

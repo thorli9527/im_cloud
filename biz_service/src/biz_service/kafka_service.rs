@@ -1,14 +1,14 @@
-use std::sync::Arc;
-use std::time::Duration;
+use common::config::KafkaConfig;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
-use rdkafka::ClientConfig;
-use rdkafka::producer::{FutureProducer, FutureRecord};
-use serde::Serialize;
-use common::config::KafkaConfig;
-use std::fmt;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::client::DefaultClientContext;
+use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::ClientConfig;
+use serde::Serialize;
+use std::fmt;
+use std::sync::Arc;
+use std::time::Duration;
 use tokio::runtime::Runtime;
 
 #[derive(Clone)]

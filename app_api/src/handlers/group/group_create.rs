@@ -9,11 +9,11 @@ use biz_service::entitys::group_member::{GroupMember, GroupRole};
 use common::errors::AppError;
 use common::errors::AppError::BizError;
 use common::repository_util::Repository;
+use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
-use common::util::common_utils::build_uuid;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(group_create);

@@ -1,13 +1,13 @@
-use crate::entitys::mq_message_info::{GroupMessage, Segment, SegmentDto, UserMessage};
+use crate::biz_service::kafka_service::KafkaService;
+use crate::entitys::mq_message_info::{GroupMessage, Segment, SegmentDto};
+use common::config::AppConfig;
+use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
+use common::util::common_utils::{build_snow_id, build_uuid};
+use common::util::date_util::now;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use common::config::AppConfig;
-use common::errors::AppError;
-use common::util::common_utils::{build_snow_id, build_uuid};
-use common::util::date_util::now;
-use crate::biz_service::kafka_service::KafkaService;
 
 #[derive(Debug)]
 pub struct GroupMessageService {
