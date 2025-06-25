@@ -13,7 +13,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 /// 加入群组请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct GroupQuitDto {
+struct GroupQuitDto {
     /// 用户 ID
     #[schema(example = "user_123")]
     pub user_id: String,
@@ -40,7 +40,7 @@ pub struct GroupQuitDto {
     )
 )]
 #[post("/group/quit")]
-pub async fn group_quit(dto: web::Json<GroupQuitDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn group_quit(dto: web::Json<GroupQuitDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let _ = AgentService::get().check_request(auth_header).await?;
     let group_manager = GroupManager::get();

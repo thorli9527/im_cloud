@@ -5,7 +5,7 @@ use utoipa::ToSchema;
 pub struct UserActionLog {
     pub id: String,  
     pub agent_id:String,// 商户id
-    pub user_id: String,                        // 被操作用户
+    pub uid: String,                        // 被操作用户
     pub action: UserActionType,              // 动作类型（使用枚举）
     pub reason: Option<String>,              // 操作原因（如违规内容）
     pub remark: Option<String>,              // 备注说明（如后台记录、系统生成信息）

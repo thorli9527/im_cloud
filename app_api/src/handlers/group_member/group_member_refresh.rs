@@ -18,7 +18,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 /// 加入群组请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct GroupMemberRefreshDto {
+struct GroupMemberRefreshDto {
     /// 群组 ID
     #[schema(example = "group_001")]
     pub group_id: String,
@@ -63,7 +63,7 @@ impl Default for GroupMemberRefreshDto {
     )
 )]
 #[post("/group/member/refresh")]
-pub async fn group_member_refresh(dto: web::Json<GroupMemberRefreshDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn group_member_refresh(dto: web::Json<GroupMemberRefreshDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
   
@@ -83,7 +83,7 @@ pub async fn group_member_refresh(dto: web::Json<GroupMemberRefreshDto>,  req: H
     let member = GroupMember {
         id: "".to_string(),
         group_id: dto.group_id.clone(),
-        user_id: dto.user_id.clone(),
+        uid: dto.user_id.clone(),
         role: GroupRole::Member,
         alias: dto.alias.clone(),
         mute:false,

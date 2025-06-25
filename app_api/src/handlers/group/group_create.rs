@@ -21,7 +21,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 /// 创建群组请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateGroupDto {
+struct CreateGroupDto {
     /// 群主用户 ID
     #[schema(example = "user_123")]
     pub user_id: String,
@@ -52,7 +52,7 @@ pub struct CreateGroupDto {
     )
 )]
 #[post("/group/create")]
-pub async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
+async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent=AgentService::get()
@@ -86,7 +86,7 @@ pub async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
     let owner = GroupMember {
         id:"".to_string(),
         group_id:group_id.clone(),
-        user_id: dto.user_id.clone(),
+        uid: dto.user_id.clone(),
         role: GroupRole::Owner,
         alias: None,
         mute:false,
@@ -103,7 +103,7 @@ pub async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
         let member = GroupMember {
             id:"".to_string(),
             group_id: group_id.clone(),
-            user_id: user_id.clone(),
+            uid: user_id.clone(),
             role: GroupRole::Member,
             alias: None,
             mute:false,

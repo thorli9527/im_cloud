@@ -6,8 +6,11 @@ use rdkafka::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use serde::Serialize;
 use common::config::KafkaConfig;
-use crate::biz_service::agent_service::AgentService;
 use std::fmt;
+use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
+use rdkafka::client::DefaultClientContext;
+use tokio::runtime::Runtime;
+
 #[derive(Clone)]
 pub struct KafkaService {
     producer: FutureProducer,
@@ -30,6 +33,55 @@ impl KafkaService {
         KafkaService { producer, config: cfg }
     }
 
+    /// 初始化：创建 topics，然后注册单例
+    pub async fn init(cfg: &KafkaConfig) {
+        Self::create_topics_or_exit(
+            &cfg.brokers,
+            &[
+                (&cfg.topic_single, 3, 1),
+                (&cfg.topic_group, 2, 1),
+            ],
+        )
+            .await;
+
+        let instance = Self::new(cfg.clone());
+        SERVICE.set(Arc::new(instance)).expect("KafkaService already initialized");
+    }
+    /// 异步创建多个 topic，如果已存在则退出程序
+    pub async fn create_topics_or_exit(brokers: &str, topics: &[(&str, i32, i32)]) {
+        let admin: AdminClient<_> = ClientConfig::new()
+            .set("bootstrap.servers", brokers)
+            .create()
+            .expect("Failed to create Kafka AdminClient");
+
+        let topic_defs: Vec<_> = topics
+            .iter()
+            .map(|(name, part, rep)| NewTopic::new(*name, *part, TopicReplication::Fixed(*rep)))
+            .collect();
+
+        let results = admin
+            .create_topics(&topic_defs, &AdminOptions::new())
+            .await
+            .expect("Kafka topic creation failed");
+
+        for result in results {
+            match result {
+                Ok(name) => println!("✅ Created topic: {}", name),
+                Err((name, err)) if err.to_string().contains("TopicAlreadyExists") => {
+                    if err.to_string().contains("TopicAlreadyExists") {
+                        println!("🔁 Topic [{}] already exists, skipping", name);
+                        continue;
+                    }
+                }
+                Err((name, err)) => {
+                    eprintln!("❌ Failed to create topic [{}]: {}", name, err);
+                    std::process::exit(1);
+                }
+            }
+        }
+    }
+
+    /// 发送消息
     pub async fn send<T: Serialize>(
         &self,
         value: &T,
@@ -42,11 +94,11 @@ impl KafkaService {
         match self.producer.send(record, Duration::from_secs(0)).await {
             Ok((partition, offset)) => {
                 log::info!(
-                "Kafka message sent successfully. topic={}, partition={}, offset={}",
-                topic,
-                partition,
-                offset
-            );
+                    "Kafka message sent successfully. topic={}, partition={}, offset={}",
+                    topic,
+                    partition,
+                    offset
+                );
                 Ok((partition, offset))
             }
             Err((err, _)) => {
@@ -56,16 +108,10 @@ impl KafkaService {
         }
     }
 
-    pub fn init(cfg: KafkaConfig) {
-        let instance = Self::new(cfg);
-        SERVICE.set(Arc::new(instance)).expect("INSTANCE already initialized");
-    }
-
     /// 获取单例
     pub fn get() -> Arc<Self> {
-        SERVICE.get().expect("INSTANCE is not initialized").clone()
+        SERVICE.get().expect("KafkaService is not initialized").clone()
     }
-
 }
 
 static SERVICE: OnceCell<Arc<KafkaService>> = OnceCell::new();

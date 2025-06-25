@@ -25,8 +25,8 @@ impl ClientService {
         user.name = name;
         user.avatar = avatar;
         user.enable = true;
-        user.user_id = user_id.to_string();
-        user.agent_id_user_id = format!("{}_{}", user.agent_id, user.user_id);
+        user.uid = user_id.to_string();
+        user.agent_id_uid = format!("{}_{}", user.agent_id, user.uid);
         self.dao.insert(&user).await?;
         Ok(user)
     }
@@ -69,9 +69,9 @@ impl ClientService {
         
     }
     
-    pub async fn build_token(&self,agent_id: &str, user_id: &UserId,device_type: DeviceType) -> Result<()> {
+    pub async fn build_token(&self,agent_id: &str, uid: &UserId,device_type: DeviceType) -> Result<()> {
         let user_manager = UserManager::get();
-        user_manager.build_token(agent_id,user_id,device_type).await?;
+        user_manager.build_token(agent_id,uid,device_type).await?;
         Ok(())
     }
     pub async fn find_client_by_token(&self, token: &str) -> Result<Option<ClientInfo>> {

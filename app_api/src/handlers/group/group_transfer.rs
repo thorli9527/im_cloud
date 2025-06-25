@@ -14,7 +14,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 /// 转让群组请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct TransferGroupDto {
+struct TransferGroupDto {
     /// 群组 ID
     pub group_id: String,
 
@@ -38,7 +38,7 @@ pub struct TransferGroupDto {
     )
 )]
 #[post("/group/transfer")]
-pub async fn group_transfer(
+async fn group_transfer(
     dto: web::Json<TransferGroupDto>,
     req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);

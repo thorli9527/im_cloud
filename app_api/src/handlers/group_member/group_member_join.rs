@@ -20,7 +20,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 /// 加入群组请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct GroupJoinDto {
+struct GroupJoinDto {
     /// 用户 ID
     #[schema(example = "user_123")]
     pub user_id: String,
@@ -58,7 +58,7 @@ pub struct GroupJoinDto {
     )
 )]
 #[post("/group/member/join")]
-pub async fn group_member_join(dto: web::Json<GroupJoinDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn group_member_join(dto: web::Json<GroupJoinDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
     let user_manager=UserManager::get();
@@ -82,7 +82,7 @@ pub async fn group_member_join(dto: web::Json<GroupJoinDto>,  req: HttpRequest) 
     let member = GroupMember {
         id: "".to_string(),
         group_id: dto.group_id.clone(),
-        user_id: dto.user_id.clone(),
+        uid: dto.user_id.clone(),
         role: GroupRole::Member,
         alias: dto.alias.clone(),
         mute:false,

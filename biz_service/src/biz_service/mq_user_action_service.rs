@@ -16,9 +16,9 @@ pub struct UserActionLogService {
 }
 
 impl UserActionLogService {
-    fn build(&self, agent_id:&str,user_id: impl AsRef<str>, remark: impl AsRef<str>, reason: impl AsRef<str>, operator_user: Option<impl AsRef<str>>) -> UserActionLog {
+    fn build(&self, agent_id:&str, uid: impl AsRef<str>, remark: impl AsRef<str>, reason: impl AsRef<str>, operator_user: Option<impl AsRef<str>>) -> UserActionLog {
         let mut log = UserActionLog::default();
-        log.user_id = as_ref_to_string(user_id);
+        log.uid = as_ref_to_string(uid);
         log.remark = Option::Some(as_ref_to_string(remark));
         log.agent_id= agent_id.to_string();
         log.reason = Option::Some(as_ref_to_string(reason));
@@ -35,8 +35,8 @@ impl UserActionLogService {
     }
     ///
     /// 强制下线
-    pub async fn offline(&self,agent_id:&str, user_id: impl AsRef<str>, remark: impl AsRef<str>, reason: impl AsRef<str>, operator_user: Option<&str>) -> Result<(), AppError> {
-        let mut action_log = self.build(agent_id,user_id, remark, reason, operator_user);
+    pub async fn offline(&self, agent_id:&str, uid: impl AsRef<str>, remark: impl AsRef<str>, reason: impl AsRef<str>, operator_user: Option<&str>) -> Result<(), AppError> {
+        let mut action_log = self.build(agent_id, uid, remark, reason, operator_user);
         action_log.action = UserActionType::Unmute;
         self.dao.insert(&action_log).await?;
         Ok(())
@@ -45,7 +45,7 @@ impl UserActionLogService {
     pub async fn mute(
         &self,
         agent_id: &str,
-        user_id: &UserId,
+        uid: &UserId,
         remark: &str,
         reason: &str,
         operator_user: Option<&str>,
@@ -53,11 +53,11 @@ impl UserActionLogService {
         let client_service = ClientService::get();
         // 通过 user_id 查找用户，不存在则抛出业务错误
         let mut result = client_service
-            .find_by_user_id(agent_id, user_id)
+            .find_by_user_id(agent_id, uid)
             .await?
             .ok_or_else(|| AppError::BizError("user.not_found".to_string()))?;
         // 构造操作日志
-        let mut action_log = self.build(agent_id, user_id, remark, reason, operator_user);
+        let mut action_log = self.build(agent_id, uid, remark, reason, operator_user);
         action_log.action = UserActionType::Mute;
 
         client_service.dao.up_property(&result.id,"message_status",true).await?;
@@ -71,7 +71,7 @@ impl UserActionLogService {
     pub async fn lock(
         &self,
         agent_id: &str,
-        user_id: &UserId,
+        uid: &UserId,
         remark: &str,
         reason: &str,
         operator_user: Option<&str>,
@@ -79,11 +79,11 @@ impl UserActionLogService {
         let client_service = ClientService::get();
         // 通过 user_id 查找用户，不存在则抛出业务错误
         let mut result = client_service
-            .find_by_user_id(agent_id, user_id)
+            .find_by_user_id(agent_id, uid)
             .await?
             .ok_or_else(|| AppError::BizError("user.not_found".to_string()))?;
         // 构造操作日志
-        let mut action_log = self.build(agent_id, user_id, remark, reason, operator_user);
+        let mut action_log = self.build(agent_id, uid, remark, reason, operator_user);
         action_log.action = UserActionType::Knockout;
         client_service.dao.up_property(&result.id,"lock",true).await?;
         result.lock=true;

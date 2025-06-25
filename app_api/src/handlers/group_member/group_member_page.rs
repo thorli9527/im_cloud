@@ -12,7 +12,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 /// 拉取群组成员分页查询请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct GroupMemberPageDto {
+struct GroupMemberPageDto {
     /// 群组 ID
     pub group_id: String,
 
@@ -40,7 +40,7 @@ pub struct GroupMemberPageDto {
     )
 )]
 #[post("/group/member/page")]
-pub async fn group_member_page(
+async fn group_member_page(
     query: web::Json<GroupMemberPageDto>,
     req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);

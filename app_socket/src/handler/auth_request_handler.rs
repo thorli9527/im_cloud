@@ -20,17 +20,17 @@ pub async fn auth_request(id: &ConnectionId, data: Envelope, auth:AuthRequest) -
             .await
             .context("find client by token error")?.unwrap();
         let mut conn_info = socket_manager.connections.get_mut(id).unwrap();
-        conn_info.meta.user_id=Option::Some(user.user_id.clone());
+        conn_info.meta.user_id=Option::Some(user.uid.clone());
         conn_info.meta.client_id=Option::Some(auth.client_id.clone());
         conn_info.meta.device_type=Option::Some(auth.device_type().clone());
-        socket_manager.user_index.entry(user.user_id.clone()).or_insert_with(HashSet::new).insert(id.clone());
+        socket_manager.user_index.entry(user.uid.clone()).or_insert_with(HashSet::new).insert(id.clone());
 
         //socket auth 请求回复
         let msg=build_auth_ack(data.envelope_id,auth.message_id,true,"".to_string());
         socket_manager.send_to_connection(id,msg).map_err(|_|AppError::SocketError("socket".to_string()))?;
 
         //redis设置用户在线
-        let user_id:UserId= user.user_id.clone();
+        let user_id:UserId= user.uid.clone();
         UserManager::get().online(&user.agent_id, &user_id, DeviceType::from(auth.device_type as u8)).await?;
     }
     else{

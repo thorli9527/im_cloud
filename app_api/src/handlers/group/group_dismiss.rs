@@ -30,7 +30,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     )
 )]
 #[post("/group/dismiss/{group_id}")]
-pub async fn group_dismiss(group_id: web::Path<String>,req: HttpRequest,
+async fn group_dismiss(group_id: web::Path<String>,req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent=AgentService::get()

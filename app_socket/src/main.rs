@@ -13,6 +13,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use app_socket::server::start_server;
+use biz_service::biz_service::kafka_service::KafkaService;
 
 /// 写通道类型，用于发送 protobuf 编码好的消息
 
@@ -28,7 +29,8 @@ async fn main() -> anyhow::Result<()> {
     let listener = TcpListener::bind(bind_cfg).await?;
     let pool = build_redis_pool(&config);
     let db = init_mongo_db(&config).await;
-    biz_service::init_service(db, config.kafka.clone());
+    KafkaService::init(&config.kafka).await;
+    biz_service::init_service(db);
     biz_service::manager::init(pool,true);
     let manager: Arc<SocketManager> = get_socket_manager();
     tokio::spawn(manager::job_manager::start_heartbeat_cleaner(manager.clone(), 30)); // 30秒无心跳视为断线

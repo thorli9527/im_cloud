@@ -23,6 +23,7 @@ use std::clone;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use biz_service::biz_service::kafka_service::KafkaService;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -33,7 +34,8 @@ async fn main() -> std::io::Result<()> {
     init_log(&app_cfg.clone());
     let address_and_port = format!("{}:{}", &app_cfg.server.host, &app_cfg.server.port);
     warn!("Starting server on {}", address_and_port);
-    biz_service::init_service(init_mongo_db(&app_cfg).await, app_cfg.kafka.clone());
+    KafkaService::init(&app_cfg.kafka).await;
+    biz_service::init_service(init_mongo_db(&app_cfg).await);
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())

@@ -55,7 +55,7 @@ struct TokenDto {
     )
 )]
 #[post("/user/create")]
-pub async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl Responder,AppError> {
     let auth_header = build_header(req);
     let agent_service = AgentService::get();
     let agent = agent_service.check_request(auth_header.clone()).await?;
@@ -70,12 +70,12 @@ pub async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<i
         let key = format!("{}{}", CLIENT_TOKEN_KEY, &token_id);
         let value_option = redis_template.ops_for_value();
         let _= value_option.set(&key, &user.clone(), Some(30 * 60)).await?;
-        let value = json!({"user_id":user.user_id,"token":token_id,"avatarUrl":user.avatar});
+        let value = json!({"user_id":user.uid,"token":token_id,"avatarUrl":user.avatar});
        return  Ok(web::Json(result_data(value)))
     }
 
     let user=user_profile_service.new_data(agent.id.clone(), &dto.uid.clone(), dto.name.clone(), dto.avatar_url.clone()).await?;
-    let token_key=user_manager.build_token(&user.agent_id,&user.user_id,auth_header.unwrap().device_type).await?;
+    let token_key=user_manager.build_token(&user.agent_id,&user.uid,auth_header.unwrap().device_type).await?;
 
     let value = json!({"user_id":dto.uid,"token":token_key,"avatarUrl":dto.avatar_url});
     Ok(web::Json(result_data(value)))
@@ -98,7 +98,7 @@ pub async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<i
     )
 )]
 #[post("/user/lock/{user_id}")]
-pub async fn user_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder,AppError> {
     let auth_header = build_header(req);
     let agent=AgentService::get().check_request(auth_header).await?;
     let action_log_service = UserActionLogService::get();
@@ -124,7 +124,7 @@ pub async fn user_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<i
     )
 )]
 #[post("/user/user_un_lock/{user_id}")]
-pub async fn user_un_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_un_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder,AppError> {
     if user_id.is_empty() {
         return Err(BizError("user.id.empty".to_string()).into());
     }
@@ -153,7 +153,7 @@ pub async fn user_un_lock(user_id: web::Path<String>, req: HttpRequest) -> Resul
     )
 )]
 #[post("/user/info/{user_id}")]
-pub async fn user_info(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_info(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder,AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
     let user_manager=UserManager::get();
@@ -167,14 +167,14 @@ pub async fn user_info(user_id: web::Path<String>, req: HttpRequest) -> Result<i
 }
 #[derive(Serialize, Deserialize, Debug, Validate, ToSchema, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct UserInfoDto {
+struct UserInfoDto {
     user_name: String,
     create_time: u64,
     avatar_url: Option<String>,
 }
 #[derive(Serialize, Deserialize, Debug, Validate, ToSchema, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct UserEnableDto {
+struct UserEnableDto {
     uid: String,
     enable: bool,
 }
@@ -197,7 +197,7 @@ pub struct UserEnableDto {
     )
 )]
 #[post("/user/expire")]
-pub async fn user_expire(dto: web::Json<UserEnableDto>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_expire(dto: web::Json<UserEnableDto>, req: HttpRequest) -> Result<impl Responder,AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
     UserActionLogService::get().ban(&agent.id,&dto.uid.clone(), "system.ban", "执行失败", Option::None).await?;
@@ -206,7 +206,7 @@ pub async fn user_expire(dto: web::Json<UserEnableDto>, req: HttpRequest) -> Res
 }
 #[derive(Serialize, Deserialize, Debug, Validate, ToSchema, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct RefreshDto {
+struct RefreshDto {
     uid: String,
     name: Option<String>,
     avatar: Option<String>,
@@ -228,7 +228,7 @@ pub struct RefreshDto {
     )
 )]
 #[post("/user/refresh")]
-pub async fn user_refresh(dto: web::Json<RefreshDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn user_refresh(dto: web::Json<RefreshDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
     let client_service = ClientService::get();
@@ -257,7 +257,7 @@ pub async fn user_refresh(dto: web::Json<RefreshDto>, req: HttpRequest) -> Resul
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct UserGroupPageDto {
+struct UserGroupPageDto {
     /// 用户 ID
     pub uid: String,
 
@@ -284,7 +284,7 @@ pub struct UserGroupPageDto {
     )
 )]
 #[post("/user/group/page")]
-pub async fn user_group_page(query: web::Json<UserGroupPageDto>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_group_page(query: web::Json<UserGroupPageDto>, req: HttpRequest) -> Result<impl Responder,AppError> {
     let auth_header = build_header(req);
     let agent= AgentService::get().check_request(auth_header).await?;
 

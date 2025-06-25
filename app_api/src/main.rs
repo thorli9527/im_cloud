@@ -14,6 +14,7 @@ use log::{info, warn, LevelFilter};
 use mongodb::options::ClientOptions;
 use mongodb::{Client, Database};
 use std::str::FromStr;
+use biz_service::biz_service::kafka_service::KafkaService;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -26,7 +27,8 @@ async fn main() -> std::io::Result<()> {
     warn!("Starting server on {}", address_and_port);
     let db = init_mongo_db(&app_cfg).await;
     let pool = build_redis_pool(&app_cfg);
-    biz_service::init_service(db,app_cfg.kafka.clone());
+    KafkaService::init(&app_cfg.kafka).await;
+    biz_service::init_service(db);
     manager::init(pool,false);
     HttpServer::new(move || {
         App::new()

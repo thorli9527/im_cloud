@@ -12,7 +12,7 @@ pub struct GroupMember {
     /// 群组 ID
     pub group_id: String,
     /// 用户 ID
-    pub user_id: String,
+    pub uid: String,
     /// 成员角色（Member/Admin/Owner）
     pub role: GroupRole,
     /// 群内昵称（可选）
@@ -34,7 +34,7 @@ pub struct GroupMemberMeta {
     /// 群组 ID
     pub group_id: String,
     /// 用户 ID
-    pub user_id: String,
+    pub uid: String,
     /// 成员角色（Member/Admin/Owner）
     pub role: GroupRole,
     /// 群内昵称（可选）

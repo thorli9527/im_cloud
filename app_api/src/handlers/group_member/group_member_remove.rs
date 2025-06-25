@@ -16,7 +16,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 /// 添加或移除群组禁言白名单成员的请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct WhiteListUserDto {
+struct WhiteListUserDto {
     /// 群组 ID
     pub group_id: String,
 
@@ -41,7 +41,7 @@ pub struct WhiteListUserDto {
     )
 )]
 #[post("/group/member/remove")]
-pub async fn group_member_remove(
+async fn group_member_remove(
     dto: web::Json<WhiteListUserDto>,
     req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);

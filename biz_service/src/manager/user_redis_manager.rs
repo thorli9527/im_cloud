@@ -1,23 +1,23 @@
-use std::collections::HashMap;
 use crate::entitys::client_entity::ClientInfo;
 use crate::entitys::group_entity::GroupInfo;
-use crate::manager::common::{DeviceType, UserId, SHARD_COUNT};
+use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
+use crate::manager::common::{DeviceType, SHARD_COUNT, UserId};
 use crate::manager::local_group_manager::{LocalGroupManager, LocalGroupManagerOpt};
 use anyhow::{Context, Result};
+use common::ClientTokenDto;
 use common::errors::AppError;
 use common::util::common_utils::build_uuid;
-use common::ClientTokenDto;
 use dashmap::DashMap;
-use deadpool_redis::redis::{cmd, AsyncCommands};
 use deadpool_redis::Pool as RedisPool;
+use deadpool_redis::redis::{AsyncCommands, cmd};
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::sleep;
-use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 
 const MAX_CLEAN_COUNT: usize = 100;
 const USER_ONLINE_TTL_SECS: u64 = 30;
@@ -28,10 +28,25 @@ const CONSUMER_NAME: &str = "user_manager";
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum UserEvent {
-    GroupLeave { group_id: String, user_id: UserId },
-    GroupJoin { group_id: String, user_id: UserId,mute: Option<bool>, alias: String, role: GroupRole },
-    Online { user_id: UserId, device:DeviceType },
-    Offline { user_id: UserId, device:DeviceType },
+    GroupLeave {
+        group_id: String,
+        user_id: UserId,
+    },
+    GroupJoin {
+        group_id: String,
+        user_id: UserId,
+        mute: Option<bool>,
+        alias: String,
+        role: GroupRole,
+    },
+    Online {
+        user_id: UserId,
+        device: DeviceType,
+    },
+    Offline {
+        user_id: UserId,
+        device: DeviceType,
+    },
 }
 
 /// 全局用户管理器
@@ -57,7 +72,8 @@ pub struct UserManager {
     /// 初始化通知器，未完成初始化时异步任务可以 await 等待。
     /// 配合 `is_initialized` 实现任务级初始化阻塞。
     init_notify: Arc<Notify>,
-
+    /// 全局用户好友关系映射，使用 DashMap 支持多线程并发访问。
+    friend_map: Arc<DashMap<String, DashMap<UserId, ()>>>,
     /// 是否启用本地缓存。
     /// 如果为 false，将直接查询 Redis，适用于测试或轻量部署模式。
     use_local_cache: bool,
@@ -67,35 +83,34 @@ pub struct UserManager {
 pub trait UserManagerOpt: Send + Sync {
     /// 将用户标记为在线，并进行必要的缓存更新和事件通知
     async fn online(&self, agent_id: &str, user_id: &UserId, device_type: DeviceType) -> Result<()>;
-
     /// 检查用户是否在线，返回 true 或 false
     async fn is_online(&self, agent_id: &str, user_id: &UserId) -> Result<bool>;
-
     /// 将用户标记为离线，更新缓存并通知其他服务
     async fn offline(&self, agent_id: &str, user_id: &UserId, device_type: DeviceType) -> Result<()>;
-
     /// 同步指定用户的信息（例如从数据库或Redis加载最新数据到本地缓存）
     async fn sync_user(&self, user: ClientInfo) -> Result<()>;
-
     /// 移除指定用户缓存
     async fn remove_user(&self, agent_id: &str, user_id: &UserId) -> Result<()>;
-
     /// 获取用户的在线状态
     async fn get_user_info(&self, agent_id: &str, user_id: &UserId) -> Result<Option<ClientInfo>>;
-
     /// 构建用户的访问令牌（例如JWT或其他形式的认证令牌）
     async fn build_token(&self, agent_id: &str, user_id: &UserId, device_type: DeviceType) -> Result<String>;
-
     /// 删除用户的访问令牌
     async fn delete_token(&self, token: &str) -> Result<()>;
-
     /// 验证用户的访问令牌，返回用户ID或错误
     async fn verify_token(&self, token: &str) -> Result<bool>;
     /// 获取用户的访问令牌信息
     async fn get_client_token(&self, token: &str) -> Result<ClientTokenDto>;
     /// 根据令牌查找用户信息
     async fn find_user_by_token(&self, token: &str) -> Result<Option<ClientInfo>>;
-
+    /// 添加好友关系
+    async fn add_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()>;
+    /// 移除好友关系
+    async fn remove_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()>;
+    /// 检查用户是否是好友关系
+    async fn is_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<bool>;
+    /// 获取用户的好友列表
+    async fn get_friends(&self, agent_id: &str, user_id: &UserId) -> Result<Vec<UserId>>;
 }
 
 impl UserManager {
@@ -111,8 +126,15 @@ impl UserManager {
     pub fn new(pool: RedisPool, use_local_cache: bool) -> Self {
         let online_shards = (0..SHARD_COUNT).map(|_| DashMap::new()).collect();
         let local_group_manager = LocalGroupManager::get();
-        let manager =
-            Self { pool, local_online_shards: Arc::new(online_shards), local_group_manager, is_initialized: Arc::new(AtomicBool::new(false)), init_notify: Arc::new(Notify::new()), use_local_cache };
+        let manager = Self {
+            pool,
+            local_online_shards: Arc::new(online_shards),
+            local_group_manager,
+            is_initialized: Arc::new(AtomicBool::new(false)),
+            init_notify: Arc::new(Notify::new()),
+            use_local_cache,
+            friend_map: Arc::new(DashMap::<String, DashMap<UserId, ()>>::new()),
+        };
 
         if !use_local_cache {
             manager.init(manager.clone());
@@ -165,11 +187,7 @@ impl UserManager {
                 let pattern = format!("{}*:{}:*", redis_key_prefix, user_id);
 
                 // 检查 Redis 是否存在该用户在线记录（模糊匹配 agent_id + device_type）
-                let exists: Vec<String> = cmd("KEYS")
-                    .arg(&pattern)
-                    .query_async(&mut conn)
-                    .await
-                    .unwrap_or_default();
+                let exists: Vec<String> = cmd("KEYS").arg(&pattern).query_async(&mut conn).await.unwrap_or_default();
 
                 if exists.is_empty() {
                     shard.remove(&user_id);
@@ -188,14 +206,7 @@ impl UserManager {
         // ----------------- 加载用户在线状态 -----------------
         let mut cursor = 0u64;
         loop {
-            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
-                .arg(cursor)
-                .arg("MATCH")
-                .arg("online:user:*")
-                .arg("COUNT")
-                .arg(100)
-                .query_async(&mut conn)
-                .await?;
+            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN").arg(cursor).arg("MATCH").arg("online:user:*").arg("COUNT").arg(100).query_async(&mut conn).await?;
 
             for key in keys {
                 if let Some(key) = key.strip_prefix("online:user:") {
@@ -217,14 +228,7 @@ impl UserManager {
         // ----------------- 加载群组信息 -----------------
         let mut cursor = 0u64;
         loop {
-            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
-                .arg(cursor)
-                .arg("MATCH")
-                .arg("group:info:*")
-                .arg("COUNT")
-                .arg(100)
-                .query_async(&mut conn)
-                .await?;
+            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN").arg(cursor).arg("MATCH").arg("group:info:*").arg("COUNT").arg(100).query_async(&mut conn).await?;
 
             for key in keys {
                 let json: Option<String> = conn.get(&key).await?;
@@ -243,14 +247,7 @@ impl UserManager {
         // ----------------- 加载群组成员和成员元信息 -----------------
         let mut cursor = 0u64;
         loop {
-            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
-                .arg(cursor)
-                .arg("MATCH")
-                .arg("group:member:*")
-                .arg("COUNT")
-                .arg(100)
-                .query_async(&mut conn)
-                .await?;
+            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN").arg(cursor).arg("MATCH").arg("group:member:*").arg("COUNT").arg(100).query_async(&mut conn).await?;
 
             for key in keys {
                 if let Some(group_id) = key.strip_prefix("group:member:") {
@@ -264,13 +261,7 @@ impl UserManager {
                         if let Some(meta_json) = metas.get(&uid) {
                             if let Ok(meta) = serde_json::from_str::<GroupMemberMeta>(meta_json) {
                                 // 使用完整信息添加成员到本地缓存
-                                self.local_group_manager.add_user(
-                                    group_id,
-                                    &uid,
-                                    Some(meta.mute),
-                                    meta.alias.as_deref().unwrap_or(""),
-                                    &meta.role,
-                                );
+                                self.local_group_manager.add_user(group_id, &uid, Some(meta.mute), meta.alias.as_deref().unwrap_or(""), &meta.role);
                             } else {
                                 // fallback: 没有 meta 结构，使用默认 role/alias/mute
                                 self.local_group_manager.add_user(group_id, &uid, None, "", &GroupRole::Member);
@@ -287,6 +278,35 @@ impl UserManager {
                 break;
             }
             cursor = next_cursor;
+        }
+
+        // ----------------- 加载好友信息 -----------------
+        // ----------------- 加载好友信息 -----------------
+        let mut cursor = 0u64;
+        loop {
+            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN").arg(cursor).arg("MATCH").arg("friend:user:*").arg("COUNT").arg(100).query_async(&mut conn).await?;
+
+            for key in keys {
+                if let Some(suffix) = key.strip_prefix("friend:user:") {
+                    let parts: Vec<&str> = suffix.split(':').collect();
+                    if parts.len() == 2 {
+                        let agent_id = parts[0];
+                        let user_id = parts[1];
+                        let full_key = format!("{}:{}", agent_id, user_id);
+
+                        let friends: Vec<String> = conn.smembers(&key).await.unwrap_or_default();
+                        let map = DashMap::new();
+                        for friend_id in friends {
+                            map.insert(friend_id, ());
+                        }
+                        self.friend_map.insert(full_key, map);
+                    }
+                }
+            }
+
+            if next_cursor == 0 {
+                break;
+            }
         }
 
         println!("[UserManager] ✅ 本地缓存初始化完成（在线状态 + 群组信息 + 成员）");
@@ -359,7 +379,6 @@ impl UserManager {
     }
 
     pub async fn clean(&self) -> Result<()> {
-
         Ok(())
     }
     /// 获取用户分片
@@ -371,7 +390,7 @@ impl UserManager {
     pub fn init(&self, instance: UserManager) {
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
-    
+
     /// 获取全局实例（未初始化会 panic）
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("UserManager is not initialized").clone()
@@ -417,7 +436,7 @@ impl UserManagerOpt for UserManager {
     }
 
     async fn sync_user(&self, _user: ClientInfo) -> anyhow::Result<()> {
-        let user_id = &_user.user_id;
+        let user_id = &_user.uid;
         let mut conn = self.pool.get().await?;
         let user_info_json = serde_json::to_string(&_user)?;
         let string = format!("agent:{}:client:{}", &_user.agent_id, user_id);
@@ -502,6 +521,87 @@ impl UserManagerOpt for UserManager {
         Ok(None)
     }
 
+    async fn add_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()> {
+        let key1 = format!("friend:user:{}:{}", agent_id, user_id);
+        let key2 = format!("friend:user:{}:{}", agent_id, friend_id);
+        let mut conn = self.pool.get().await?;
+
+        // 写入 Redis 双向关系
+        let _: () = conn.sadd(&key1, friend_id).await?;
+        let _: () = conn.sadd(&key2, user_id).await?;
+
+        if self.use_local_cache {
+            let key1 = format!("{}:{}", agent_id, user_id);
+            let key2 = format!("{}:{}", agent_id, friend_id);
+
+            let map1 = self.friend_map.entry(key1).or_insert_with(DashMap::new);
+            map1.insert(friend_id.clone(), ());
+
+            let map2 = self.friend_map.entry(key2).or_insert_with(DashMap::new);
+            map2.insert(user_id.clone(), ());
+        }
+        Ok(())
+    }
+
+    async fn remove_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()> {
+        let key1 = format!("friend:user:{}:{}", agent_id, user_id);
+        let key2 = format!("friend:user:{}:{}", agent_id, friend_id);
+        let mut conn = self.pool.get().await?;
+
+        // 删除 Redis 中的双向关系
+        let _: () = conn.srem(&key1, friend_id).await?;
+        let _: () = conn.srem(&key2, user_id).await?;
+
+        if self.use_local_cache {
+            let key1 = format!("{}:{}", agent_id, user_id);
+            let key2 = format!("{}:{}", agent_id, friend_id);
+
+            if let Some(map1) = self.friend_map.get(&key1) {
+                map1.remove(friend_id);
+            }
+            if let Some(map2) = self.friend_map.get(&key2) {
+                map2.remove(user_id);
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn is_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<bool> {
+        // 1. 本地缓存查询
+        if self.use_local_cache {
+            let key = format!("{}:{}", agent_id, user_id);
+            if let Some(map) = self.friend_map.get(&key) {
+                if map.contains_key(friend_id) {
+                    return Ok(true);
+                }
+            }
+        }
+
+        // 2. Redis 查询
+        let redis_key = format!("friend:user:{}:{}", agent_id, user_id);
+        let mut conn = self.pool.get().await?;
+        let exists: bool = conn.sismember(&redis_key, friend_id).await.context("Redis SISMEMBER 查询失败")?;
+
+        Ok(exists)
+    }
+
+    async fn get_friends(&self, agent_id: &str, user_id: &UserId) -> Result<Vec<UserId>> {
+        let key = format!("{}:{}", agent_id, user_id);
+
+        // 1. 本地缓存
+        if self.use_local_cache {
+            if let Some(map) = self.friend_map.get(&key) {
+                let friends: Vec<UserId> = map.iter().map(|kv| kv.key().clone()).collect();
+                return Ok(friends);
+            }
+        }
+        // 2. Redis 获取好友集合
+        let redis_key = format!("friend:user:{}:{}", agent_id, user_id);
+        let mut conn = self.pool.get().await?;
+        let friend_ids: Vec<String> = conn.smembers(&redis_key).await.context("Redis SMEMBERS 获取好友列表失败")?;
+        Ok(friend_ids)
+    }
 }
 
 // 全局单例实例
@@ -517,13 +617,12 @@ async fn handle_user_event(event: &UserEvent, shards: &Vec<DashMap<UserId, Devic
             // let shard = &shards[hash_user(user_id) % SHARD_COUNT];
             // shard.remove(user_id);
         }
-        UserEvent::GroupJoin { group_id,  user_id,mute,  alias ,role   } => {
+        UserEvent::GroupJoin { group_id, user_id, mute, alias, role } => {
             let current_mute = mute.unwrap_or(false);
-            groups.add_user(&group_id, &user_id,Option::Some(current_mute),&alias,&role );
+            groups.add_user(&group_id, &user_id, Option::Some(current_mute), &alias, &role);
         }
         UserEvent::GroupLeave { group_id, user_id } => {
             groups.remove_user(&group_id, &user_id);
         }
     }
 }
-

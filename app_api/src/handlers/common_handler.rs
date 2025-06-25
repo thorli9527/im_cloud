@@ -16,6 +16,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     )
 )]
 #[get("/status")]
-pub async fn status() -> Result<impl Responder, AppError> {
+async fn status() -> Result<impl Responder, AppError> {
     Ok(result())
 }

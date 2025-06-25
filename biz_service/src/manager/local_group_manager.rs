@@ -182,7 +182,7 @@ impl LocalGroupManagerOpt for LocalGroupManager {
         meta_map.entry(user_id.clone()).or_insert_with(|| GroupMemberMeta {
             id: format!("{}_{}", group_id, user_id),
             group_id,
-            user_id,
+            uid: user_id,
             role: group_role.clone(),
             alias: Some(alias.to_string()),
             mute: mute.unwrap_or(false),

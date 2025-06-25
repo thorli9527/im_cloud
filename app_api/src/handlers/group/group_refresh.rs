@@ -51,7 +51,7 @@ struct GroupRefreshDto {
 )]
 #[post("/group/refresh")]
 /// 修改群组名称请求体
-pub async fn group_refresh(dto: web::Json<GroupRefreshDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn group_refresh(dto: web::Json<GroupRefreshDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
     let group_service = GroupService::get();

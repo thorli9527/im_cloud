@@ -1,0 +1,98 @@
+use crate::result::{ApiResponse, result, result_data};
+use actix_web::{HttpRequest, Responder, post, web};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
+use biz_service::manager::user_redis_manager::{UserManager, UserManagerOpt};
+use common::errors::AppError;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(friend_add);
+    cfg.service(friend_remove);
+    cfg.service(friend_check);
+    cfg.service(friend_list);
+}
+
+#[utoipa::path(
+    post,
+    path = "/user/friend/add",
+    tag = "好友-管理",
+    summary = "添加好友",
+    request_body = FriendOpDto,
+    responses((status = 200, description = "成功", body = ApiResponse<String>))
+)]
+#[post("/user/friend/add")]
+async fn friend_add(dto: web::Json<FriendOpDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+    let auth = build_header(req);
+    let agent = AgentService::get().check_request(auth).await?;
+    UserManager::get().add_friend(&agent.id, &dto.uid, &dto.friend_id).await?;
+    Ok(web::Json(result()))
+}
+
+#[utoipa::path(
+    post,
+    path = "/user/friend/remove",
+     tag = "好友-管理",
+    summary = "删除好友",
+    request_body = FriendOpDto,
+    responses((status = 200, description = "成功", body = ApiResponse<String>))
+)]
+#[post("/user/friend/remove")]
+async fn friend_remove(dto: web::Json<FriendOpDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+    let auth = build_header(req);
+    let agent = AgentService::get().check_request(auth).await?;
+    UserManager::get().remove_friend(&agent.id, &dto.uid, &dto.friend_id).await?;
+    Ok(web::Json(result()))
+}
+
+#[utoipa::path(
+    post,
+    path = "/user/friend/check",
+       tag = "好友-管理",
+    summary = "检查是否为好友",
+    request_body = FriendCheckDto,
+    responses((status = 200, description = "true/false", body = ApiResponse<bool>))
+)]
+#[post("/user/friend/check")]
+async fn friend_check(dto: web::Json<FriendCheckDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+    let auth = build_header(req);
+    let agent = AgentService::get().check_request(auth).await?;
+    let result = UserManager::get().is_friend(&agent.id, &dto.uid, &dto.friend_id).await?;
+    Ok(web::Json(result_data(result)))
+}
+
+#[utoipa::path(
+    post,
+    path = "/user/friend/list",
+   tag = "好友-管理",
+    summary = "获取好友列表",
+    request_body = FriendListDto,
+    responses((status = 200, description = "好友 ID 列表", body = ApiResponse<Vec<String>>))
+)]
+#[post("/user/friend/list")]
+async fn friend_list(dto: web::Json<FriendListDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+    let auth = build_header(req);
+    let agent = AgentService::get().check_request(auth).await?;
+    let list = UserManager::get().get_friends(&agent.id, &dto.uid).await?;
+    Ok(web::Json(result_data(list)))
+}
+
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+struct FriendOpDto {
+    pub uid: String,
+    pub friend_id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+struct FriendCheckDto {
+    pub uid: String,
+    pub friend_id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+struct FriendListDto {
+    pub uid: String,
+}

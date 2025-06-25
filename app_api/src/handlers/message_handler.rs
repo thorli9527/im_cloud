@@ -20,7 +20,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {}
 /// 消息发送 DTO
 #[derive(Debug, Deserialize, Serialize, ToSchema, Validate)]
 #[serde(rename_all = "camelCase")]
-pub struct MessageSendDto {
+struct MessageSendDto {
     #[validate(length(min = 16, message = "from 不能为空，且长度至少为 16"))]
     /// 发送者
     pub from: String,
@@ -42,7 +42,7 @@ pub struct MessageSendDto {
         (status = 200, description = "消息发送成功", body = HashMap<String, String>)
     )
 )]
-pub async fn send_message(dto: web::Json<MessageSendDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn send_message(dto: web::Json<MessageSendDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     // 验证参数合法性
     dto.validate().map_err(|e| AppError::BizError(format!("验证错误: {:?}", e)))?;
 

@@ -9,6 +9,7 @@ use crate::handlers::group_member::group_member_join::*;
 use crate::handlers::group_member::group_member_refresh::*;
 use crate::handlers::group_member::group_member_remove::*;
 use crate::handlers::group_member::group_member_page::*;
+use crate::handlers::frend_handler::*;
 
 use crate::result::ApiResponse;
 use actix_web::{get, web, HttpResponse, Responder};
@@ -39,6 +40,12 @@ use utoipa::OpenApi;
         group_member_refresh,
         group_member_remove,
         group_member_page,
+        
+        //好友-管理
+        friend_add,
+        friend_remove,
+        friend_check,
+        friend_list,
     ),
     components(schemas(
         PageResult<AgentInfo>,

@@ -133,7 +133,7 @@ impl GroupManagerOpt for GroupManager {
         let meta = GroupMemberMeta {
             id: format!("{}_{}", group_id, user_id),
             group_id: group_id.to_string(),
-            user_id: user_id.to_string(),
+            uid: user_id.to_string(),
             role: group_role.clone(),
             alias: Some(alias.to_string()),
             mute: mute.unwrap_or(false),
