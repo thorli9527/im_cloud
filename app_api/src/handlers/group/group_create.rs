@@ -7,12 +7,10 @@ use biz_service::biz_service::group_service::GroupService;
 use biz_service::entitys::group_entity::GroupInfo;
 use biz_service::entitys::group_member::{GroupMember, GroupRole};
 use common::errors::AppError;
-use common::errors::AppError::BizError;
 use common::repository_util::Repository;
 use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use utoipa::ToSchema;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -31,7 +29,6 @@ struct CreateGroupDto {
     pub group_name: String,
 
     /// 初始成员 ID 列表（不含群主）
-    #[schema(example = json!(["user_456", "user_789"]))]
     #[serde(default)]
     pub members: Vec<String>,
 }
