@@ -5,6 +5,8 @@ use biz_service::manager::user_redis_manager::{UserManager, UserManagerOpt};
 use common::errors::AppError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use validator::Validate;
+use biz_service::entitys::user_friend::FriendSourceType;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(friend_add);
@@ -23,9 +25,10 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 )]
 #[post("/user/friend/add")]
 async fn friend_add(dto: web::Json<FriendOpDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+    dto.validate()?;
     let auth = build_header(req);
     let agent = AgentService::get().check_request(auth).await?;
-    UserManager::get().add_friend(&agent.id, &dto.uid, &dto.friend_id).await?;
+    UserManager::get().add_friend(&agent.id, &dto.uid, &dto.friend_id,&dto.nickname,&dto.source_type,&dto.remark).await?;
     Ok(web::Json(result()))
 }
 
@@ -77,11 +80,22 @@ async fn friend_list(dto: web::Json<FriendListDto>, req: HttpRequest) -> Result<
     Ok(web::Json(result_data(list)))
 }
 
-#[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, Validate)]
 #[serde(rename_all = "camelCase")]
-struct FriendOpDto {
+pub struct FriendOpDto {
+    #[validate(length(min = 2, max = 64, message = "用户ID不能为空，长度为2~64"))]
     pub uid: String,
+
+    #[validate(length(min = 2, max = 64, message = "好友ID不能为空，长度为2~64"))]
     pub friend_id: String,
+
+    #[validate(length(min = 0, max = 32, message = "昵称不能超过32个字符"))]
+    pub nickname: Option<String>,
+
+    #[validate(length(min = 0, max = 64, message = "备注不能超过64个字符"))]
+    pub remark: Option<String>,
+
+    pub source_type: FriendSourceType,
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]

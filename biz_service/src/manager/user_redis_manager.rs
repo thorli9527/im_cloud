@@ -18,6 +18,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::sleep;
+use crate::biz_service::user_friend_service::UserFriendService;
+use crate::entitys::user_friend::FriendSourceType;
 
 const MAX_CLEAN_COUNT: usize = 100;
 const USER_ONLINE_TTL_SECS: u64 = 30;
@@ -104,7 +106,7 @@ pub trait UserManagerOpt: Send + Sync {
     /// 根据令牌查找用户信息
     async fn find_user_by_token(&self, token: &str) -> Result<Option<ClientInfo>>;
     /// 添加好友关系
-    async fn add_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()>;
+    async fn add_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId,nickname: &Option<String>, source_type: &FriendSourceType,remark:&Option<String>) -> Result<()>;
     /// 移除好友关系
     async fn remove_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()>;
     /// 检查用户是否是好友关系
@@ -521,7 +523,7 @@ impl UserManagerOpt for UserManager {
         Ok(None)
     }
 
-    async fn add_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()> {
+    async fn add_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId,nickname: &Option<String>, source_type: &FriendSourceType,remark:&Option<String>) -> Result<()> {
         let key1 = format!("friend:user:{}:{}", agent_id, user_id);
         let key2 = format!("friend:user:{}:{}", agent_id, friend_id);
         let mut conn = self.pool.get().await?;
@@ -540,6 +542,8 @@ impl UserManagerOpt for UserManager {
             let map2 = self.friend_map.entry(key2).or_insert_with(DashMap::new);
             map2.insert(user_id.clone(), ());
         }
+        let friend_service=UserFriendService::get();
+        friend_service.add_friend(agent_id, user_id, friend_id,nickname,source_type,remark).await?;
         Ok(())
     }
 

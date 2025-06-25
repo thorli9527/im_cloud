@@ -56,6 +56,7 @@ struct TokenDto {
 )]
 #[post("/user/create")]
 async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl Responder,AppError> {
+    dto.validate()?;
     let auth_header = build_header(req);
     let agent_service = AgentService::get();
     let agent = agent_service.check_request(auth_header.clone()).await?;

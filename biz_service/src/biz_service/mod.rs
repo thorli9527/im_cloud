@@ -11,7 +11,7 @@ pub mod mq_message_group_service;
 pub mod mq_message_user_service;
 pub mod mq_user_action_service;
 pub mod user_service;
-mod user_friend_service;
+pub mod user_friend_service;
 
 use crate::biz_service::kafka_service::KafkaService;
 use actix_web::body::MessageBody;
@@ -30,4 +30,5 @@ pub  fn init_service(db: Database)  {
     mq_user_action_service::UserActionLogService::init(db.clone());
     mq_message_group_service::GroupMessageService::init(db.clone());
     mq_message_user_service::UserMessageService::init(db.clone());
+    user_friend_service::UserFriendService::init(db.clone());
 }

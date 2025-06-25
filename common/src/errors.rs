@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::to_string;
 use std::{fmt, io};
 use thiserror::Error;
-
+use validator::Validate;
 /// HTTP 错误响应结构
 #[derive(Serialize)]
 struct ErrorResponse {
@@ -66,6 +66,11 @@ pub enum AppError {
 impl From<anyhow::Error> for AppError {
     fn from(e: anyhow::Error) -> Self {
         AppError::Internal(e.to_string())
+    }
+}
+impl From<validator::ValidationErrors> for AppError {
+    fn from(e: validator::ValidationErrors) -> Self {
+        AppError::BizError(format!("参数验证失败: {}", e))
     }
 }
 impl ResponseError for AppError {

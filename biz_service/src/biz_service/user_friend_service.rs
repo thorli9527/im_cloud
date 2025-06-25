@@ -19,7 +19,7 @@ impl UserFriendService {
     }
 
     /// 添加好友（可配置昵称/来源等）
-    pub async fn add_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId, nickname: Option<String>, source_type: FriendSourceType) -> Result<()> {
+    pub async fn add_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId, nickname: &Option<String>, source_type: &FriendSourceType,remark: &Option<String>) -> Result<()> {
         // 校验对方存在
         let client_opt = UserManager::get().get_user_info(agent_id, friend_id).await?;
         if client_opt.is_none() {
@@ -42,18 +42,14 @@ impl UserFriendService {
             agent_id: agent_id.to_string(),
             uid: uid.to_string(),
             friend_id: friend_id.to_string(),
-            nickname,
+            nickname:nickname.clone(),
             remark: None,
-            source_type,
+            source_type: source_type.clone(),
             friend_status: FriendStatus::Accepted,
             created_at: common::util::date_util::now(),
         };
 
         self.dao.insert(&friend).await?;
-
-        // 更新 Redis 缓存
-        UserManager::get().add_friend(agent_id, uid, friend_id).await?;
-
         Ok(())
     }
 
