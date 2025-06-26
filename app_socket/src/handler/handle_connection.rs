@@ -1,9 +1,5 @@
 use crate::kafka::kafka_consumer::*;
 use crate::manager::socket_manager::{get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta};
-use crate::pb::protocol::envelope::Payload;
-use crate::pb::protocol::envelope::Payload::AuthRequest;
-use crate::pb::protocol::message_content::Content;
-use crate::pb::protocol::Envelope;
 
 use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
@@ -14,6 +10,10 @@ use prost::Message;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
+use biz_service::protocol::protocol::envelope::Payload;
+use biz_service::protocol::protocol::envelope::Payload::AuthRequest;
+use biz_service::protocol::protocol::message_content::Content;
+use biz_service::protocol::protocol::Envelope;
 use rdkafka::consumer::{CommitMode, Consumer};
 use rdkafka::topic_partition_list::TopicPartitionList;
 use rdkafka::Offset;
@@ -60,7 +60,7 @@ pub async fn handle_connection(stream: TcpStream) -> anyhow::Result<()> {
         match Envelope::decode(bytes.clone()) {
             Ok(envelope) => match envelope.payload {
                 Some(AuthRequest(auth)) => {
-                    log::info!("🔐 收到 Auth 请求: token={}, client_id={}", auth.token, auth.client_id);
+                    log::info!("🔐 收到 Auth 请求: token={}, client_id={}", auth.token, auth.uid);
                     // 可扩展调用 handler 模块
                 }
 
@@ -107,7 +107,8 @@ pub async fn handle_connection(stream: TcpStream) -> anyhow::Result<()> {
                 }
 
                 Some(Payload::Heartbeat(_)) => {
-                    // TODO: 可更新心跳时间（当前未设置 user_id 无法索引）
+                    // connection.last_heartbeat.store(now() as u64, Ordering::SeqCst);
+                    log::debug!("💓 心跳更新: {:?}", conn_id);
                 }
 
                 Some(unknown) => {

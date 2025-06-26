@@ -11,9 +11,10 @@ pub mod mq_message_group_service;
 pub mod mq_message_user_service;
 pub mod mq_user_action_service;
 pub mod user_service;
-pub mod user_friend_service;
+pub mod friend_service;
+mod friend_event_service;
 
-use actix_web::body::MessageBody;
+use crate::biz_service::friend_event_service::FriendEventService;
 use mongodb::Database;
 
 pub  fn init_service(db: Database)  {
@@ -28,5 +29,6 @@ pub  fn init_service(db: Database)  {
     mq_user_action_service::UserActionLogService::init(db.clone());
     mq_message_group_service::GroupMessageService::init(db.clone());
     mq_message_user_service::UserMessageService::init(db.clone());
-    user_friend_service::UserFriendService::init(db.clone());
+    friend_service::UserFriendService::init(db.clone());
+    FriendEventService::init(db.clone());
 }

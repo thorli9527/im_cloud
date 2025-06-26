@@ -5,8 +5,7 @@ use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::client_service::ClientService;
 use biz_service::biz_service::mq_user_action_service::UserActionLogService;
 use biz_service::entitys::client_entity::ClientInfo;
-use biz_service::manager::group_redis_manager::{GroupManager, GroupManagerOpt};
-use biz_service::manager::user_redis_manager::{UserManager, UserManagerOpt};
+use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
 use common::errors::AppError;
 use common::errors::AppError::BizError;
 use common::redis::redis_template::RedisTemplate;
@@ -19,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
 use validator::Validate;
+use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_create);
@@ -34,7 +34,7 @@ struct TokenDto {
     uid: String,
     #[validate(length(min = 2, max = 32, message = "name 不能为空，且长度至少为 2位,最大为 32位"))]
     name: String,
-    avatar_url: Option<String>,
+    avatar: Option<String>,
 }
 
 #[utoipa::path(
@@ -60,7 +60,7 @@ async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl 
     let auth_header = build_header(req);
     let agent_service = AgentService::get();
     let agent = agent_service.check_request(auth_header.clone()).await?;
-    let user_profile_service = ClientService::get();
+    let client_service = ClientService::get();
     let string = &dto.uid.clone();
     let user_manager = UserManager::get();
     let user_option:Option<ClientInfo>= user_manager.get_user_info(&agent.id, string).await?;
@@ -71,14 +71,14 @@ async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl 
         let key = format!("{}{}", CLIENT_TOKEN_KEY, &token_id);
         let value_option = redis_template.ops_for_value();
         let _= value_option.set(&key, &user.clone(), Some(30 * 60)).await?;
-        let value = json!({"user_id":user.uid,"token":token_id,"avatarUrl":user.avatar});
+        let value = json!({"uid":user.uid,"token":token_id,"avatar":user.avatar});
        return  Ok(web::Json(result_data(value)))
     }
 
-    let user=user_profile_service.new_data(agent.id.clone(), &dto.uid.clone(), dto.name.clone(), dto.avatar_url.clone()).await?;
+    let user= client_service.new_data(agent.id.clone(), &dto.uid.clone(), dto.name.clone(), dto.avatar.clone()).await?;
     let token_key=user_manager.build_token(&user.agent_id,&user.uid,auth_header.unwrap().device_type).await?;
-
-    let value = json!({"user_id":dto.uid,"token":token_key,"avatarUrl":dto.avatar_url});
+    user_manager.sync_user(user).await?;
+    let value = json!({"uid":dto.uid,"token":token_key,"avatar":dto.avatar});
     Ok(web::Json(result_data(value)))
 }
 //锁定用户
@@ -163,7 +163,7 @@ async fn user_info(user_id: web::Path<String>, req: HttpRequest) -> Result<impl 
         return Err(BizError("user.not.exist".to_string()).into());
     }
     let client = client_option.unwrap();
-    let value = json!({"user_name":client.name,"avatarUrl":client.avatar,"avatarUrl":client.avatar,"create_time":time_to_str(client.create_time)});
+    let value = json!({"user_name":client.name,"avatar":client.avatar,"create_time":time_to_str(client.create_time)});
     Ok(web::Json(result_data(value)))
 }
 #[derive(Serialize, Deserialize, Debug, Validate, ToSchema, Clone)]

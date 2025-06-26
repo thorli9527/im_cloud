@@ -1,15 +1,15 @@
 use crate::util::common_utils::as_ref_to_string;
+use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
 use mongodb::bson::oid::ObjectId;
 use mongodb::bson::{doc, Bson};
 use mongodb::options::FindOptions;
-use mongodb::{bson, bson::Document, error::Result, Collection, Database};
+use mongodb::{bson, bson::Document, Collection, Database};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::cmp::PartialEq;
 use std::marker::PhantomData;
 use utoipa::ToSchema;
-
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PageResult<T> {
@@ -25,16 +25,16 @@ pub enum OrderType {
 }
 #[async_trait]
 pub trait Repository<T> {
-    async fn find_by_id(&self, id: impl AsRef<str> + std::marker::Send) -> Result<Option<T>>;
-    async fn insert(&self, entity: &T) -> Result<()>;
+    async fn find_by_id(&self, id:&str) -> Result<Option<T>>;
+    async fn insert(&self, entity: &T) -> Result<String>;
     async fn insert_many(&self, entities: &[T])-> Result<()>;
     async fn find_one(&self, filter: Document) -> Result<Option<T>>;
     async fn query_all(&self) -> Result<Vec<T>>;
     async fn query(&self, filter: Document) -> Result<Vec<T>>;
     async fn save(&self, entity: &T) -> Result<()>;
-    async fn un_set(&self,id: impl AsRef<str> + std::marker::Send, property:impl AsRef<str> + std::marker::Send)->Result<()>;
+    async fn un_set(&self,id: &str, property:&str)->Result<()>;
     async fn update(&self, filter: Document, update: Document) -> Result<u64>;
-    async fn up_property<E: Send + Sync + Serialize>(&self, id: impl AsRef<str> + std::marker::Send , property: impl AsRef<str> + std::marker::Send, value: E) -> Result<()>;
+    async fn up_property<E: Send + Sync + Serialize>(&self, id: &str , property: &str, value: E) -> Result<()>;
     async fn delete(&self, filter: Document) -> Result<u64>;
     async fn delete_by_id(&self, id: impl AsRef<str> + std::marker::Send) -> Result<u64>;
     async fn query_by_page(&self, filter: Document, page_size: i64, order_type: Option<OrderType>, sort_field: &str) -> Result<PageResult<T>>;
@@ -59,13 +59,13 @@ impl<T: Send + Sync + std::fmt::Debug> Repository<T> for BaseRepository<T>
 where
     T: Serialize + DeserializeOwned + Unpin + Send + Sync,
 {
-    async fn find_by_id(&self, id: impl AsRef<str> + std::marker::Send) -> Result<Option<T>> {
-        let obj_id = ObjectId::parse_str(id).unwrap();
+    async fn find_by_id(&self, id: &str) -> Result<Option<T>> {
+        let obj_id = ObjectId::parse_str(id)?;
         let option = self.find_one(doc! { "_id": obj_id }).await?;
         Ok(option)
     }
 
-    async fn insert(&self, entity: &T) -> Result<()> {
+    async fn insert(&self, entity: &T) -> Result<String> {
         let mut doc = bson::to_document(entity)?;
         if let Some(bson::Bson::String(id_str)) = doc.get_str("id").ok().map(str::to_string).map(bson::Bson::String) {
             if let Ok(object_id) = ObjectId::parse_str(&id_str) {
@@ -73,8 +73,12 @@ where
             }
         }
         doc.remove("id");
-        self.collection.insert_one(doc).await?;
-        Ok(())
+        let result=self.collection.insert_one(doc).await?;
+        if let Bson::ObjectId(oid) = result.inserted_id {
+            Ok(oid.to_string())
+        } else {
+            Err(anyhow::anyhow!("❌ 插入成功但未返回 ObjectId"))
+        }
     }
 
     async fn insert_many(&self, entities: &[T])-> Result<()> {
@@ -109,19 +113,18 @@ where
         doc.remove("id");
         let object_id = ObjectId::parse_str(id).unwrap(); // 将字符串转为 ObjectId
         let filter = doc! { "_id": object_id };
-        let result = self.collection.update_one(filter, doc).await?;
+        let _=self.collection.update_one(filter, doc).await?;
         Ok(())
     }
 
     async fn find_one(&self, filter: Document) -> Result<Option<T>> {
-        let result = self.collection.find_one(filter).await?;
-        let value: Option<T> = match result {
-            Some(doc) => Option::Some(bson::from_document(transform_doc_id(doc))?),
-            _ => Option::None,
-        };
-        return Ok(value);
+        if let Some(doc) = self.collection.find_one(filter).await? {
+            let deserialized = bson::from_document(transform_doc_id(doc))?;
+            Ok(Some(deserialized))
+        } else {
+            Ok(None)
+        }
     }
-
 
     async fn query_all(&self) -> Result<Vec<T>> {
         let mut cursor = self.collection.find(doc! {}).await?;
@@ -146,7 +149,7 @@ where
         Ok(result.modified_count)
     }
 
-    async fn up_property<E: Send + Sync + Serialize>(&self, id: impl AsRef<str> + std::marker::Send , property: impl AsRef<str> + std::marker::Send , value: E) -> Result<()> {
+    async fn up_property<E: Send + Sync + Serialize>(&self, id: &str , property: &str, value: E) -> Result<()> {
         let object_id = ObjectId::parse_str(as_ref_to_string(id)).unwrap();
         let filter = doc! {"_id":object_id};
         let update = doc! {
@@ -175,7 +178,7 @@ where
         match order_type {
             None => sort_direction = 1,
             Some(order) => {
-                if (order == OrderType::Asc) {
+                if order == OrderType::Asc {
                     sort_direction = 1
                 }
                 if order == OrderType::Desc {
@@ -206,7 +209,7 @@ where
         })
     }
 
-    async fn un_set(&self, id: impl AsRef<str> + Send, property: impl AsRef<str> + std::marker::Send)->Result<()> {
+    async fn un_set(&self, id: &str, property: &str)->Result<()> {
         let object_id = ObjectId::parse_str(as_ref_to_string(id)).unwrap();
         let filter = doc! {"_id":object_id};
         let update = doc! {
@@ -227,13 +230,6 @@ fn transform_doc_id(mut doc: Document) -> Document {
     doc
 }
 
-fn get_id_string(doc: &Document) -> Option<String> {
-    match doc.get("_id") {
-        Some(Bson::String(s)) => Some(s.clone()),
-        Some(Bson::ObjectId(oid)) => Some(oid.to_hex()),
-        _ => None,
-    }
-}
 
 fn build_id(doc: &Document) -> String {
     return doc.get("id").unwrap().to_string();

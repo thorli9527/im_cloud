@@ -1,7 +1,7 @@
 use crate::biz_service::client_service::ClientService;
 use crate::entitys::mq_user_action::{UserActionLog, UserActionType};
 use crate::manager::common::UserId;
-use crate::manager::user_redis_manager::{UserManager, UserManagerOpt};
+use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use anyhow::Result;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};

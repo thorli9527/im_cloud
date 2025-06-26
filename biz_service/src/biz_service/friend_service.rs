@@ -1,15 +1,17 @@
-use crate::entitys::user_friend::{FriendSourceType, FriendStatus, UserFriend};
+use crate::entitys::friend::FriendInfo;
 use crate::manager::common::UserId;
-use crate::manager::user_redis_manager::{UserManager, UserManagerOpt};
+use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
+use crate::protocol::protocol::FriendSourceType;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use mongodb::{bson::doc, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use mongodb::bson::Bson;
 
 #[derive(Debug)]
 pub struct UserFriendService {
-    pub dao: BaseRepository<UserFriend>,
+    pub dao: BaseRepository<FriendInfo>,
 }
 
 impl UserFriendService {
@@ -18,8 +20,43 @@ impl UserFriendService {
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
 
+    /// 拉黑好友（将 is_blocked 设置为 true）
+    pub async fn friend_block(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<()> {
+        let filter = doc! {
+            "agent_id": agent_id,
+            "uid": uid,
+            "friend_id": friend_id
+        };
+
+        let update = doc! {
+            "$set": {
+                "is_blocked": Bson::Boolean(true)
+            }
+        };
+        self.dao.update(filter, update).await?;
+        Ok(())
+    }
+
+    /// 解除拉黑好友（将 is_blocked 设置为 false）
+    pub async fn friend_unblock(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<()> {
+        let filter = doc! {
+            "agent_id": agent_id,
+            "uid": uid,
+            "friend_id": friend_id
+        };
+
+        let update = doc! {
+            "$set": {
+                "is_blocked": Bson::Boolean(false)
+            }
+        };
+
+        self.dao.update(filter, update).await?;
+        Ok(())
+    }
+    
     /// 添加好友（可配置昵称/来源等）
-    pub async fn add_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId, nickname: &Option<String>, source_type: &FriendSourceType,remark: &Option<String>) -> Result<()> {
+    pub async fn add_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId, nickname: &Option<String>, source_type: &FriendSourceType,remark: &Option<String>) -> Result<String> {
         // 校验对方存在
         let client_opt = UserManager::get().get_user_info(agent_id, friend_id).await?;
         if client_opt.is_none() {
@@ -33,24 +70,24 @@ impl UserFriendService {
             "friend_id": friend_id
         };
         let exists = self.dao.find_one(filter).await?;
-        if exists.is_some() {
-            return Ok(()); // 已存在，忽略重复添加
+        if let Some(friend) = exists {
+            return Ok(friend.id); // 已存在，忽略重复添加
         }
 
-        let friend = UserFriend {
-            id: uuid::Uuid::new_v4().to_string(),
+        let friend = FriendInfo {
+            id: "".to_string(),
             agent_id: agent_id.to_string(),
             uid: uid.to_string(),
             friend_id: friend_id.to_string(),
             nickname:nickname.clone(),
             remark: None,
+            is_blocked: false,
             source_type: source_type.clone(),
-            friend_status: FriendStatus::Accepted,
             created_at: common::util::date_util::now(),
         };
 
-        self.dao.insert(&friend).await?;
-        Ok(())
+        let id=self.dao.insert(&friend).await?;
+        Ok(id)
     }
 
     /// 删除好友
@@ -62,8 +99,6 @@ impl UserFriendService {
         };
 
         self.dao.delete(filter).await?;
-        UserManager::get().remove_friend(agent_id, uid, friend_id).await?;
-
         Ok(())
     }
 
@@ -74,18 +109,17 @@ impl UserFriendService {
     }
 
     /// 获取好友列表
-    pub async fn get_friend_list(&self, agent_id: &str, uid: &UserId) -> Result<Vec<UserFriend>> {
+    pub async fn get_friend_list(&self, agent_id: &str, uid: &UserId) -> Result<Vec<FriendInfo>> {
         let filter = doc! {
             "agent_id": agent_id,
             "uid": uid,
-            "friend_status": FriendStatus::Accepted as i32
         };
         let list = self.dao.query(filter).await?;
         Ok(list)
     }
 
     /// 查询单个好友详细信息（例如备注/昵称）
-    pub async fn get_friend_detail(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<Option<UserFriend>> {
+    pub async fn get_friend_detail(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<Option<FriendInfo>> {
         let filter = doc! {
             "agent_id": agent_id,
             "uid": uid,
@@ -99,7 +133,7 @@ impl UserFriendService {
     pub async fn delete_all_for_user(&self, agent_id: &str, uid: &UserId) -> Result<()> {
         let filter = doc! {
             "agent_id": agent_id,   //
-            "uid": uid 
+            "uid": uid
         };
         self.dao.delete(filter).await?;
         Ok(())

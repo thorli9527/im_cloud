@@ -10,10 +10,10 @@ pub mod mq_user_action;
 pub mod mq_group_operation_log;
 pub mod mq_message_info;
 pub mod read_index;
-pub mod user_friend;
+pub mod friend;
 
 use mongodb::bson::oid::ObjectId;
-use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub fn deserialize_object_id_as_hex_string<'de, D>(deserializer: D) -> Result<String, D::Error>
 where

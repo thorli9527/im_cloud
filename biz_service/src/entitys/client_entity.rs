@@ -11,16 +11,6 @@ pub enum Gender {
     Female, // 女性
 }
 
-/// 登录设备类型
-#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
-pub enum DeviceType {
-    #[default]
-    Unknown, // 未知设备
-    Web,
-    Android,
-    IOS,
-    PC,
-}
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub enum FriendPolicy {
     #[default]

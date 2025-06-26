@@ -64,7 +64,7 @@ pub async fn user_add(state: web::Data<AppState>, dto: web::Json<UserAddDto>) ->
 #[post("/user/change/{user_id}/{state}")]
 pub async fn user_change(parmas: web::Path<(String, bool)>) -> Result<impl Responder, AppError> {
     let (user_id, state) = parmas.into_inner();
-    UserService::get().dao.up_property(user_id, "status".to_string(), state).await?;
+    UserService::get().dao.up_property(&user_id, "status", state).await?;
     Ok(result())
 }
 
@@ -87,7 +87,7 @@ pub async fn user_change_pass(state: web::Data<AppState>, dto: web::Json<UserPas
     match &dto.validate() {
         Ok(_) => {
             let password = build_md5_with_key(&state.config.sys.md5_key, &dto.password.as_ref().unwrap());
-            UserService::get().dao.up_property(dto.user_id.clone(), "status".to_string(), password).await?;
+            UserService::get().dao.up_property(&dto.user_id, "status", password).await?;
             Ok(result())
         }
         Err(e) => return Ok(result_error(e.to_string())),

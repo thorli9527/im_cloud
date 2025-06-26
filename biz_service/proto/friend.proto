@@ -1,0 +1,62 @@
+syntax = "proto3";
+package protocol;
+
+// ================================
+// 🤝 好友事件类型枚举
+// ================================
+// 表示好友关系变更的操作类型，通常用于请求加好友、拉黑、解除等社交关系变动。
+enum FriendEventType {
+    FRIEND_EVENT_UNKNOWN = 0; // 未知类型，默认占位（防止解析失败时崩溃）
+
+    FRIEND_REQUEST = 1;       // 发起好友请求（from_uid → to_uid）
+    FRIEND_ACCEPT = 2;        // 接受好友请求（to_uid 接受 from_uid）
+    FRIEND_REJECT = 3;        // 拒绝好友请求（to_uid 拒绝 from_uid）
+
+    FRIEND_REMOVE = 4;        // 删除好友（from_uid 主动删除 to_uid）
+    FRIEND_BLOCK = 5;         // 拉黑好友（from_uid 屏蔽 to_uid，不再接收消息）
+    FRIEND_UNBLOCK = 6;       // 取消拉黑（from_uid 解除对 to_uid 的屏蔽）
+    FRIEND_UPDATE_REMARK = 7; // 修改备注名（from_uid 修改自己对 to_uid 的备注名称）
+    FRIEND_ADD_FORCE = 8; // 后台系统直接添加好友（跳过申请/确认流程）
+}
+// ================================
+// 📥 好友添加来源类型
+// ================================
+// 表示用户是通过何种方式添加好友的
+enum FriendSourceType {
+    FRIEND_SOURCE_UNKNOWN = 0;  // 未知来源，默认占位（兼容性用途）
+    FRIEND_SOURCE_SEARCH = 1;   // 用户搜索账号添加
+    FRIEND_SOURCE_QRCODE = 2;   // 扫码添加
+    FRIEND_SOURCE_PHONE = 3;    // 手机联系人添加
+    FRIEND_SOURCE_GROUP = 4;    // 群组中点击添加
+    FRIEND_SOURCE_SYSTEM = 5;   // 系统后台添加（如客服、风控）
+}
+
+// ================================
+// 📌 好友事件状态枚举
+// ================================
+// 每个好友事件都具有生命周期状态，用于判断是否被处理
+enum EventStatus {
+    PENDING = 0;  // 等待处理（如好友请求待接受）
+    DONE = 1;     // 已处理完成（如已同意、已拒绝、已解除）
+    REVOKED = 2;  // 已撤销（如申请主动取消、系统超时取消）
+}
+
+// ================================
+// 📦 好友事件消息结构
+// ================================
+// 用于客户端/服务端之间同步好友事件记录
+message FriendEventMessage {
+    string event_id = 1;            // 事件唯一 ID（用于去重、防止重复处理）
+    string from_uid = 2;            // 发起操作的用户 ID（如请求、删除、拉黑）
+    string to_uid = 3;              // 接收操作的目标用户 ID（如被请求、被拉黑）
+
+    FriendEventType event_type = 4; // 当前事件的类型（请求/接受/拒绝等）
+    string message = 5;             // 附加信息，如加好友请求附带备注、说明等
+
+    EventStatus status = 6;         // 当前事件的状态（待处理 / 已完成 / 已撤销）
+
+    int64 created_at = 7;           // 事件创建时间（毫秒时间戳）
+    int64 updated_at = 8;           // 最近更新时间（如处理、撤销时间）
+
+    FriendSourceType source_type = 9; // 添加来源类型（扫码/手机号/后台等）
+}

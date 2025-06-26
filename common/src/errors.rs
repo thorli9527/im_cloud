@@ -3,11 +3,9 @@ use deadpool_redis::redis::RedisError;
 use deadpool_redis::PoolError;
 use log::error;
 use mongodb::error::Error as MongoError;
-use serde::{Deserialize, Serialize};
-use serde_json::to_string;
-use std::{fmt, io};
+use serde::Serialize;
+use std::io;
 use thiserror::Error;
-use validator::Validate;
 /// HTTP 错误响应结构
 #[derive(Serialize)]
 struct ErrorResponse {

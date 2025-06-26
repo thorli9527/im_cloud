@@ -1,5 +1,6 @@
 use crate::result::{result, result_page, ApiResponse};
 use actix_web::{post, web, Responder};
+use anyhow::{anyhow, Result};
 use biz_service::biz_service::agent_service::AgentService;
 use biz_service::entitys::agent_entity::AgentInfo;
 use chrono::Utc;
@@ -59,7 +60,7 @@ pub struct AgentInfoDto {
 #[post("/agent/create")]
 pub async fn agent_create(dto: web::Json<AgentInfoDto>) -> Result<impl Responder, AppError> {
     // 执行验证
-    dto.validate().map_err(|e| AppError::Validation(format!("参数验证失败: {}", e)))?;
+    dto.validate()?;
     let agent_service = AgentService::get();
     let mut agent = AgentInfo::default();
     agent.create_time = now();
@@ -91,9 +92,9 @@ pub struct AgentKeyDto {
 )]
 #[post("/agent/refresh_secret")]
 pub async fn agent_refresh_secret(dto: web::Json<AgentKeyDto>) -> Result<impl Responder, AppError> {
-    dto.validate().map_err(|e| AppError::Validation("验证错证".to_owned() + e.to_string().as_str()))?;
+    dto.validate()?;
     let agent_service = AgentService::get();
-    let entity = agent_service.dao.find_by_id(dto.agent_id.to_string()).await?;
+    let entity = agent_service.dao.find_by_id(&dto.agent_id).await?;
     if entity.is_none() {
         return Err(AppError::BizError("agent.not.found".to_string()));
     }
@@ -118,10 +119,10 @@ pub struct AgentEndTimeDto {
 )]
 #[post("/agent/refresh_end_time")]
 pub async fn agent_refresh_end_time(dto: web::Json<AgentEndTimeDto>) -> Result<impl Responder, AppError> {
-    dto.validate().map_err(|e| AppError::Validation("验证错证".to_owned() + e.to_string().as_str()))?;
-    validate_agent_end_time(&dto).map_err(|e| AppError::Validation(e.to_string()))?;
+    dto.validate()?;
+    validate_agent_end_time(&dto)?;
     let agent_service = AgentService::get();
-    let entity = agent_service.dao.find_by_id(dto.agent_id.to_string()).await?;
+    let entity = agent_service.dao.find_by_id(&dto.agent_id).await?;
     if entity.is_none() {
         return Err(AppError::BizError("agent.not.found".to_string()));
     }
@@ -129,12 +130,11 @@ pub async fn agent_refresh_end_time(dto: web::Json<AgentEndTimeDto>) -> Result<i
     Ok(result())
 }
 
-fn validate_agent_end_time(dto: &AgentEndTimeDto) -> Result<(), String> {
+fn validate_agent_end_time(dto: &AgentEndTimeDto) -> Result<()> {
     let now = Utc::now().timestamp() as u64;
     let min_end_time = now + 86400; // 当前时间 + 1 天
-
     if dto.end_time <= min_end_time {
-        return Err("end_time 必须大于当前时间 + 1 天".into());
+        return Err(anyhow!("end_time 必须大于当前时间 + 1 天"));
     }
     Ok(())
 }
@@ -158,7 +158,7 @@ pub struct AgentEnable {
 )]
 #[post("/agent/active")]
 pub async fn agent_active(dto: web::Json<AgentEnable>) -> Result<impl Responder, AppError> {
-    dto.validate().map_err(|e| AppError::Validation("验证错证".to_owned() + e.to_string().as_str()))?;
+    dto.validate()?;
     let agent_service = AgentService::get();
     agent_service.dao.up_property(&dto.id, "enable", dto.enable).await?;
     Ok(result())

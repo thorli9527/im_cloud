@@ -1,0 +1,295 @@
+syntax = "proto3";
+
+package protocol;
+
+option go_package = "your/app/path/protocol"; // 适配 Golang 项目可选
+
+// ========================
+// 🌟 1. 聊天内容类消息
+// ========================
+message Message {
+    string message_id = 1;
+    string sender_id = 2;
+    string receiver_id = 3;
+    int64 timestamp = 4;
+    MessageType message_type = 5; // 主内容类型
+    ChatScene scene = 6;
+    repeated MessageContent contents = 10;
+}
+
+enum ChatScene {
+    CHAT_UNKNOWN = 0;
+    SINGLE = 1;
+    GROUP = 2;
+}
+
+enum MessageType {
+    UNKNOWN = 0;
+    TEXT = 1;
+    IMAGE = 2;
+    AUDIO = 3;
+    VIDEO = 4;
+    LOCATION = 5;
+    FILE = 6;
+    AV_CALL = 7;
+    NOTIFICATION = 8;
+    SYSTEM = 9;
+    REMINDER = 10;
+    VOIP = 11;
+    CUSTOM = 12;
+    EMOJI = 13;
+    SYSTEM_EVENT = 14;
+    REVOKE = 15;
+    FORWARD = 16;
+    QUOTE = 17;
+}
+
+message MessageContent {
+    oneof content {
+        TextMessage text = 1;
+        ImageMessage image = 2;
+        AudioMessage audio = 3;
+        VideoMessage video = 4;
+        LocationMessage location = 5;
+        FileMessage file = 6;
+        AVCallMessage av_call = 7;
+        CustomMessage custom = 8;
+        EmojiMessage emoji = 9;
+        RevokeMessage revoke = 10;
+        ForwardMessage forward = 11;
+        QuoteMessage quote = 12;
+    }
+}
+
+message TextMessage { string text = 1; }
+
+message ImageMessage {
+    string url = 1;
+    int32 width = 2;
+    int32 height = 3;
+    string thumbnail_url = 4;
+}
+
+message AudioMessage {
+    string url = 1;
+    int32 duration = 2;
+}
+
+message VideoMessage {
+    string url = 1;
+    int32 duration = 2;
+    int32 width = 3;
+    int32 height = 4;
+    string thumbnail_url = 5;
+}
+
+message LocationMessage {
+    double latitude = 1;
+    double longitude = 2;
+    string address = 3;
+    string name = 4;
+}
+
+message FileMessage {
+    string file_name = 1;
+    string url = 2;
+    int64 file_size = 3;
+    string file_type = 4;
+}
+
+message AVCallMessage {
+    string call_id = 1;
+    bool is_video = 2;
+    CallStatus status = 3;
+    int32 duration = 4;
+}
+
+enum CallStatus {
+    CALLING = 0;
+    ACCEPTED = 1;
+    REJECTED = 2;
+    MISSED = 3;
+    ENDED = 4;
+}
+
+message CustomMessage {
+    string custom_type = 1;
+    string json_payload = 2;
+}
+
+message EmojiMessage {
+    EmojiType emoji = 1;
+    string custom_emoji_url = 2;
+}
+
+enum EmojiType {
+    EMOJI_UNKNOWN = 0;
+    SMILE = 1;
+    HEART = 21;
+    CUSTOM_EMOJI = 1000;
+}
+
+message RevokeMessage {
+    string target_message_id = 1;
+    string operator_id = 2;
+    int64 revoke_time = 3;
+}
+
+message ForwardMessage {
+    string original_message_id = 1;
+    string original_sender_id = 2;
+    MessageType original_type = 3;
+    string summary = 4;
+}
+
+message QuoteMessage {
+    string quoted_message_id = 1;
+    string quoted_content_preview = 2;
+    string quote_text = 3;
+}
+
+// ========================
+// 🛡️ 2. 系统类消息
+// ========================
+message SystemNotification {
+    string notification_type = 1;
+    string sender = 2;
+    string target = 3;
+    string content = 4;
+    int64 timestamp = 5;
+    map<string, string> meta = 6;
+}
+
+message SystemEventMessage {
+    string event_type = 1;
+    string description = 2;
+    map<string, string> details = 3;
+}
+
+message GroupAttributeChange {
+    string group_id = 1;
+    string key = 2;
+    string old_value = 3;
+    string new_value = 4;
+    string operator_id = 5;
+    int64 timestamp = 6;
+}
+
+message GroupMemberChange {
+    string group_id = 1;
+    string operator_id = 2;
+    repeated string affected_users = 3;
+    string change_type = 4;
+    int64 timestamp = 5;
+}
+
+// ========================
+// 📶 3. 状态类消息
+// ========================
+message ReadReceipt {
+    string msg_id = 1;
+    repeated string reader_ids = 2;
+    int64 read_time = 3;
+}
+
+message TypingNotice {
+    string from_user = 1;
+    string to_user = 2;
+    bool is_typing = 3;
+    int64 timestamp = 4;
+}
+
+message Heartbeat {
+    int64 timestamp = 1;
+}
+
+// ========================
+// ✅ 4. ACK 消息
+// ========================
+message AckMessage {
+    string message_id = 1;
+    int64 ack_timestamp = 3;
+}
+
+// ========================
+// 👥 5. 好友事件类
+// ========================
+enum FriendEventType {
+    FRIEND_EVENT_UNKNOWN = 0;
+    REQUEST = 1;
+    ACCEPT = 2;
+    REJECT = 3;
+    REMOVE = 4;
+    BLOCK = 5;
+    UNBLOCK = 6;
+    UPDATE_REMARK = 7;
+}
+
+enum EventStatus {
+    PENDING = 0;
+    DONE = 1;
+    REVOKED = 2;
+}
+
+message FriendEventMessage {
+    string event_id = 1;
+    string from_uid = 2;
+    string to_uid = 3;
+    FriendEventType event_type = 4;
+    string message = 5;
+    EventStatus status = 6;
+    int64 created_at = 7;
+    int64 updated_at = 8;
+}
+
+// ========================
+// 🔐 6. 认证与连接类
+// ========================
+enum DeviceType {
+    DEVICE_UNKNOWN = 0;
+    Mobile = 1;
+    DESKTOP = 2;
+    WEB = 3;
+}
+
+message AuthRequest {
+    string message_id = 1;
+    string token = 2;
+    string client_id = 3;
+    DeviceType device_type = 4;
+}
+
+message AuthResponse {
+    string message_id = 1;
+    bool success = 2;
+    string message = 3;
+}
+
+// ========================
+// ✉️ 顶层封包结构
+// ========================
+enum EnvelopeType {
+    CLIENT_TO_SERVER = 0;
+    SERVER_TO_CLIENT = 1;
+    ACK = 2;
+}
+
+message Envelope {
+    string envelope_id = 1;
+    EnvelopeType envelope_type = 2;
+    int64 timestamp = 3;
+
+    oneof payload {
+        AuthRequest auth_request = 4;
+        AuthResponse auth_response = 5;
+        Message message = 6;
+        ReadReceipt read_receipt = 7;
+        SystemNotification system_notification = 8;
+        TypingNotice typing_notice = 9;
+        GroupMemberChange group_member_change = 10;
+        GroupAttributeChange group_attribute_change = 11;
+        AckMessage ack = 12;
+        Heartbeat heartbeat = 13;
+        FriendEventMessage friend_event = 14;
+    }
+}

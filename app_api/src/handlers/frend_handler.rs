@@ -1,8 +1,8 @@
 use crate::result::{result, result_data, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
-use biz_service::entitys::user_friend::FriendSourceType;
-use biz_service::manager::user_redis_manager::{UserManager, UserManagerOpt};
+use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
+use biz_service::protocol::protocol::FriendSourceType;
 use common::errors::AppError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

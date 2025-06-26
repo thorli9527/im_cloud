@@ -1,6 +1,7 @@
 use crate::entitys::client_entity::ClientInfo;
-use crate::manager::common::{DeviceType, UserId};
-use crate::manager::user_redis_manager::{UserManager, UserManagerOpt};
+use crate::manager::common::UserId;
+use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
+use crate::protocol::protocol::DeviceType;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::date_util::now;
@@ -16,7 +17,7 @@ pub struct ClientService {
 
 impl ClientService {
     pub fn new(db: Database) -> Self {
-        let collection = db.collection("user_profile");
+        let collection = db.collection("client");
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
     pub async fn new_data(&self, agent_id: String, user_id: &UserId, name: String, avatar: Option<String>) -> Result<ClientInfo> {
@@ -66,7 +67,7 @@ impl ClientService {
     }
 
     pub async fn lock(&self,agent_id: &str, user_id: &UserId){
-        
+        //
     }
     
     pub async fn build_token(&self,agent_id: &str, uid: &UserId,device_type: DeviceType) -> Result<()> {

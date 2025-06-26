@@ -6,6 +6,7 @@ use biz_service::biz_service::kafka_service::KafkaService;
 use biz_service::manager;
 use common::config::{AppConfig, ServerRes};
 use common::errors::AppError;
+use common::redis::redis_template::RedisTemplate;
 use deadpool_redis::{
     redis::{cmd, FromRedisValue}, Connection, Manager, Pool, PoolConfig,
     Runtime as RedisRuntime,
@@ -27,6 +28,7 @@ async fn main() -> std::io::Result<()> {
     warn!("Starting server on {}", address_and_port);
     let db = init_mongo_db(&app_cfg).await;
     let pool = build_redis_pool(&app_cfg);
+    RedisTemplate::init(pool.clone());
     KafkaService::init(&app_cfg.kafka).await;
     biz_service::init_service(db);
     manager::init(pool,false);

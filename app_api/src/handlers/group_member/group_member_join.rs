@@ -5,13 +5,13 @@ use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::group_member::{GroupMember, GroupRole};
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
-use biz_service::manager::group_redis_manager::{GroupManager, GroupManagerOpt};
-use biz_service::manager::user_redis_manager::{UserManager, UserManagerOpt};
+use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
 use common::errors::AppError;
 use common::repository_util::Repository;
 use common::util::date_util::now;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(group_member_join);

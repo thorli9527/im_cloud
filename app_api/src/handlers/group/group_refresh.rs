@@ -58,7 +58,7 @@ async fn group_refresh(dto: web::Json<GroupRefreshDto>,  req: HttpRequest) -> Re
     if info.is_err(){
         return Err(BizError("group.not.found".to_string()));
     }
-    group_service.dao.up_property(info.ok().unwrap().id, "name", &dto.group_name).await?;
+    group_service.dao.up_property(&info.ok().unwrap().id, "name", &dto.group_name).await?;
 
     GroupOperationLogService::get().add_log(&agent.id,&*dto.group_id, "", None, GroupOperationType::Change).await?;
     Ok(web::Json(result()))

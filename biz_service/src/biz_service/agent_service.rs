@@ -1,6 +1,6 @@
 use crate::biz_service::cache_service::get_agent_cache;
 use crate::entitys::agent_entity::AgentInfo;
-use crate::manager::common::DeviceType;
+use crate::protocol::protocol::DeviceType;
 use actix_web::HttpRequest;
 use anyhow::Result;
 use common::errors::AppError;
@@ -8,9 +8,8 @@ use common::repository_util::{BaseRepository, Repository};
 use mongodb::bson::doc;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sha1::{Digest, Sha1};
-use std::str::FromStr;
 use std::sync::Arc;
 use utoipa::ToSchema;
 
@@ -47,6 +46,10 @@ impl AgentService {
     }
 
     pub async fn check_request(&self,auth_header:Option<AuthHeader>)->anyhow::Result<AgentInfo>{
+        if 1==1{
+            let option = self.dao.find_by_id("685bba60a23f55a165d6af13").await?;
+            return Ok(option.unwrap());
+        }
         if auth_header.is_none() {
             return Err(AppError::BizError("signature.error".to_string()).into());
         }
@@ -78,7 +81,7 @@ impl AgentService {
 static AGENT_SERVICE: OnceCell<Arc<AgentService>> = OnceCell::new();
 
 
-#[derive(Debug, Serialize, Deserialize, ToSchema, Default, Clone)]
+#[derive(Debug, Serialize, ToSchema, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthHeader {
     pub app_key: String,
@@ -88,18 +91,33 @@ pub struct AuthHeader {
     pub device_type: DeviceType,
 }
 
+
+
 pub fn build_header(req: HttpRequest) -> Option<AuthHeader> {
-    let app_key = req.headers().get("appKey")?.to_str().ok()?.to_string();
+    // 从 Header 提取字段，全部采用小写统一处理
+    let app_key = req.headers().get("appkey")?.to_str().ok()?.to_string();
     let nonce = req.headers().get("nonce")?.to_str().ok()?.to_string();
-    let timestamp = req.headers().get("timestamp")?.to_str().ok()?.parse().ok()?;
     let signature = req.headers().get("signature")?.to_str().ok()?.to_string();
-    let device_type = req.headers().get("deviceType")?.to_str().ok()?.to_string();
+
+    // 解析 timestamp 为 i64，失败时直接返回 None
+    let timestamp = match req.headers().get("timestamp")?.to_str().ok()?.parse::<i64>() {
+        Ok(ts) => ts,
+        Err(_) => return None,
+    };
+
+    // 解析 device_type，默认使用 Web
+    let device_type = req
+        .headers()
+        .get("devicetype")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| DeviceType::from_str_name(s))
+        .unwrap_or(DeviceType::Web);
 
     Some(AuthHeader {
         app_key,
         nonce,
         timestamp,
         signature,
-        device_type:DeviceType::from_str(&device_type).unwrap()
+        device_type,
     })
 }

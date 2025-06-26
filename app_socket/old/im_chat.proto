@@ -1,14 +1,21 @@
 syntax = "proto3";
 
 package protocol;
-
+enum MessageStatus {
+    NORMAL = 0;
+    DELETED = 1;
+    REVOKED = 2;
+    DRAFT = 3;
+    EDITED = 4;
+}
 message Message {
     string message_id = 1;        // 消息唯一 ID
     string sender_id = 2;         // 发送者用户 ID
     string receiver_id = 3;       // 接收者用户 ID
     int64 timestamp = 4;          // 消息时间戳（毫秒）
-    MessageType type = 5;         // 消息类型（第一个内容的主类型，可选）
+    MessageType message_type = 5;         // 消息类型（第一个内容的主类型，可选）
     ChatScene scene = 6;          // 会话类型（单聊/群聊）
+    MessageStatus status = 7;       // 消息状态（正常/删除/撤回/草稿/编辑）
     repeated MessageContent contents = 10; // 支持多个内容段
 }
 
@@ -191,7 +198,7 @@ message ForwardMessage {
 
 // ===== 系统通知类消息结构 =====
 message SystemNotification {
-    string type = 1;        // 通知类型：login, logout, mute, group_update 等
+    string notification_type = 1;        // 通知类型：login, logout, mute, group_update 等
     string sender = 2;      // 发起方（系统或管理员）
     string target = 3;      // 被操作对象（用户 ID 或群组 ID）
     string content = 4;     // 文本内容或 JSON 描述
@@ -325,9 +332,38 @@ enum EnvelopeType {
     SERVER_TO_CLIENT = 1;
     ACK = 2;
 }
+// 好友事件类型
+enum FriendEventType {
+    FRIEND_EVENT_UNKNOWN = 0;  // 未知类型（默认值，避免解析错误时系统崩溃）
+    REQUEST = 1;               // 发起好友请求：from_uid 向 to_uid 提出添加好友的操作
+    ACCEPT = 2;                // 接受好友请求：to_uid 同意来自 from_uid 的请求
+    REJECT = 3;                // 拒绝好友请求：to_uid 拒绝来自 from_uid 的请求
+    REMOVE = 4;                // 删除好友：from_uid 主动将 to_uid 从好友列表中移除
+    BLOCK = 5;                 // 拉黑好友：from_uid 拉黑 to_uid，通常不再接收其任何消息
+    UNBLOCK = 6;               // 取消拉黑：from_uid 取消对 to_uid 的屏蔽
+    UPDATE_REMARK = 7;         // 修改备注名：from_uid 修改自己对 to_uid 的备注（或昵称）
+}
+
+// 好友事件状态
+enum EventStatus {
+    PENDING = 0;
+    DONE = 1;
+    REVOKED = 2;
+}
+// 好友事件消息体（可用于加好友通知、好友接受等）
+message FriendEventMessage {
+    string event_id = 1;                  // 事件唯一 ID（用于去重）
+    string from_uid = 2;             // 操作发起人 ID
+    string to_uid = 3;               // 接收方 ID
+    FriendEventType event_type = 4;      // 事件类型：请求、接受、拒绝、移除等
+    string message = 5;                  // 附加备注信息
+    EventStatus status = 6;              // 状态：pending / done / revoked
+    int64 created_at = 7;                // 创建时间戳（毫秒）
+    int64 updated_at = 8;                // 更新时间戳（毫秒）
+}
 message Envelope {
     string envelope_id = 1;                                 //封包唯一 ID（可用于链路追踪）
-    EnvelopeType type = 2;                                  //封包类型（决定方向/功能）
+    EnvelopeType envelope_type = 2;                                  //封包类型（决定方向/功能）
     int64 timestamp = 3;                                    //封包发送时间戳（毫秒）
     oneof payload {
         AuthRequest auth_request = 4;                       //认证
@@ -340,6 +376,6 @@ message Envelope {
         GroupAttributeChange group_attribute_change = 11;   //群属性变更通知
         AckMessage ack = 12;                                //新增的 ACK 消息类型
         Heartbeat heartbeat = 13;
-
+        FriendEventMessage friend_event = 14;
     }
 }

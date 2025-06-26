@@ -1,15 +1,12 @@
 use common::config::KafkaConfig;
-use mongodb::Database;
 use once_cell::sync::OnceCell;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
-use rdkafka::client::DefaultClientContext;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::ClientConfig;
 use serde::Serialize;
 use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::runtime::Runtime;
 
 #[derive(Clone)]
 pub struct KafkaService {
@@ -18,51 +15,30 @@ pub struct KafkaService {
 }
 impl fmt::Debug for KafkaService {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("KafkaService")
-            .field("config", &self.config)
-            .finish()
+        f.debug_struct("KafkaService").field("config", &self.config).finish()
     }
 }
 impl KafkaService {
     pub fn new(cfg: KafkaConfig) -> Self {
-        let producer = ClientConfig::new()
-            .set("bootstrap.servers", &cfg.brokers)
-            .create()
-            .expect("Kafka producer init failed");
+        let producer = ClientConfig::new().set("bootstrap.servers", &cfg.brokers).create().expect("Kafka producer init failed");
 
         KafkaService { producer, config: cfg }
     }
 
     /// 初始化：创建 topics，然后注册单例
     pub async fn init(cfg: &KafkaConfig) {
-        Self::create_topics_or_exit(
-            &cfg.brokers,
-            &[
-                (&cfg.topic_single, 3, 1),
-                (&cfg.topic_group, 2, 1),
-            ],
-        )
-            .await;
+        Self::create_topics_or_exit(&cfg.brokers, &[(&cfg.topic_single, 3, 1), (&cfg.topic_group, 2, 1)]).await;
 
         let instance = Self::new(cfg.clone());
         SERVICE.set(Arc::new(instance)).expect("KafkaService already initialized");
     }
     /// 异步创建多个 topic，如果已存在则退出程序
     pub async fn create_topics_or_exit(brokers: &str, topics: &[(&str, i32, i32)]) {
-        let admin: AdminClient<_> = ClientConfig::new()
-            .set("bootstrap.servers", brokers)
-            .create()
-            .expect("Failed to create Kafka AdminClient");
+        let admin: AdminClient<_> = ClientConfig::new().set("bootstrap.servers", brokers).create().expect("Failed to create Kafka AdminClient");
 
-        let topic_defs: Vec<_> = topics
-            .iter()
-            .map(|(name, part, rep)| NewTopic::new(*name, *part, TopicReplication::Fixed(*rep)))
-            .collect();
+        let topic_defs: Vec<_> = topics.iter().map(|(name, part, rep)| NewTopic::new(*name, *part, TopicReplication::Fixed(*rep))).collect();
 
-        let results = admin
-            .create_topics(&topic_defs, &AdminOptions::new())
-            .await
-            .expect("Kafka topic creation failed");
+        let results = admin.create_topics(&topic_defs, &AdminOptions::new()).await.expect("Kafka topic creation failed");
 
         for result in results {
             match result {
@@ -82,23 +58,13 @@ impl KafkaService {
     }
 
     /// 发送消息
-    pub async fn send<T: Serialize>(
-        &self,
-        value: &T,
-        key: &str,
-        topic: &str,
-    ) -> Result<(i32, i64), anyhow::Error> {
+    pub async fn send<T: Serialize>(&self, value: &T, key: &str, topic: &str) -> Result<(i32, i64), anyhow::Error> {
         let payload = serde_json::to_string(value)?;
         let record = FutureRecord::to(topic).payload(&payload).key(key);
 
         match self.producer.send(record, Duration::from_secs(0)).await {
             Ok((partition, offset)) => {
-                log::info!(
-                    "Kafka message sent successfully. topic={}, partition={}, offset={}",
-                    topic,
-                    partition,
-                    offset
-                );
+                log::info!("Kafka message sent successfully. topic={}, partition={}, offset={}", topic, partition, offset);
                 Ok((partition, offset))
             }
             Err((err, _)) => {
