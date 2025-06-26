@@ -1,10 +1,11 @@
-use crate::result::{result, result_data, ApiResponse};
-use actix_web::{post, web, HttpRequest, Responder};
+use crate::result::{ApiResponse, result, result_data};
+use actix_web::{HttpRequest, Responder, post, web};
 use biz_service::biz_const::redis_const::CLIENT_TOKEN_KEY;
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
 use biz_service::biz_service::client_service::ClientService;
 use biz_service::biz_service::mq_user_action_service::UserActionLogService;
 use biz_service::entitys::client_entity::ClientInfo;
+use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
 use common::errors::AppError;
 use common::errors::AppError::BizError;
@@ -18,7 +19,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
 use validator::Validate;
-use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_create);
@@ -55,7 +55,7 @@ struct TokenDto {
     )
 )]
 #[post("/user/create")]
-async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     dto.validate()?;
     let auth_header = build_header(req);
     let agent_service = AgentService::get();
@@ -63,20 +63,20 @@ async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl 
     let client_service = ClientService::get();
     let string = &dto.uid.clone();
     let user_manager = UserManager::get();
-    let user_option:Option<ClientInfo>= user_manager.get_user_info(&agent.id, string).await?;
+    let user_option: Option<ClientInfo> = user_manager.get_user_info(&agent.id, string).await?;
     let redis_template = RedisTemplate::get();
     if user_option.is_some() {
-        let user:ClientInfo=user_option.unwrap();
+        let user: ClientInfo = user_option.unwrap();
         let token_id = build_uuid();
         let key = format!("{}{}", CLIENT_TOKEN_KEY, &token_id);
         let value_option = redis_template.ops_for_value();
-        let _= value_option.set(&key, &user.clone(), Some(30 * 60)).await?;
+        let _ = value_option.set(&key, &user.clone(), Some(30 * 60)).await?;
         let value = json!({"uid":user.uid,"token":token_id,"avatar":user.avatar});
-       return  Ok(web::Json(result_data(value)))
+        return Ok(web::Json(result_data(value)));
     }
 
-    let user= client_service.new_data(agent.id.clone(), &dto.uid.clone(), dto.name.clone(), dto.avatar.clone()).await?;
-    let token_key=user_manager.build_token(&user.agent_id,&user.uid,auth_header.unwrap().device_type).await?;
+    let user = client_service.new_data(agent.id.clone(), &dto.uid.clone(), dto.name.clone(), dto.avatar.clone()).await?;
+    let token_key = user_manager.build_token(&user.agent_id, &user.uid, auth_header.unwrap().device_type).await?;
     user_manager.sync_user(user).await?;
     let value = json!({"uid":dto.uid,"token":token_key,"avatar":dto.avatar});
     Ok(web::Json(result_data(value)))
@@ -99,9 +99,9 @@ async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl 
     )
 )]
 #[post("/user/lock/{user_id}")]
-async fn user_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let agent=AgentService::get().check_request(auth_header).await?;
+    let agent = AgentService::get().check_request(auth_header).await?;
     let action_log_service = UserActionLogService::get();
     action_log_service.lock(&agent.id, &*user_id, "系统强制锁定", "", Option::None).await?;
     //发送用户lock Mq
@@ -125,13 +125,13 @@ async fn user_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<impl 
     )
 )]
 #[post("/user/user_un_lock/{user_id}")]
-async fn user_un_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_un_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder, AppError> {
     if user_id.is_empty() {
         return Err(BizError("user.id.empty".to_string()).into());
     }
     let user_id = user_id.into_inner();
     let auth_header = build_header(req);
-    let agent=AgentService::get().check_request(auth_header).await?;
+    let agent = AgentService::get().check_request(auth_header).await?;
     let action_log_service = UserActionLogService::get();
     action_log_service.un_block(&agent.id, &user_id, "系统强制锁定", "", Option::None).await?;
     //发送用户lock Mq
@@ -154,11 +154,11 @@ async fn user_un_lock(user_id: web::Path<String>, req: HttpRequest) -> Result<im
     )
 )]
 #[post("/user/info/{user_id}")]
-async fn user_info(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_info(user_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
-    let user_manager=UserManager::get();
-    let client_option = user_manager.get_user_info(&agent.id,user_id.as_ref()).await?;
+    let user_manager = UserManager::get();
+    let client_option = user_manager.get_user_info(&agent.id, user_id.as_ref()).await?;
     if client_option.is_none() {
         return Err(BizError("user.not.exist".to_string()).into());
     }
@@ -198,10 +198,10 @@ struct UserEnableDto {
     )
 )]
 #[post("/user/expire")]
-async fn user_expire(dto: web::Json<UserEnableDto>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_expire(dto: web::Json<UserEnableDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
-    UserActionLogService::get().ban(&agent.id,&dto.uid.clone(), "system.ban", "执行失败", Option::None).await?;
+    UserActionLogService::get().ban(&agent.id, &dto.uid.clone(), "system.ban", "执行失败", Option::None).await?;
     //发送用户下线MQ
     Ok(web::Json(result()))
 }
@@ -234,7 +234,7 @@ async fn user_refresh(dto: web::Json<RefreshDto>, req: HttpRequest) -> Result<im
     let agent = AgentService::get().check_request(auth_header).await?;
     let client_service = ClientService::get();
     let user_manager = UserManager::get();
-    let client = user_manager.get_user_info(&agent.id,&dto.uid).await?;
+    let client = user_manager.get_user_info(&agent.id, &dto.uid).await?;
     if client.is_none() {
         return Err(BizError("user.not.exist".to_string()));
     }
@@ -250,7 +250,7 @@ async fn user_refresh(dto: web::Json<RefreshDto>, req: HttpRequest) -> Result<im
     if let Some(url) = &dto.avatar {
         up_doc.insert("avatar_url", as_ref_to_string(url));
     }
-    client.avatar= dto.avatar.clone();
+    client.avatar = dto.avatar.clone();
     client_service.dao.update(doc! {"_id":client.id.clone()}, up_doc).await?;
     user_manager.sync_user(client.clone()).await?;
     Ok(web::Json(result()))
@@ -285,9 +285,9 @@ struct UserGroupPageDto {
     )
 )]
 #[post("/user/group/page")]
-async fn user_group_page(query: web::Json<UserGroupPageDto>, req: HttpRequest) -> Result<impl Responder,AppError> {
+async fn user_group_page(query: web::Json<UserGroupPageDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let agent= AgentService::get().check_request(auth_header).await?;
+    let agent = AgentService::get().check_request(auth_header).await?;
 
     // 2. 查询
     let group_list = GroupManager::get().get_group_members_by_page(&query.uid, query.page as usize, query.size as usize).await?;

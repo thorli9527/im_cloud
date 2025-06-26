@@ -37,7 +37,6 @@ impl<T: Clone + Send + Sync + 'static> CacheService<T> {
     pub fn clear(&self) {
         self.cache.invalidate_all();
     }
-
 }
 
 static AGENT_CACHE_INSTANCE: OnceCell<Arc<CacheService<AgentInfo>>> = OnceCell::new();

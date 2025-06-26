@@ -3,8 +3,8 @@ fn main() {
 
     // 编译 proto 文件
     tonic_build::configure()
-        .build_server(false)  // 如无需生成 gRPC Server 代码
-        .build_client(false)  // 如无需生成 gRPC Client 代码
+        .build_server(false) // 如无需生成 gRPC Server 代码
+        .build_client(false) // 如无需生成 gRPC Client 代码
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]")
         .out_dir("src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(

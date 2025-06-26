@@ -39,7 +39,7 @@ use utoipa::OpenApi;
         group_member_refresh,
         group_member_remove,
         group_member_page,
-        
+
         //好友-管理
         friend_add,
         friend_remove,

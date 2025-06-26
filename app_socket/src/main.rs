@@ -1,5 +1,5 @@
 use app_socket::manager;
-use app_socket::manager::socket_manager::{get_socket_manager, SocketManager};
+use app_socket::manager::socket_manager::{SocketManager, get_socket_manager};
 use app_socket::server::start_server;
 use biz_service::biz_service::kafka_service::KafkaService;
 use common::config::AppConfig;
@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     let db = init_mongo_db(&config).await;
     KafkaService::init(&config.kafka).await;
     biz_service::init_service(db);
-    biz_service::manager::init(pool,true);
+    biz_service::manager::init(pool, true);
     let manager: Arc<SocketManager> = get_socket_manager();
     tokio::spawn(manager::job_manager::start_heartbeat_cleaner(manager.clone(), 30)); // 30秒无心跳视为断线
     start_server(listener, config.kafka.clone()).await
@@ -48,8 +48,6 @@ pub fn build_redis_pool(config: &AppConfig) -> Pool {
     // 创建并返回连接池
     cfg.create_pool(Some(deadpool_redis::Runtime::Tokio1)).expect("Failed to create Redis connection pool")
 }
-
-
 
 pub fn init_log(config: &AppConfig) -> Result<(), AppError> {
     let mut builder = env_logger::Builder::new();

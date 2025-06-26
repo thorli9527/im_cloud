@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-common={path = "../common"}
+common = { path = "../common" }
 actix-web.workspace = true
 serde.workspace = true
 mongodb.workspace = true

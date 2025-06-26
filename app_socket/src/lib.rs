@@ -1,6 +1,6 @@
 pub mod handler;
+mod kafka;
 pub mod manager;
 pub mod server;
-mod kafka;
 
 pub use handler::*;

@@ -1,6 +1,6 @@
-use crate::result::{result, ApiResponse, };
-use actix_web::{post, web, HttpRequest, Responder};
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use crate::result::{ApiResponse, result};
+use actix_web::{HttpRequest, Responder, post, web};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
@@ -41,22 +41,24 @@ struct WhiteListUserDto {
     )
 )]
 #[post("/group/member/remove")]
-async fn group_member_remove(
-    dto: web::Json<WhiteListUserDto>,
-    req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn group_member_remove(dto: web::Json<WhiteListUserDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let agent= AgentService::get().check_request(auth_header).await?;
-  
+    let agent = AgentService::get().check_request(auth_header).await?;
+
     GroupMemberService::get()
         .dao
-        .update(doc! {"group_id":&*dto.group_id,"user_id":&*dto.user_id},
-                doc! {
+        .update(
+            doc! {"group_id":&*dto.group_id,"user_id":&*dto.user_id},
+            doc! {
                 "mute": false,
                 "mute_end_time": Option::<i64>::None,
                 "update_time": now(),
-            }
-        ).await?;
+            },
+        )
+        .await?;
 
-    GroupOperationLogService::get().add_log(&agent.id,&*dto.group_id, &*dto.user_id, None, GroupOperationType::Quit).await?;
+    GroupOperationLogService::get()
+        .add_log(&agent.id, &*dto.group_id, &*dto.user_id, None, GroupOperationType::Quit)
+        .await?;
     Ok(web::Json(result()))
 }

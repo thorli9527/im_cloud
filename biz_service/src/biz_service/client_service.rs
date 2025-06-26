@@ -5,8 +5,8 @@ use crate::protocol::protocol::DeviceType;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::date_util::now;
-use mongodb::bson::doc;
 use mongodb::Database;
+use mongodb::bson::doc;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 
@@ -63,16 +63,16 @@ impl ClientService {
     }
 
     pub async fn verify_token(&self, token: &str) -> Result<bool> {
-         Ok(UserManager::get().verify_token(token).await?)
+        Ok(UserManager::get().verify_token(token).await?)
     }
 
-    pub async fn lock(&self,agent_id: &str, user_id: &UserId){
+    pub async fn lock(&self, agent_id: &str, user_id: &UserId) {
         //
     }
-    
-    pub async fn build_token(&self,agent_id: &str, uid: &UserId,device_type: DeviceType) -> Result<()> {
+
+    pub async fn build_token(&self, agent_id: &str, uid: &UserId, device_type: DeviceType) -> Result<()> {
         let user_manager = UserManager::get();
-        user_manager.build_token(agent_id,uid,device_type).await?;
+        user_manager.build_token(agent_id, uid, device_type).await?;
         Ok(())
     }
     pub async fn find_client_by_token(&self, token: &str) -> Result<Option<ClientInfo>> {

@@ -7,7 +7,6 @@ use std::fmt::Debug;
 use std::option::Option;
 use utoipa::ToSchema;
 
-
 pub fn result_data<T: Serialize + Debug>(data: T) -> Value {
     return serde_json::json!({"success":true,"data":data});
 }

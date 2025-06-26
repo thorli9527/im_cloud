@@ -1,6 +1,6 @@
-use crate::result::{result, ApiResponse};
-use actix_web::{post, web, HttpRequest, Responder};
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use crate::result::{ApiResponse, result};
+use actix_web::{HttpRequest, Responder, post, web};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
@@ -50,16 +50,16 @@ struct GroupRefreshDto {
 )]
 #[post("/group/refresh")]
 /// 修改群组名称请求体
-async fn group_refresh(dto: web::Json<GroupRefreshDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn group_refresh(dto: web::Json<GroupRefreshDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
     let group_service = GroupService::get();
     let info = group_service.find_by_group_id(&*dto.group_id).await;
-    if info.is_err(){
+    if info.is_err() {
         return Err(BizError("group.not.found".to_string()));
     }
     group_service.dao.up_property(&info.ok().unwrap().id, "name", &dto.group_name).await?;
 
-    GroupOperationLogService::get().add_log(&agent.id,&*dto.group_id, "", None, GroupOperationType::Change).await?;
+    GroupOperationLogService::get().add_log(&agent.id, &*dto.group_id, "", None, GroupOperationType::Change).await?;
     Ok(web::Json(result()))
 }

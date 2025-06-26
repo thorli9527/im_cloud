@@ -1,13 +1,13 @@
-use std::sync::Arc;
-use async_trait::async_trait;
-use dashmap::{DashMap, DashSet};
-use once_cell::sync::OnceCell;
 use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 use crate::manager::common::UserId;
 use crate::manager::local_group_manager;
 use crate::manager::local_group_manager::{LocalGroupManager, LocalGroupManagerOpt};
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
+use async_trait::async_trait;
+use dashmap::{DashMap, DashSet};
+use once_cell::sync::OnceCell;
+use std::sync::Arc;
 
 impl LocalGroupManager {
     fn new() -> Self {
@@ -16,12 +16,7 @@ impl LocalGroupManager {
         let user_to_groups_shards = Arc::new((0..local_group_manager::SHARD_COUNT).map(|_| DashMap::new()).collect());
         let group_info_map = Arc::new(DashMap::new());
 
-        Self {
-            group_info_map,
-            group_members_shards_map,
-            group_members_meta_map,
-            user_to_groups_shards,
-        }
+        Self { group_info_map, group_members_shards_map, group_members_meta_map, user_to_groups_shards }
     }
 
     /// 清理所有成员为空的群组（仅本地缓存）
@@ -29,11 +24,7 @@ impl LocalGroupManager {
         let mut cleaned = 0;
 
         for shard in self.group_members_shards_map.iter() {
-            let empty_groups: Vec<String> = shard
-                .iter()
-                .filter(|entry| entry.value().is_empty())
-                .map(|entry| entry.key().clone())
-                .collect();
+            let empty_groups: Vec<String> = shard.iter().filter(|entry| entry.value().is_empty()).map(|entry| entry.key().clone()).collect();
 
             for group_id in empty_groups {
                 shard.remove(&group_id);
@@ -71,10 +62,8 @@ impl LocalGroupManager {
 
     // 获取全局实例
     pub fn get() -> Arc<Self> {
-       INSTANCE.get().expect("INSTANCE is not initialized").clone()
+        INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
-
-
 }
 // 单例静态变量
 static INSTANCE: OnceCell<Arc<LocalGroupManager>> = OnceCell::new();
@@ -93,35 +82,19 @@ impl LocalGroupManagerOpt for LocalGroupManager {
         self.group_info_map.remove(group_id);
     }
 
-
-    fn add_user(
-        &self,
-        group_id: &str,
-        user_id: &UserId,
-        mute: Option<bool>,
-        alias: &str,
-        group_role: &GroupRole,
-    ) {
+    fn add_user(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &str, group_role: &GroupRole) {
         let group_id = group_id.to_string();
         let user_id = user_id.to_string();
 
         // 1. 加入群组成员列表
-        self.get_group_members_shard(&group_id)
-            .entry(group_id.clone())
-            .or_insert_with(DashSet::new)
-            .insert(user_id.clone());
+        self.get_group_members_shard(&group_id).entry(group_id.clone()).or_insert_with(DashSet::new).insert(user_id.clone());
 
         // 2. 加入用户到群组反向索引
-        self.get_user_to_groups_shards(&user_id)
-            .entry(user_id.clone())
-            .or_insert_with(DashSet::new)
-            .insert(group_id.clone());
+        self.get_user_to_groups_shards(&user_id).entry(user_id.clone()).or_insert_with(DashSet::new).insert(group_id.clone());
 
         // 3. 写入群成员元信息（只在首次添加时插入）
         let meta_shard = self.get_group_meta_shard(&group_id);
-        let meta_map = meta_shard
-            .entry(group_id.clone())
-            .or_insert_with(DashMap::new);
+        let meta_map = meta_shard.entry(group_id.clone()).or_insert_with(DashMap::new);
 
         meta_map.entry(user_id.clone()).or_insert_with(|| GroupMemberMeta {
             id: format!("{}_{}", group_id, user_id),
@@ -133,28 +106,15 @@ impl LocalGroupManagerOpt for LocalGroupManager {
         });
     }
 
-    fn refresh_user(
-        &self,
-        group_id: &str,
-        user_id: &UserId,
-        mute: Option<bool>,
-        alias: &Option<String>,
-        role: Option<GroupRole>,
-    ) {
+    fn refresh_user(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &Option<String>, role: Option<GroupRole>) {
         let group_id = group_id.to_string();
         let user_id = user_id.to_string();
 
         // 1. 添加用户到群成员列表
-        self.get_group_members_shard(&group_id)
-            .entry(group_id.clone())
-            .or_insert_with(DashSet::new)
-            .insert(user_id.clone());
+        self.get_group_members_shard(&group_id).entry(group_id.clone()).or_insert_with(DashSet::new).insert(user_id.clone());
 
         // 2. 添加群组到用户映射
-        self.get_user_to_groups_shards(&user_id)
-            .entry(user_id.clone())
-            .or_insert_with(DashSet::new)
-            .insert(group_id.clone());
+        self.get_user_to_groups_shards(&user_id).entry(user_id.clone()).or_insert_with(DashSet::new).insert(group_id.clone());
 
         // 3. 如果 alias、role、mute 都为空，直接跳过 meta 更新
         if alias.is_none() && role.is_none() && mute.is_none() {
@@ -176,9 +136,6 @@ impl LocalGroupManagerOpt for LocalGroupManager {
             }
         }
     }
-
-
-
 
     fn remove_user(&self, group_id: &str, user_id: &UserId) {
         let group_id = group_id.to_string();
@@ -205,10 +162,7 @@ impl LocalGroupManagerOpt for LocalGroupManager {
 
     fn get_users(&self, group_id: &str) -> Vec<UserId> {
         let shard = self.get_group_members_shard(group_id);
-        shard
-            .get(group_id)
-            .map(|set| set.iter().map(|v| v.to_string()).collect())
-            .unwrap_or_default()
+        shard.get(group_id).map(|set| set.iter().map(|v| v.to_string()).collect()).unwrap_or_default()
     }
 
     fn get_users_page(&self, group_id: &str, page: usize, page_size: usize) -> Vec<UserId> {
@@ -258,10 +212,7 @@ impl LocalGroupManagerOpt for LocalGroupManager {
 
     async fn get_user_groups(&self, user_id: &str) -> Vec<String> {
         let shard = self.get_user_to_groups_shards(user_id);
-        shard
-            .get(user_id)
-            .map(|set| set.iter().map(|v| v.to_string()).collect())
-            .unwrap_or_default()
+        shard.get(user_id).map(|set| set.iter().map(|v| v.to_string()).collect()).unwrap_or_default()
     }
 
     /// 获取用户所在的群组，分页返回

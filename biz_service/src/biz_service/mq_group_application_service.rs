@@ -15,17 +15,12 @@ impl GroupApplicationService {
     }
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        INSTANCE
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     /// 获取单例
     pub fn get() -> Arc<Self> {
-        INSTANCE
-            .get()
-            .expect("INSTANCE is not initialized")
-            .clone()
+        INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
 }
 static INSTANCE: OnceCell<Arc<GroupApplicationService>> = OnceCell::new();

@@ -1,20 +1,20 @@
 [database]
 url = "mongodb://localhost:27017"
-db_name="im_cloud"
+db_name = "im_cloud"
 [redis]
-url="redis://127.0.0.1:6379/"
+url = "redis://127.0.0.1:6379/"
 [server]
 host = "127.0.0.1"
 port = 8080
 [cache]
-node_id=0
-node_total=1
+node_id = 0
+node_total = 1
 [sys]
 log_leve = "trace"  #trace debug info error warn
 upload_path = "./upload"
-md5_key="0000000000000000000000000000000"
+md5_key = "0000000000000000000000000000000"
 [kafka]
-brokers="localhost:9092"
-topic_single="im-p2p-messages"
-topic_group="im-group-messages"
+brokers = "localhost:9092"
+topic_single = "im-p2p-messages"
+topic_group = "im-group-messages"
 

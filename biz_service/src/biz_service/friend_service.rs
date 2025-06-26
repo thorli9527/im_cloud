@@ -4,10 +4,10 @@ use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use crate::protocol::protocol::FriendSourceType;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
-use mongodb::{bson::doc, Database};
+use mongodb::bson::Bson;
+use mongodb::{Database, bson::doc};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use mongodb::bson::Bson;
 
 #[derive(Debug)]
 pub struct UserFriendService {
@@ -54,9 +54,9 @@ impl UserFriendService {
         self.dao.update(filter, update).await?;
         Ok(())
     }
-    
+
     /// 添加好友（可配置昵称/来源等）
-    pub async fn add_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId, nickname: &Option<String>, source_type: &FriendSourceType,remark: &Option<String>) -> Result<String> {
+    pub async fn add_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId, nickname: &Option<String>, source_type: &FriendSourceType, remark: &Option<String>) -> Result<String> {
         // 校验对方存在
         let client_opt = UserManager::get().get_user_info(agent_id, friend_id).await?;
         if client_opt.is_none() {
@@ -79,14 +79,14 @@ impl UserFriendService {
             agent_id: agent_id.to_string(),
             uid: uid.to_string(),
             friend_id: friend_id.to_string(),
-            nickname:nickname.clone(),
+            nickname: nickname.clone(),
             remark: None,
             is_blocked: false,
             source_type: source_type.clone(),
             created_at: common::util::date_util::now(),
         };
 
-        let id=self.dao.insert(&friend).await?;
+        let id = self.dao.insert(&friend).await?;
         Ok(id)
     }
 

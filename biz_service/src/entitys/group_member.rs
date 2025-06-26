@@ -22,7 +22,6 @@ pub struct GroupMember {
     pub create_time: i64,
     /// 最后更新时间（Unix 秒时间戳）
     pub update_time: i64,
-
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema, Eq, PartialEq)]

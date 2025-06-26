@@ -3,8 +3,8 @@ use serde::{Serialize, Deserialize};
 
 #[derive(QueryFilter, Serialize, Deserialize, Debug)]
 pub struct AdvancedQuery {
-    #[query(eq)]
-    #pub username: Option<String>,
+#[query(eq)]
+#pub username: Option<String>,
 
     #[query(between)]
     pub age: Option<u32>,
@@ -17,6 +17,7 @@ pub struct AdvancedQuery {
 
     #[query(regex, field = "nickname")]
     pub nick_like: Option<String>,
+
 }
 
 fn main() {
@@ -30,4 +31,5 @@ nick_like: Some("^T".into()),
 
     let doc = query.to_query_doc();
     println!("📄 Mongo 查询: {:?}", doc);
+
 }

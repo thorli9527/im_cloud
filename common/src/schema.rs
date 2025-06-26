@@ -1,6 +1,6 @@
-use mongodb::bson::{oid::ObjectId, DateTime};
-use utoipa::openapi::schema::{ObjectBuilder, RefOr, Schema, SchemaType};
+use mongodb::bson::{DateTime, oid::ObjectId};
 use utoipa::ToSchema;
+use utoipa::openapi::schema::{ObjectBuilder, RefOr, Schema, SchemaType};
 
 impl ToSchema for DateTime {
     fn schema() -> RefOr<Schema> {
@@ -9,8 +9,9 @@ impl ToSchema for DateTime {
                 .schema_type(SchemaType::String)
                 .format(Some("date-time".into()))
                 .description(Some("MongoDB DateTime as ISO8601 string"))
-                .build()
-        ).into()
+                .build(),
+        )
+        .into()
     }
 }
 
@@ -21,7 +22,8 @@ impl ToSchema for ObjectId {
                 .schema_type(SchemaType::String)
                 .format(Some("objectid".into()))
                 .description(Some("MongoDB ObjectId as 24-char hex string"))
-                .build()
-        ).into()
+                .build(),
+        )
+        .into()
     }
 }

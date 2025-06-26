@@ -2,8 +2,8 @@ use crate::handlers::group_member::group_member_join;
 use actix_web::web;
 
 pub mod group_create;
-pub mod group_quit;
 pub mod group_dismiss;
+pub mod group_quit;
 pub mod group_refresh;
 pub mod group_transfer;
 

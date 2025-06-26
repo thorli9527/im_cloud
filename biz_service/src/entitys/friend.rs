@@ -4,15 +4,15 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct FriendInfo {
-    pub id: String,                             // 用户 ID
-    pub agent_id: String,                       // 代理 ID
-    pub uid: String,                            // 用户 ID
-    pub friend_id: String,                      // 好友 ID
-    pub nickname: Option<String>,               // 好友昵称
-    pub remark: Option<String>,                 // 好友备注
-    pub source_type: FriendSourceType,          // 好友来源类型
-    pub created_at: i64,                        // 创建时间
-    pub is_blocked: bool,                       // 是否已拉黑好友（uid 拉黑 friend_id）
+    pub id: String,                    // 用户 ID
+    pub agent_id: String,              // 代理 ID
+    pub uid: String,                   // 用户 ID
+    pub friend_id: String,             // 好友 ID
+    pub nickname: Option<String>,      // 好友昵称
+    pub remark: Option<String>,        // 好友备注
+    pub source_type: FriendSourceType, // 好友来源类型
+    pub created_at: i64,               // 创建时间
+    pub is_blocked: bool,              // 是否已拉黑好友（uid 拉黑 friend_id）
 }
 
 /// 好友事件记录实体，用于数据库存储好友行为的详细信息。
@@ -46,4 +46,3 @@ pub struct FriendEvent {
     /// 事件最后更新时间，单位为毫秒时间戳（如状态变化、备注更新等）
     pub updated_at: u64,
 }
-

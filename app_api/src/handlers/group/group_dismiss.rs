@@ -1,7 +1,7 @@
 use crate::handlers::common_handler::status;
-use crate::result::{result, ApiResponse};
-use actix_web::{post, web, HttpRequest, Responder};
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use crate::result::{ApiResponse, result};
+use actix_web::{HttpRequest, Responder, post, web};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
@@ -30,16 +30,13 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     )
 )]
 #[post("/group/dismiss/{group_id}")]
-async fn group_dismiss(group_id: web::Path<String>,req: HttpRequest,
-) -> Result<impl Responder, AppError> {
+async fn group_dismiss(group_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let agent=AgentService::get()
-        .check_request(auth_header)
-        .await?;
+    let agent = AgentService::get().check_request(auth_header).await?;
     let group_service = GroupService::get();
 
     let info = group_service.find_by_group_id(&*group_id).await;
-    if info.is_err(){
+    if info.is_err() {
         return Err(BizError("group.not.found".to_string()));
     }
 
@@ -47,6 +44,6 @@ async fn group_dismiss(group_id: web::Path<String>,req: HttpRequest,
     group_member_service.dao.delete_by_id(&*group_id).await?;
     group_service.dao.delete_by_id(&*group_id).await?;
     GroupManager::get().dismiss_group(&*group_id).await?;
-    GroupOperationLogService::get().add_log(&agent.id,&*group_id, "", None, GroupOperationType::Dismiss).await?;
+    GroupOperationLogService::get().add_log(&agent.id, &*group_id, "", None, GroupOperationType::Dismiss).await?;
     Ok(web::Json(result()))
 }

@@ -1,22 +1,22 @@
 use crate::entitys::client_entity::ClientInfo;
 use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
-use crate::manager::common::{UserId, SHARD_COUNT};
+use crate::manager::common::{SHARD_COUNT, UserId};
 use crate::manager::local_group_manager::{LocalGroupManager, LocalGroupManagerOpt};
 use crate::protocol::protocol::{DeviceType, FriendSourceType};
 use anyhow::Result;
 use async_trait::async_trait;
-use common::repository_util::Repository;
 use common::ClientTokenDto;
+use common::repository_util::Repository;
 use dashmap::DashMap;
-use deadpool_redis::redis::{cmd, AsyncCommands};
 use deadpool_redis::Pool as RedisPool;
+use deadpool_redis::redis::{AsyncCommands, cmd};
 use mongodb::bson::doc;
 use once_cell::sync::OnceCell;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::sleep;
@@ -115,9 +115,9 @@ pub trait UserManagerOpt: Send + Sync {
     /// 获取用户的好友列表
     async fn get_friends(&self, agent_id: &str, user_id: &UserId) -> Result<Vec<UserId>>;
     ///拉黑好友
-    async fn friend_block(&self, agent_id: &str,user_id: &UserId, friend_id: &UserId) -> Result<()>;
+    async fn friend_block(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()>;
     ///拉黑好友-取消
-    async fn friend_unblock(&self, agent_id: &str,user_id: &UserId, friend_id: &UserId) -> Result<()>;
+    async fn friend_unblock(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()>;
 }
 
 impl UserManager {

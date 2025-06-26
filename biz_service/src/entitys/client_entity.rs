@@ -21,20 +21,20 @@ pub enum FriendPolicy {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct ClientInfo {
-    pub id: String,      // 用户id
-    pub name:String,     //用户名
-    pub uid: String, //客户端用户id
-    pub alias:String,    //客户端用户昵称
-    pub enable: bool,    //用户启用状态                   封号
-    pub lock:bool,          //用户锁定 不能登录
+    pub id: String,                                     // 用户id
+    pub name: String,                                   //用户名
+    pub uid: String,                                    //客户端用户id
+    pub alias: String,                                  //客户端用户昵称
+    pub enable: bool,                                   //用户启用状态                   封号
+    pub lock: bool,                                     //用户锁定 不能登录
     pub agent_id: String,                               // 商户id
-    pub agent_id_uid: String, // 商户ID+uid 组合唯一标识
-    pub avatar: Option<String>,                     // 头像 URL
+    pub agent_id_uid: String,                           // 商户ID+uid 组合唯一标识
+    pub avatar: Option<String>,                         // 头像 URL
     pub allow_add_friend: FriendPolicy,                 // 加好友策略
-    pub profile_fields: HashMap<String, String>,// 用户基本信息
+    pub profile_fields: HashMap<String, String>,        // 用户基本信息
     pub extend_fields: Option<HashMap<String, String>>, // 字段扩展
-    pub message_expired_at:Option<i64>,                 //禁言时间
-    pub message_status:bool,                            //禁言状态 true 禁止
+    pub message_expired_at: Option<i64>,                //禁言时间
+    pub message_status: bool,                           //禁言状态 true 禁止
     /// 创建时间（Unix 秒时间戳）
     pub create_time: i64,
     /// 最后更新时间（Unix 秒时间戳）

@@ -3,8 +3,8 @@ use anyhow::Result;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::as_ref_to_string;
-use mongodb::bson::doc;
 use mongodb::Database;
+use mongodb::bson::doc;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 #[derive(Debug)]
@@ -17,7 +17,7 @@ impl GroupService {
         let collection = db.collection("group_info");
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
-    
+
     pub async fn find_by_group_id(&self, group_id: impl AsRef<str>) -> Result<GroupInfo, AppError> {
         let result = self.dao.find_one(doc! {"group_id":as_ref_to_string(group_id)}).await?;
         match result {
@@ -27,11 +27,7 @@ impl GroupService {
     }
 
     /// 转让群组（变更 creator_id）
-    pub async fn transfer_ownership(
-        &self,
-        group_id: impl AsRef<str>,
-        new_owner_id: impl AsRef<str>,
-    ) -> Result<(), AppError> {
+    pub async fn transfer_ownership(&self, group_id: impl AsRef<str>, new_owner_id: impl AsRef<str>) -> Result<(), AppError> {
         let filter = doc! {"group_id": as_ref_to_string(&group_id)};
         let update = doc! {
             "$set": {
@@ -44,17 +40,12 @@ impl GroupService {
     }
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        INSTANCE
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     /// 获取单例
     pub fn get() -> Arc<Self> {
-        INSTANCE
-            .get()
-            .expect("INSTANCE is not initialized")
-            .clone()
+        INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
 }
 static INSTANCE: OnceCell<Arc<GroupService>> = OnceCell::new();

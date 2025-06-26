@@ -1,6 +1,6 @@
 use crate::result::result;
-use actix_web::{web, HttpRequest, Responder};
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use actix_web::{HttpRequest, Responder, web};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
 use biz_service::biz_service::mq_message_group_service::GroupMessageService;
 use biz_service::biz_service::mq_message_user_service::UserMessageService;
 use biz_service::entitys::mq_message_info::{ChatTargetType, SegmentDto};

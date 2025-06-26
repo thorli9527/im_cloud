@@ -6,19 +6,10 @@ impl ValueOps for ValueOperations {
         let data = serde_json::to_string(value)?;
         match expire {
             Some(ttl) => {
-                let _: () = cmd("SETEX")
-                    .arg(key)
-                    .arg(ttl)
-                    .arg(data)
-                    .query_async(&mut conn)
-                    .await?;
+                let _: () = cmd("SETEX").arg(key).arg(ttl).arg(data).query_async(&mut conn).await?;
             }
             None => {
-                let _: () = cmd("SET")
-                    .arg(key)
-                    .arg(data)
-                    .query_async(&mut conn)
-                    .await?;
+                let _: () = cmd("SET").arg(key).arg(data).query_async(&mut conn).await?;
             }
         }
         Ok(())

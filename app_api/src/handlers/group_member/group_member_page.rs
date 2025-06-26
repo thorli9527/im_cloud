@@ -1,14 +1,12 @@
-use crate::result::{result_data, ApiResponse, };
-use actix_web::{post, web, HttpRequest, Responder};
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use crate::result::{ApiResponse, result_data};
+use actix_web::{HttpRequest, Responder, post, web};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
+use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use common::errors::AppError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 
-pub fn configure(cfg: &mut web::ServiceConfig) {
-
-}
+pub fn configure(cfg: &mut web::ServiceConfig) {}
 /// 拉取群组成员分页查询请求体
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -40,14 +38,12 @@ struct GroupMemberPageDto {
     )
 )]
 #[post("/group/member/page")]
-async fn group_member_page(
-    query: web::Json<GroupMemberPageDto>,
-    req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn group_member_page(query: web::Json<GroupMemberPageDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let _ = AgentService::get().check_request(auth_header).await?;
 
     // 2. 分页查询
-    let members = GroupManager::get().get_group_members_by_page(&query.group_id,query.page as usize,query.size as usize).await?;
+    let members = GroupManager::get().get_group_members_by_page(&query.group_id, query.page as usize, query.size as usize).await?;
 
     // 3. 返回
     Ok(web::Json(result_data(members)))

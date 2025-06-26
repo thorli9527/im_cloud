@@ -9,8 +9,8 @@ pub use repository::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ClientTokenDto{
-    pub agent_id:String,
-    pub user_id:String,
-    pub device_type:u8
+pub struct ClientTokenDto {
+    pub agent_id: String,
+    pub user_id: String,
+    pub device_type: u8,
 }

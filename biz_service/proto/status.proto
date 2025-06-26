@@ -6,9 +6,9 @@ package protocol;
 // =======================================
 // 表示某条消息已被哪些用户阅读，适用于单聊或群聊消息同步场景。
 message ReadReceipt {
-    string msg_id = 1;                  // 被标记为已读的消息 ID
-    repeated string reader_ids = 2;     // 已读该消息的用户 ID 列表（单聊为1，群聊可多）
-    int64 read_time = 3;                // 首次被读的时间戳（毫秒）
+  string msg_id = 1;                  // 被标记为已读的消息 ID
+  repeated string reader_ids = 2;     // 已读该消息的用户 ID 列表（单聊为1，群聊可多）
+  int64 read_time = 3;                // 首次被读的时间戳（毫秒）
 }
 
 // =======================================
@@ -16,10 +16,10 @@ message ReadReceipt {
 // =======================================
 // 表示某个用户正在对另一个用户/会话进行输入操作，适用于 UI "对方正在输入..." 提示。
 message TypingNotice {
-    string from_uid = 1;   // 正在输入的用户 ID（发送方）
-    string to_uid = 2;     // 输入目标 ID（对方用户 ID 或群组 ID）
-    bool is_typing = 3;     // 是否正在输入（true=开始输入, false=结束输入）
-    int64 timestamp = 4;    // 通知发送的时间戳（毫秒）
+  string from_uid = 1;   // 正在输入的用户 ID（发送方）
+  string to_uid = 2;     // 输入目标 ID（对方用户 ID 或群组 ID）
+  bool is_typing = 3;     // 是否正在输入（true=开始输入, false=结束输入）
+  int64 timestamp = 4;    // 通知发送的时间戳（毫秒）
 }
 
 // =======================================
@@ -27,7 +27,7 @@ message TypingNotice {
 // =======================================
 // 用于维持客户端与服务器之间的长连接状态，客户端定时发送。
 message Heartbeat {
-    int64 timestamp = 1;   // 心跳发送时间（毫秒时间戳）
+  int64 timestamp = 1;   // 心跳发送时间（毫秒时间戳）
 }
 
 // =======================================
@@ -35,6 +35,6 @@ message Heartbeat {
 // =======================================
 // 用于确认收到某一封消息（包括聊天、系统等），支持链路追踪和可靠性保证。
 message AckMessage {
-    string message_id = 1;     // 被确认接收的消息 ID
-    int64 ack_timestamp = 3;   // 确认时间戳（毫秒）
+  string message_id = 1;     // 被确认接收的消息 ID
+  int64 ack_timestamp = 3;   // 确认时间戳（毫秒）
 }

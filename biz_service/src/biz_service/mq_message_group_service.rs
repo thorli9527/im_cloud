@@ -21,25 +21,14 @@ impl GroupMessageService {
     }
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        INSTANCE
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     /// 获取单例
     pub fn get() -> Arc<Self> {
-        INSTANCE
-            .get()
-            .expect("INSTANCE is not initialized")
-            .clone()
+        INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
-    pub async fn send_group_message(
-        &self,
-        agent_id: &str,
-        from:&String,
-        to:&String,
-        segments: &Vec<SegmentDto>,
-    ) -> Result<GroupMessage, AppError> {
+    pub async fn send_group_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<SegmentDto>) -> Result<GroupMessage, AppError> {
         let now_time = now();
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
@@ -62,7 +51,7 @@ impl GroupMessageService {
         let message = GroupMessage {
             id: build_uuid(), // 或 build_snow_id().to_string()
             agent_id: agent_id.to_string(),
-            from:from.to_string(),
+            from: from.to_string(),
             sync_mq_status: true,
             to: to.to_string(),
             content: segments,
@@ -75,7 +64,7 @@ impl GroupMessageService {
         let kafka_service = KafkaService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        kafka_service.send(&message,from,&app_config.kafka.topic_group).await?;
+        kafka_service.send(&message, from, &app_config.kafka.topic_group).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

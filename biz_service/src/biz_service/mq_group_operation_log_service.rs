@@ -17,7 +17,7 @@ impl GroupOperationLogService {
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
 
-    fn build(&self,agent_id:&str, group_id: impl AsRef<str>, user_id: impl AsRef<str>, operator_id: Option<String>) -> GroupOperationLog {
+    fn build(&self, agent_id: &str, group_id: impl AsRef<str>, user_id: impl AsRef<str>, operator_id: Option<String>) -> GroupOperationLog {
         let mut log = GroupOperationLog::default();
         log.group_id = as_ref_to_string(group_id);
         log.agent_id = agent_id.to_string();
@@ -33,13 +33,11 @@ impl GroupOperationLogService {
         log.sync_statue = false;
         log
     }
-    pub async fn add_log(&self,agent_id:&str, group_id: impl AsRef<str>, user_id: impl AsRef<str>, operator_user: Option<String>, action: GroupOperationType) -> Result<(), AppError> {
-        let mut action_log = self.build(agent_id,group_id, user_id, operator_user);
+    pub async fn add_log(&self, agent_id: &str, group_id: impl AsRef<str>, user_id: impl AsRef<str>, operator_user: Option<String>, action: GroupOperationType) -> Result<(), AppError> {
+        let mut action_log = self.build(agent_id, group_id, user_id, operator_user);
         action_log.action = action;
         match action {
-            GroupOperationType::Mute => {
-               return Err(AppError::BizError("please.call.method.add_log_expired_at".to_string()))
-            }
+            GroupOperationType::Mute => return Err(AppError::BizError("please.call.method.add_log_expired_at".to_string())),
             _ => {}
         }
         self.dao.insert(&action_log).await?;

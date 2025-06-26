@@ -15,17 +15,12 @@ impl CountryService {
     }
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        INSTANCE_COUNTRY
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE_COUNTRY.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     /// 获取单例
     pub fn get() -> Arc<Self> {
-        INSTANCE_COUNTRY
-            .get()
-            .expect("INSTANCE is not initialized")
-            .clone()
+        INSTANCE_COUNTRY.get().expect("INSTANCE is not initialized").clone()
     }
 }
 static INSTANCE_COUNTRY: OnceCell<Arc<CountryService>> = OnceCell::new();

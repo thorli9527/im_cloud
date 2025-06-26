@@ -1,22 +1,22 @@
 use crate::kafka::kafka_consumer::*;
-use crate::manager::socket_manager::{get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta};
+use crate::manager::socket_manager::{ConnectionId, ConnectionInfo, ConnectionMeta, get_socket_manager};
 
 use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
 
 use futures::{SinkExt, StreamExt};
-use prost::bytes::Bytes;
 use prost::Message;
-use std::sync::atomic::AtomicU64;
+use prost::bytes::Bytes;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 
+use biz_service::protocol::protocol::Envelope;
 use biz_service::protocol::protocol::envelope::Payload;
 use biz_service::protocol::protocol::envelope::Payload::AuthRequest;
 use biz_service::protocol::protocol::message_content::Content;
-use biz_service::protocol::protocol::Envelope;
+use rdkafka::Offset;
 use rdkafka::consumer::{CommitMode, Consumer};
 use rdkafka::topic_partition_list::TopicPartitionList;
-use rdkafka::Offset;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
@@ -29,15 +29,7 @@ pub async fn handle_connection(stream: TcpStream) -> anyhow::Result<()> {
     let mut writer = FramedWrite::new(write_half, LengthDelimitedCodec::new());
 
     let (tx, mut rx) = mpsc::unbounded_channel::<Bytes>();
-    let connection = ConnectionInfo {
-        meta: ConnectionMeta {
-            user_id: None,
-            client_id: None,
-            device_type: None,
-        },
-        sender: tx.clone(),
-        last_heartbeat: Arc::new(AtomicU64::new(now() as u64)),
-    };
+    let connection = ConnectionInfo { meta: ConnectionMeta { user_id: None, client_id: None, device_type: None }, sender: tx.clone(), last_heartbeat: Arc::new(AtomicU64::new(now() as u64)) };
 
     let manager = get_socket_manager();
     let conn_key = ConnectionId(conn_id.clone());
@@ -73,11 +65,7 @@ pub async fn handle_connection(stream: TcpStream) -> anyhow::Result<()> {
                         let mut tpl = TopicPartitionList::new();
 
                         // 构造正确的 Offset 提交对象
-                        if tpl.add_partition_offset(
-                            &pending_meta.topic,
-                            pending_meta.partition,
-                            Offset::Offset(pending_meta.offset + 1)
-                        ).is_ok() {
+                        if tpl.add_partition_offset(&pending_meta.topic, pending_meta.partition, Offset::Offset(pending_meta.offset + 1)).is_ok() {
                             if let Err(e) = consumer.commit(&tpl, CommitMode::Async) {
                                 log::error!("❌ Kafka 提交失败 [{}]: {:?}", msg_id, e);
                             } else {

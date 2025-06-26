@@ -1,6 +1,6 @@
 use actix_web::middleware::Logger;
 use actix_web::rt::Runtime;
-use actix_web::{cookie, web, App, HttpServer};
+use actix_web::{App, HttpServer, cookie, web};
 use app_api::handlers;
 use biz_service::biz_service::kafka_service::KafkaService;
 use biz_service::manager;
@@ -8,11 +8,11 @@ use common::config::{AppConfig, ServerRes};
 use common::errors::AppError;
 use common::redis::redis_template::RedisTemplate;
 use deadpool_redis::{
-    redis::{cmd, FromRedisValue}, Connection, Manager, Pool, PoolConfig,
-    Runtime as RedisRuntime,
+    Connection, Manager, Pool, PoolConfig, Runtime as RedisRuntime,
+    redis::{FromRedisValue, cmd},
 };
 use env_logger::Builder;
-use log::{info, warn, LevelFilter};
+use log::{LevelFilter, info, warn};
 use mongodb::options::ClientOptions;
 use mongodb::{Client, Database};
 use std::str::FromStr;
@@ -20,7 +20,7 @@ use std::str::FromStr;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // 读取配置文件
-     AppConfig::init(&"api-config.toml".to_string());
+    AppConfig::init(&"api-config.toml".to_string());
     let app_cfg = AppConfig::get();
     //初始化日志
     init_log(&app_cfg);
@@ -31,7 +31,7 @@ async fn main() -> std::io::Result<()> {
     RedisTemplate::init(pool.clone());
     KafkaService::init(&app_cfg.kafka).await;
     biz_service::init_service(db);
-    manager::init(pool,false);
+    manager::init(pool, false);
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())

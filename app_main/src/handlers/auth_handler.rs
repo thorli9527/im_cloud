@@ -1,10 +1,10 @@
 use crate::result::result;
-use actix_web::{post, web, Responder};
+use actix_web::{Responder, post, web};
 use biz_service::biz_service::user_service::UserService;
 use common::errors::AppError;
 use common::repository_util::Repository;
-use mongodb::bson;
 use r#macro::QueryFilter;
+use mongodb::bson;
 use serde::{Deserialize, Serialize};
 use std::option::Option;
 use utoipa::ToSchema;

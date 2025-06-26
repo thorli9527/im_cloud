@@ -5,9 +5,9 @@ edition = "2024"
 
 [dependencies]
 common = { path = "../common" }
-biz_service={path = "../biz_service"}
-prost .workspace = true
-tonic .workspace = true
+biz_service = { path = "../biz_service" }
+prost.workspace = true
+tonic.workspace = true
 tokio.workspace = true
 futures.workspace = true
 pulsar.version = "6.3.1"
@@ -16,7 +16,7 @@ uuid.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 deadpool-redis.workspace = true
-config =  { workspace = true }
+config = { workspace = true }
 log.workspace = true
 mongodb.workspace = true
 env_logger.workspace = true

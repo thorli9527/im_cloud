@@ -1,4 +1,3 @@
-use actix_web::cookie::time::macros::time;
 use crate::biz_service::agent_service::AgentService;
 use crate::biz_service::friend_service::UserFriendService;
 use crate::biz_service::kafka_service::KafkaService;
@@ -6,6 +5,7 @@ use crate::entitys::client_entity::ClientInfo;
 use crate::manager::common::UserId;
 use crate::manager::user_manager_core::{USER_ONLINE_TTL_SECS, UserManager, UserManagerOpt};
 use crate::protocol::protocol::{DeviceType, EventStatus, FriendEventMessage, FriendEventType, FriendSourceType};
+use actix_web::cookie::time::macros::time;
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
 use common::ClientTokenDto;
@@ -18,12 +18,9 @@ use dashmap::DashMap;
 use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
 use tokio::try_join;
-fn build_block_key(agent_id: &str, uid: &UserId) -> String {
-    format!("block:user:{}:{}", agent_id, uid)
-}
+
 #[async_trait]
 impl UserManagerOpt for UserManager {
-
     async fn online(&self, agent_id: &str, user_id: &UserId, device_type: DeviceType) -> anyhow::Result<()> {
         if self.use_local_cache {
             self.get_online_shard(&user_id).insert(user_id.to_string(), device_type);
@@ -202,7 +199,10 @@ impl UserManagerOpt for UserManager {
         // 同步通知双方
         for (id, form_uid, to_uid) in [(&friend_data_id, &friend_data_id, &friend_data_id), (&friend_data_u_id, &friend_data_u_id, &friend_data_u_id)] {
             let event = make_event(id, form_uid, to_uid);
-            if let Err(e) = kafka_service.send(&event, id, topic).await {
+            // if let Err(e) = kafka_service.send(&event, id, topic).await {
+            //     log::warn!("Kafka 消息发送失败 [{}]: {:?}", id, e);
+            // }
+            if let Err(e) = kafka_service.send_proto(&event, id, topic).await {
                 log::warn!("Kafka 消息发送失败 [{}]: {:?}", id, e);
             }
         }
@@ -340,7 +340,6 @@ impl UserManagerOpt for UserManager {
     }
 
     async fn friend_block(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()> {
-
         let friend_service = UserFriendService::get();
 
         // ---------- 1. 校验是否有好友关系 ----------
@@ -424,7 +423,6 @@ impl UserManagerOpt for UserManager {
     }
 
     async fn friend_unblock(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()> {
-
         let friend_service = UserFriendService::get();
 
         // ---------- 1. 校验是否有好友关系 ----------
@@ -504,5 +502,4 @@ impl UserManagerOpt for UserManager {
         }
         Ok(())
     }
-
 }

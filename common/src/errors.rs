@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, ResponseError};
-use deadpool_redis::redis::RedisError;
 use deadpool_redis::PoolError;
+use deadpool_redis::redis::RedisError;
 use log::error;
 use mongodb::error::Error as MongoError;
 use serde::Serialize;
@@ -59,7 +59,6 @@ pub enum AppError {
     Internal(String),
     #[error("Conversion error")]
     ConversionError,
-    
 }
 impl From<anyhow::Error> for AppError {
     fn from(e: anyhow::Error) -> Self {

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::manager::socket_error::SendError;
@@ -8,8 +8,8 @@ use biz_service::protocol::protocol::DeviceType;
 use dashmap::DashMap;
 use log::{info, warn};
 use once_cell::sync::OnceCell;
-use prost::bytes::Bytes;
 use prost::Message;
+use prost::bytes::Bytes;
 use tokio::sync::mpsc;
 
 /// 客户端连接唯一标识
@@ -41,21 +41,14 @@ pub struct SocketManager {
 
 impl SocketManager {
     pub fn new() -> Self {
-        Self {
-            connections: DashMap::new(),
-            user_index: DashMap::new(),
-            group_members: DashMap::new(),
-        }
+        Self { connections: DashMap::new(), user_index: DashMap::new(), group_members: DashMap::new() }
     }
 
     /// 新增连接
     pub fn insert(&self, id: impl Into<ConnectionId>, conn: ConnectionInfo) {
         let id = id.into();
         if let Some(user_id) = &conn.meta.user_id {
-            self.user_index
-                .entry(user_id.clone())
-                .or_insert_with(HashSet::new)
-                .insert(id.clone());
+            self.user_index.entry(user_id.clone()).or_insert_with(HashSet::new).insert(id.clone());
         }
         self.connections.insert(id, conn);
     }
@@ -88,11 +81,7 @@ impl SocketManager {
     }
 
     /// 发送到指定连接
-    pub fn send_to_connection(
-        &self,
-        id: &ConnectionId,
-        bytes: Bytes,
-    ) -> Result<(), SendError> {
+    pub fn send_to_connection(&self, id: &ConnectionId, bytes: Bytes) -> Result<(), SendError> {
         let conn = self.connections.get(id).ok_or(SendError::ConnectionNotFound)?;
         conn.sender.send(bytes).map_err(|_| SendError::ChannelClosed)
     }
@@ -101,21 +90,12 @@ impl SocketManager {
     pub fn get_connections_by_user(&self, user_id: &str) -> Vec<ConnectionInfo> {
         self.user_index
             .get(user_id)
-            .map(|set| {
-                set.iter()
-                    .filter_map(|id| self.connections.get(id).map(|c| c.clone()))
-                    .collect()
-            })
+            .map(|set| set.iter().filter_map(|id| self.connections.get(id).map(|c| c.clone())).collect())
             .unwrap_or_default()
     }
 
     /// 向用户发送消息（支持设备类型过滤）
-    pub fn send_to_user(
-        &self,
-        user_id: &str,
-        bytes: Bytes,
-        device_filter: Option<DeviceType>,
-    ) -> Result<(), SendError> {
+    pub fn send_to_user(&self, user_id: &str, bytes: Bytes, device_filter: Option<DeviceType>) -> Result<(), SendError> {
         let mut sent = false;
 
         if let Some(conn_ids) = self.user_index.get(user_id) {
@@ -139,11 +119,7 @@ impl SocketManager {
     }
 
     /// 群组广播（预留）
-    pub fn send_to_group(
-        &self,
-        group_id: &str,
-        bytes: Bytes,
-    ) -> Result<(), SendError> {
+    pub fn send_to_group(&self, group_id: &str, bytes: Bytes) -> Result<(), SendError> {
         let mut sent = false;
 
         if let Some(users) = self.group_members.get(group_id) {

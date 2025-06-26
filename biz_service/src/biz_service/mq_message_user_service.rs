@@ -21,26 +21,15 @@ impl UserMessageService {
     }
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        INSTANCE
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     /// 获取单例
     pub fn get() -> Arc<Self> {
-        INSTANCE
-            .get()
-            .expect("INSTANCE is not initialized")
-            .clone()
+        INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
     /// 构造并保存一条用户消息，返回完整 UserMessage
-    pub async fn send_user_message(
-        &self,
-        agent_id: &str,
-        from:&String,
-        to:&String,
-        segments: &Vec<SegmentDto>,
-    ) -> Result<UserMessage, AppError> {
+    pub async fn send_user_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<SegmentDto>) -> Result<UserMessage, AppError> {
         let now_time = now();
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
@@ -77,7 +66,7 @@ impl UserMessageService {
         let kafka_service = KafkaService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        kafka_service.send(&message,from,&app_config.kafka.topic_single).await?;
+        kafka_service.send(&message, from, &app_config.kafka.topic_single).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

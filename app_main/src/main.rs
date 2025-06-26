@@ -1,7 +1,7 @@
 use actix_web::middleware::Logger;
 use actix_web::rt::Runtime;
 use actix_web::test::init_service;
-use actix_web::{cookie, web, App, HttpServer};
+use actix_web::{App, HttpServer, cookie, web};
 use app_main::handlers;
 use app_main::handlers::swagger::openapi_json;
 use app_main::result::AppState;
@@ -13,11 +13,11 @@ use common::redis::redis_template::RedisTemplate;
 use config::Config;
 use deadpool_redis::redis::Client as redisClient;
 use deadpool_redis::{
-    redis::{cmd, FromRedisValue}, Connection, Manager, Pool, PoolConfig,
-    Runtime as RedisRuntime,
+    Connection, Manager, Pool, PoolConfig, Runtime as RedisRuntime,
+    redis::{FromRedisValue, cmd},
 };
 use env_logger::Builder;
-use log::{info, warn, LevelFilter};
+use log::{LevelFilter, info, warn};
 use mongodb::options::ClientOptions;
 use mongodb::{Client, Database};
 use std::clone;

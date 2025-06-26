@@ -1,11 +1,11 @@
-use crate::result::{result, ApiResponse};
-use actix_web::{post, web, HttpRequest, Responder};
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use crate::result::{ApiResponse, result};
+use actix_web::{HttpRequest, Responder, post, web};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
+use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use common::errors::AppError;
 use common::errors::AppError::BizError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(group_quit);

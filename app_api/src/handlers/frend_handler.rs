@@ -1,6 +1,6 @@
-use crate::result::{result, result_data, ApiResponse};
-use actix_web::{post, web, HttpRequest, Responder};
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use crate::result::{ApiResponse, result, result_data};
+use actix_web::{HttpRequest, Responder, post, web};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
 use biz_service::protocol::protocol::FriendSourceType;
 use common::errors::AppError;
@@ -28,7 +28,7 @@ async fn friend_add(dto: web::Json<FriendOpDto>, req: HttpRequest) -> Result<imp
     dto.validate()?;
     let auth = build_header(req);
     let agent = AgentService::get().check_request(auth).await?;
-    UserManager::get().add_friend(&agent.id, &dto.uid, &dto.friend_id,&dto.nickname,&dto.source_type,&dto.remark).await?;
+    UserManager::get().add_friend(&agent.id, &dto.uid, &dto.friend_id, &dto.nickname, &dto.source_type, &dto.remark).await?;
     Ok(web::Json(result()))
 }
 

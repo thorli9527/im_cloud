@@ -10,14 +10,12 @@ pub struct AppConfig {
     pub redis: RedisConfig,
     pub server: ServerConfig,
     pub sys: SysConfig,
-    pub cache:CacheConfig,
+    pub cache: CacheConfig,
     pub kafka: KafkaConfig,
 }
 
-
-impl AppConfig{
-
-    pub fn new(file:&String) -> Self {
+impl AppConfig {
+    pub fn new(file: &String) -> Self {
         let config = Config::builder()
             .add_source(config::File::with_name(file).required(true))
             .add_source(config::Environment::with_prefix("APP").separator("_"))
@@ -26,7 +24,7 @@ impl AppConfig{
         let cfg = config.try_deserialize::<AppConfig>().expect("Failed to deserialize configuration");
         return cfg;
     }
-    pub fn init(file:&String) {
+    pub fn init(file: &String) {
         let instance = Self::new(&file);
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
@@ -39,9 +37,9 @@ impl AppConfig{
 }
 static INSTANCE: OnceCell<Arc<AppConfig>> = OnceCell::new();
 #[derive(Debug, Deserialize, Clone)]
-pub struct CacheConfig{
+pub struct CacheConfig {
     pub node_id: usize,
-    pub node_total:usize
+    pub node_total: usize,
 }
 #[derive(Debug, Deserialize, Clone)]
 pub struct DatabaseConfig {
@@ -77,5 +75,3 @@ pub struct KafkaConfig {
     pub topic_single: String,
     pub topic_group: String,
 }
-
-

@@ -1,6 +1,6 @@
-use crate::result::{result, result_page, ApiResponse};
-use actix_web::{post, web, Responder};
-use anyhow::{anyhow, Result};
+use crate::result::{ApiResponse, result, result_page};
+use actix_web::{Responder, post, web};
+use anyhow::{Result, anyhow};
 use biz_service::biz_service::agent_service::AgentService;
 use biz_service::entitys::agent_entity::AgentInfo;
 use chrono::Utc;
@@ -138,7 +138,7 @@ fn validate_agent_end_time(dto: &AgentEndTimeDto) -> Result<()> {
     }
     Ok(())
 }
-#[derive(Debug, Serialize, Deserialize, ToSchema,Validate)]
+#[derive(Debug, Serialize, Deserialize, ToSchema, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentEnable {
     /// 代理 ID，唯一标识

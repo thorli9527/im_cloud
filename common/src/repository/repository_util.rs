@@ -3,10 +3,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
 use mongodb::bson::oid::ObjectId;
-use mongodb::bson::{doc, Bson};
+use mongodb::bson::{Bson, doc};
 use mongodb::options::FindOptions;
-use mongodb::{bson, bson::Document, Collection, Database};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use mongodb::{Collection, Database, bson, bson::Document};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::cmp::PartialEq;
 use std::marker::PhantomData;
 use utoipa::ToSchema;
@@ -25,16 +25,16 @@ pub enum OrderType {
 }
 #[async_trait]
 pub trait Repository<T> {
-    async fn find_by_id(&self, id:&str) -> Result<Option<T>>;
+    async fn find_by_id(&self, id: &str) -> Result<Option<T>>;
     async fn insert(&self, entity: &T) -> Result<String>;
-    async fn insert_many(&self, entities: &[T])-> Result<()>;
+    async fn insert_many(&self, entities: &[T]) -> Result<()>;
     async fn find_one(&self, filter: Document) -> Result<Option<T>>;
     async fn query_all(&self) -> Result<Vec<T>>;
     async fn query(&self, filter: Document) -> Result<Vec<T>>;
     async fn save(&self, entity: &T) -> Result<()>;
-    async fn un_set(&self,id: &str, property:&str)->Result<()>;
+    async fn un_set(&self, id: &str, property: &str) -> Result<()>;
     async fn update(&self, filter: Document, update: Document) -> Result<u64>;
-    async fn up_property<E: Send + Sync + Serialize>(&self, id: &str , property: &str, value: E) -> Result<()>;
+    async fn up_property<E: Send + Sync + Serialize>(&self, id: &str, property: &str, value: E) -> Result<()>;
     async fn delete(&self, filter: Document) -> Result<u64>;
     async fn delete_by_id(&self, id: impl AsRef<str> + std::marker::Send) -> Result<u64>;
     async fn query_by_page(&self, filter: Document, page_size: i64, order_type: Option<OrderType>, sort_field: &str) -> Result<PageResult<T>>;
@@ -73,7 +73,7 @@ where
             }
         }
         doc.remove("id");
-        let result=self.collection.insert_one(doc).await?;
+        let result = self.collection.insert_one(doc).await?;
         if let Bson::ObjectId(oid) = result.inserted_id {
             Ok(oid.to_string())
         } else {
@@ -81,7 +81,7 @@ where
         }
     }
 
-    async fn insert_many(&self, entities: &[T])-> Result<()> {
+    async fn insert_many(&self, entities: &[T]) -> Result<()> {
         if entities.is_empty() {
             return Ok(());
         }
@@ -91,9 +91,7 @@ where
         for entity in entities {
             let mut doc = bson::to_document(entity)?;
 
-            if let Some(Bson::String(id_str)) =
-                doc.get_str("id").ok().map(str::to_string).map(Bson::String)
-            {
+            if let Some(Bson::String(id_str)) = doc.get_str("id").ok().map(str::to_string).map(Bson::String) {
                 if let Ok(object_id) = ObjectId::parse_str(&id_str) {
                     doc.insert("_id", object_id);
                 }
@@ -113,7 +111,7 @@ where
         doc.remove("id");
         let object_id = ObjectId::parse_str(id).unwrap(); // 将字符串转为 ObjectId
         let filter = doc! { "_id": object_id };
-        let _=self.collection.update_one(filter, doc).await?;
+        let _ = self.collection.update_one(filter, doc).await?;
         Ok(())
     }
 
@@ -149,7 +147,7 @@ where
         Ok(result.modified_count)
     }
 
-    async fn up_property<E: Send + Sync + Serialize>(&self, id: &str , property: &str, value: E) -> Result<()> {
+    async fn up_property<E: Send + Sync + Serialize>(&self, id: &str, property: &str, value: E) -> Result<()> {
         let object_id = ObjectId::parse_str(as_ref_to_string(id)).unwrap();
         let filter = doc! {"_id":object_id};
         let update = doc! {
@@ -209,7 +207,7 @@ where
         })
     }
 
-    async fn un_set(&self, id: &str, property: &str)->Result<()> {
+    async fn un_set(&self, id: &str, property: &str) -> Result<()> {
         let object_id = ObjectId::parse_str(as_ref_to_string(id)).unwrap();
         let filter = doc! {"_id":object_id};
         let update = doc! {
@@ -218,9 +216,8 @@ where
             }
         };
         self.collection.update_one(filter, update).await?;
-       return Ok(());
+        return Ok(());
     }
-
 }
 
 fn transform_doc_id(mut doc: Document) -> Document {
@@ -229,7 +226,6 @@ fn transform_doc_id(mut doc: Document) -> Document {
     }
     doc
 }
-
 
 fn build_id(doc: &Document) -> String {
     return doc.get("id").unwrap().to_string();

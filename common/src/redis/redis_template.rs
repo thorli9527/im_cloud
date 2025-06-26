@@ -1,13 +1,13 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use deadpool_redis::redis::Pipeline;
-use deadpool_redis::{redis, Pool};
+use deadpool_redis::{Pool, redis};
 use once_cell::sync::OnceCell;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use std::collections::HashMap;
 use std::sync::Arc;
 /// RedisTemplate 是 Redis 操作的统一入口点，封装了连接池并提供 Value/List/Hash 操作接口
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct RedisTemplate {
     pub pool: Pool,
 }
@@ -19,9 +19,7 @@ impl RedisTemplate {
 
     pub fn init(pool: Pool) {
         let instance = Self::new(pool);
-        INSTANCE
-            .set(Arc::new(instance))
-            .expect("AgentService already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("AgentService already initialized");
     }
 
     pub fn get() -> Arc<Self> {
@@ -29,23 +27,17 @@ impl RedisTemplate {
     }
     /// 获取 Value 类型操作接口实现
     pub fn ops_for_value(self: &Arc<Self>) -> impl ValueOps {
-        ValueOperations {
-            redis: self.clone(),
-        }
+        ValueOperations { redis: self.clone() }
     }
 
     /// 获取 List 类型操作接口实现
     pub fn ops_for_list(self: &Arc<Self>) -> impl ListOps {
-        ListOperations {
-            redis: self.clone(),
-        }
+        ListOperations { redis: self.clone() }
     }
 
     /// 获取 Hash 类型操作接口实现
     pub fn ops_for_hash(self: &Arc<Self>) -> impl HashOps {
-        HashOperations {
-            redis: self.clone(),
-        }
+        HashOperations { redis: self.clone() }
     }
 
     /// 执行一组命令作为 pipeline（非事务）
@@ -136,7 +128,6 @@ pub struct HashOperations {
 include!("impl_value_ops.rs");
 include!("impl_list_ops.rs");
 include!("impl_hash_ops.rs");
-
 
 // 单例静态变量
 static INSTANCE: OnceCell<Arc<RedisTemplate>> = OnceCell::new();

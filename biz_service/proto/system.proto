@@ -6,12 +6,12 @@ package protocol;
 // =======================================
 // 用于客户端接收系统级别的通知，如登录提醒、账号变动、强制下线等
 message SystemNotification {
-    string notification_type = 1;  // 通知类型标识，例如 login/logout/mute/kick/update 等
-    string sender = 2;             // 发起方标识（系统或管理员用户名/ID）
-    string target = 3;             // 被通知的对象 ID（可以是用户 ID 或群组 ID）
-    string content = 4;            // 通知的主体内容（文本或 JSON 格式，便于结构化扩展）
-    int64 timestamp = 5;           // 通知触发的时间戳（毫秒）
-    map<string, string> meta = 6;  // 附加信息键值对（如 IP 地址、来源设备、登录位置等）
+  string notification_type = 1;  // 通知类型标识，例如 login/logout/mute/kick/update 等
+  string sender = 2;             // 发起方标识（系统或管理员用户名/ID）
+  string target = 3;             // 被通知的对象 ID（可以是用户 ID 或群组 ID）
+  string content = 4;            // 通知的主体内容（文本或 JSON 格式，便于结构化扩展）
+  int64 timestamp = 5;           // 通知触发的时间戳（毫秒）
+  map<string, string> meta = 6;  // 附加信息键值对（如 IP 地址、来源设备、登录位置等）
 }
 
 // =======================================
@@ -19,7 +19,7 @@ message SystemNotification {
 // =======================================
 // 用于传递后端业务逻辑事件，例如用户被封禁、服务重启、设备冲突等
 message SystemEventMessage {
-    string event_type = 1;             // 事件类型标识（如 user_banned、server_shutdown、session_conflict）
-    string description = 2;            // 事件的详细描述（用于 UI 展示或用户提示）
-    map<string, string> details = 3;   // 附加参数信息（例如 {"ban_reason": "违规发言", "duration": "7d"}）
+  string event_type = 1;             // 事件类型标识（如 user_banned、server_shutdown、session_conflict）
+  string description = 2;            // 事件的详细描述（用于 UI 展示或用户提示）
+  map<string, string> details = 3;   // 附加参数信息（例如 {"ban_reason": "违规发言", "duration": "7d"}）
 }

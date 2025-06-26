@@ -5,12 +5,12 @@ edition = "2024"
 
 [dependencies]
 common = { path = "../common" }
-biz_service={path = "../biz_service"}
-macro = {path = "../macro"}
+biz_service = { path = "../biz_service" }
+macro = { path = "../macro" }
 actix-web.workspace = true
 actix-files.workspace = true
 validator.workspace = true
-config =  { workspace = true }
+config = { workspace = true }
 serde.workspace = true
 serde_json.workspace = true
 deadpool-redis.workspace = true

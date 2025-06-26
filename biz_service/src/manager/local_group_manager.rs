@@ -31,7 +31,7 @@ pub trait LocalGroupManagerOpt: Send + Sync {
     /// # user_id: 用户ID
     /// # alias: 群内昵称
     /// # group_role: 群组角色
-    fn add_user(&self, group_id: &str, user_id: &UserId, mute: Option<bool>,alias:&str, group_role: &GroupRole);
+    fn add_user(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &str, group_role: &GroupRole);
 
     /// 刷新用户信息
     /// # group_id: 群组ID
@@ -59,14 +59,12 @@ pub trait LocalGroupManagerOpt: Send + Sync {
     /// 获取离线用户列表
     /// # group_id: 群组ID
     async fn get_offline_users(&self, group_id: &str) -> Vec<UserId>;
-    
+
     async fn get_user_groups(&self, user_id: &str) -> Vec<String>;
 
     /// 获取用户所在的群组，分页返回
-    async fn get_user_groups_page(&self, user_id: &str, page: usize, page_size: usize) -> Vec<String> ;
+    async fn get_user_groups_page(&self, user_id: &str, page: usize, page_size: usize) -> Vec<String>;
 
     /// 判断用户是否在群组中
     async fn is_user_in_group(&self, group_id: &str, user_id: &UserId) -> bool;
 }
-
-

@@ -7,8 +7,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use dashmap::DashSet;
 use deadpool_redis::{
-    redis::{cmd, AsyncCommands}, Pool as RedisPool,
-    Pool,
+    Pool as RedisPool, Pool,
+    redis::{AsyncCommands, cmd},
 };
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
@@ -27,9 +27,8 @@ impl GroupManager {
         Self { pool, local_group_manager, use_local_cache }
     }
 
-
     pub fn init(pool: Pool, use_local_cache: bool) {
-        let instance = Self::new(pool,use_local_cache);
+        let instance = Self::new(pool, use_local_cache);
         INSTANCE.set(Arc::new(instance)).expect("AgentService already initialized");
     }
 

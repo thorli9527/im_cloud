@@ -5,8 +5,8 @@ use actix_web::HttpRequest;
 use anyhow::Result;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
-use mongodb::bson::doc;
 use mongodb::Database;
+use mongodb::bson::doc;
 use once_cell::sync::OnceCell;
 use serde::Serialize;
 use sha1::{Digest, Sha1};
@@ -19,7 +19,6 @@ pub struct AgentService {
 }
 
 impl AgentService {
-
     pub fn new(db: Database) -> Self {
         let collection = db.collection("agent_info");
         let service = Self { dao: BaseRepository::new(db, collection.clone()) };
@@ -45,8 +44,8 @@ impl AgentService {
         format!("{:x}", hasher.finalize())
     }
 
-    pub async fn check_request(&self,auth_header:Option<AuthHeader>)->anyhow::Result<AgentInfo>{
-        if 1==1{
+    pub async fn check_request(&self, auth_header: Option<AuthHeader>) -> anyhow::Result<AgentInfo> {
+        if 1 == 1 {
             let option = self.dao.find_by_id("685bba60a23f55a165d6af13").await?;
             return Ok(option.unwrap());
         }
@@ -61,25 +60,19 @@ impl AgentService {
         }
         Ok(agent)
     }
-    
+
     /// 初始化单例（仅运行一次）
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        AGENT_SERVICE
-            .set(Arc::new(instance))
-            .expect("AgentService already initialized");
+        AGENT_SERVICE.set(Arc::new(instance)).expect("AgentService already initialized");
     }
 
     /// 获取单例
     pub fn get() -> Arc<Self> {
-        AGENT_SERVICE
-            .get()
-            .expect("AgentService is not initialized")
-            .clone()
+        AGENT_SERVICE.get().expect("AgentService is not initialized").clone()
     }
 }
 static AGENT_SERVICE: OnceCell<Arc<AgentService>> = OnceCell::new();
-
 
 #[derive(Debug, Serialize, ToSchema, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -90,8 +83,6 @@ pub struct AuthHeader {
     pub signature: String,
     pub device_type: DeviceType,
 }
-
-
 
 pub fn build_header(req: HttpRequest) -> Option<AuthHeader> {
     // 从 Header 提取字段，全部采用小写统一处理
@@ -113,11 +104,5 @@ pub fn build_header(req: HttpRequest) -> Option<AuthHeader> {
         .and_then(|s| DeviceType::from_str_name(s))
         .unwrap_or(DeviceType::Web);
 
-    Some(AuthHeader {
-        app_key,
-        nonce,
-        timestamp,
-        signature,
-        device_type,
-    })
+    Some(AuthHeader { app_key, nonce, timestamp, signature, device_type })
 }

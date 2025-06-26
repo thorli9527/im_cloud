@@ -1,6 +1,6 @@
-use crate::result::{result, ApiResponse};
-use actix_web::{post, web, HttpRequest, Responder};
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use crate::result::{ApiResponse, result};
+use actix_web::{HttpRequest, Responder, post, web};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::entitys::group_entity::GroupInfo;
@@ -48,12 +48,9 @@ struct CreateGroupDto {
     )
 )]
 #[post("/group/create")]
-async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
-) -> Result<impl Responder, AppError> {
+async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let agent=AgentService::get()
-        .check_request(auth_header)
-        .await?;
+    let agent = AgentService::get().check_request(auth_header).await?;
 
     // ✅ 2. 服务初始化
     let group_service = GroupService::get();
@@ -62,7 +59,7 @@ async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
     let group_id = build_uuid();
     // ✅ 3. 创建群组
     let group = GroupInfo {
-        id:group_id.clone(),
+        id: group_id.clone(),
         group_id: group_id.clone(),
         agent_id: agent.id.clone(),
         name: dto.group_name.clone(),
@@ -79,16 +76,7 @@ async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
     group_service.dao.insert(&group).await?;
 
     // ✅ 4. 添加群主
-    let owner = GroupMember {
-        id:"".to_string(),
-        group_id:group_id.clone(),
-        uid: dto.user_id.clone(),
-        role: GroupRole::Owner,
-        alias: None,
-        mute:false,
-        create_time: now,
-        update_time: now,
-    };
+    let owner = GroupMember { id: "".to_string(), group_id: group_id.clone(), uid: dto.user_id.clone(), role: GroupRole::Owner, alias: None, mute: false, create_time: now, update_time: now };
     member_service.dao.insert(&owner).await?;
 
     // ✅ 5. 添加其他初始成员
@@ -96,16 +84,7 @@ async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest,
         if user_id == &dto.user_id {
             continue; // 跳过群主
         }
-        let member = GroupMember {
-            id:"".to_string(),
-            group_id: group_id.clone(),
-            uid: user_id.clone(),
-            role: GroupRole::Member,
-            alias: None,
-            mute:false,
-            create_time: now,
-            update_time: now,
-        };
+        let member = GroupMember { id: "".to_string(), group_id: group_id.clone(), uid: user_id.clone(), role: GroupRole::Member, alias: None, mute: false, create_time: now, update_time: now };
         member_service.dao.insert(&member).await?;
     }
 

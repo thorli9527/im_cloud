@@ -5,8 +5,8 @@ use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::as_ref_to_string;
 use common::util::date_util::now;
-use mongodb::bson::doc;
 use mongodb::Database;
+use mongodb::bson::doc;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 
@@ -22,19 +22,17 @@ impl GroupMemberService {
     }
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        INSTANCE
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
-    
+
     pub async fn remove(&self, group_id: impl AsRef<str>, user_id: &UserId) -> Result<(), AppError> {
         let filter = doc! {"group_id":as_ref_to_string(group_id),"user_id":user_id.to_string()};
         self.dao.delete(filter).await?;
         Ok(())
     }
-    
+
     pub async fn delete_by_group_id(&self, group_id: impl AsRef<str>) -> Result<(), AppError> {
-        if as_ref_to_string(&group_id).is_empty(){
+        if as_ref_to_string(&group_id).is_empty() {
             return Err(AppError::BizError("group_id is empty".to_string()));
         }
         let filter = doc! {"group_id":as_ref_to_string(group_id)};
@@ -52,15 +50,14 @@ impl GroupMemberService {
     }
 
     /// 仅添加群管理员
-    pub async fn add_admin(
-        &self,
-        group_id: &str,
-        user_id: &str,
-    ) -> Result<(), AppError> {
-        let member = self.dao.find_one(doc! {
-            "group_id": group_id,
-            "user_id": user_id,
-        }).await?;
+    pub async fn add_admin(&self, group_id: &str, user_id: &str) -> Result<(), AppError> {
+        let member = self
+            .dao
+            .find_one(doc! {
+                "group_id": group_id,
+                "user_id": user_id,
+            })
+            .await?;
 
         match member {
             Some(m) => {
@@ -89,16 +86,15 @@ impl GroupMemberService {
     }
 
     /// 取消群管理员
-    pub async fn remove_admin(
-        &self,
-        group_id: &str,
-        user_id: &str,
-    ) -> Result<(), AppError> {
+    pub async fn remove_admin(&self, group_id: &str, user_id: &str) -> Result<(), AppError> {
         // 查询当前成员
-        let member = self.dao.find_one(doc! {
-            "group_id": group_id,
-            "user_id": user_id,
-        }).await?;
+        let member = self
+            .dao
+            .find_one(doc! {
+                "group_id": group_id,
+                "user_id": user_id,
+            })
+            .await?;
 
         match member {
             Some(m) => {
@@ -140,10 +136,7 @@ impl GroupMemberService {
 
     /// 获取单例
     pub fn get() -> Arc<Self> {
-        INSTANCE
-            .get()
-            .expect("INSTANCE is not initialized")
-            .clone()
+        INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
 }
 static INSTANCE: OnceCell<Arc<GroupMemberService>> = OnceCell::new();

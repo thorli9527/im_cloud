@@ -1,16 +1,16 @@
-use crate::result::{result, ApiResponse};
-use actix_web::{post, web, HttpRequest, Responder};
-use biz_service::biz_service::agent_service::{build_header, AgentService};
+use crate::result::{ApiResponse, result};
+use actix_web::{HttpRequest, Responder, post, web};
+use biz_service::biz_service::agent_service::{AgentService, build_header};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::group_member::{GroupMember, GroupRole};
 use biz_service::entitys::mq_group_operation_log::GroupOperationType;
+use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use common::errors::AppError;
 use common::repository_util::Repository;
 use common::util::date_util::now;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(group_member_refresh);
@@ -33,12 +33,7 @@ struct GroupMemberRefreshDto {
 }
 impl Default for GroupMemberRefreshDto {
     fn default() -> Self {
-        GroupMemberRefreshDto {
-            user_id: "".to_string(),
-            group_id: "".to_string(),
-            alias: None,
-            role: None,
-        }
+        GroupMemberRefreshDto { user_id: "".to_string(), group_id: "".to_string(), alias: None, role: None }
     }
 }
 
@@ -63,10 +58,9 @@ impl Default for GroupMemberRefreshDto {
     )
 )]
 #[post("/group/member/refresh")]
-async fn group_member_refresh(dto: web::Json<GroupMemberRefreshDto>,  req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn group_member_refresh(dto: web::Json<GroupMemberRefreshDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
-  
 
     let group_manager = GroupManager::get();
     let now = now();
@@ -77,7 +71,7 @@ async fn group_member_refresh(dto: web::Json<GroupMemberRefreshDto>,  req: HttpR
     }
 
     //添加用户到组
-    group_manager.group_member_refresh(&dto.group_id, &dto.user_id,Option::None,&dto.alias,&dto.role).await?;
+    group_manager.group_member_refresh(&dto.group_id, &dto.user_id, Option::None, &dto.alias, &dto.role).await?;
 
     // ✅ 插入成员记录
     let member = GroupMember {
@@ -86,7 +80,7 @@ async fn group_member_refresh(dto: web::Json<GroupMemberRefreshDto>,  req: HttpR
         uid: dto.user_id.clone(),
         role: GroupRole::Member,
         alias: dto.alias.clone(),
-        mute:false,
+        mute: false,
         create_time: now,
         update_time: now,
     };
@@ -94,6 +88,6 @@ async fn group_member_refresh(dto: web::Json<GroupMemberRefreshDto>,  req: HttpR
     GroupMemberService::get().dao.insert(&member).await?;
 
     //发送消息
-    GroupOperationLogService::get().add_log(&agent.id,&dto.group_id, &dto.user_id, None, GroupOperationType::Join).await?;
+    GroupOperationLogService::get().add_log(&agent.id, &dto.group_id, &dto.user_id, None, GroupOperationType::Join).await?;
     Ok(web::Json(result()))
 }
