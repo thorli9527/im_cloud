@@ -9,16 +9,17 @@ use serde::Deserialize;
 use std::sync::Arc;
 use uuid::Uuid;
 
+use crate::kafka::friend_msg::friend_msg_to_socket;
 use crate::manager::socket_manager::SocketManager;
 use biz_service::biz_service::kafka_service::KafkaMessageType;
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
-use biz_service::protocol::protocol::{Envelope, EnvelopeType, FriendEventMessage, FriendSourceType};
-use common::config::KafkaConfig;
-use rdkafka::config::ClientConfig;
-use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 use biz_service::protocol::protocol::envelope::Payload;
 use biz_service::protocol::protocol::envelope::Payload::FriendEvent;
+use biz_service::protocol::protocol::{Envelope, EnvelopeType, FriendEventMessage, FriendSourceType};
+use common::config::KafkaConfig;
 use common::util::date_util::now;
+use rdkafka::config::ClientConfig;
+use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 
 type MessageId = String;
 
@@ -72,7 +73,7 @@ pub async fn start_consumer(kafka_cfg: KafkaConfig, socket_manager: Arc<SocketMa
         match arc_consumer.recv().await {
             Ok(msg) => {
                 let owned = msg.detach();
-                if let Err(e) = handle_kafka_message(owned, &socket_manager).await {
+                if let Err(e) = handle_kafka_message(&owned, &socket_manager).await {
                     log::error!("❌ Kafka 消息处理失败: {:?}", e);
                 }
             }
@@ -83,7 +84,7 @@ pub async fn start_consumer(kafka_cfg: KafkaConfig, socket_manager: Arc<SocketMa
     }
 }
 
-pub async fn handle_kafka_message(msg: OwnedMessage, socket_manager: &Arc<SocketManager>) -> Result<()> {
+pub async fn handle_kafka_message(msg: &OwnedMessage, socket_manager: &Arc<SocketManager>) -> Result<()> {
     let payload = msg.payload().ok_or_else(|| anyhow!("Kafka 消息为空"))?;
 
     if payload.is_empty() {
@@ -94,23 +95,10 @@ pub async fn handle_kafka_message(msg: OwnedMessage, socket_manager: &Arc<Socket
     let body = &payload[1..];
 
     match msg_type {
+        //好友类消息
         x if x == KafkaMessageType::FriendMsg as u8 => {
-            let message = FriendEventMessage::decode(body)?;
-            let message_id = message.event_id.clone();
-            get_pending_acks().insert(message_id.clone(), PendingMeta { topic: msg.topic().to_string(), partition: msg.partition(), offset: msg.offset() });
-            let envelope = Envelope {
-                envelope_id: message_id.clone(),
-                envelope_type: EnvelopeType::ServerToClient as i32,
-                timestamp: now(),
-                payload: Some(FriendEvent(message.clone())),
-            };
-            let mut buf = Vec::with_capacity(envelope.encoded_len());
-            envelope.encode(&mut buf)?;
-            let bytes = Bytes::from(buf);
-            match socket_manager.send_to_user(&message.from_uid, bytes, None) {
-                Ok(_) => log::info!("📨 成功推送消息给用户 [{}]", &message.from_uid),
-                Err(e) => log::warn!("⚠️ 推送失败 [{}]: {:?}", &message.from_uid, e),
-            }
+            //转发mq到socket 消息
+            friend_msg_to_socket(body, msg, socket_manager).await?;
         }
         _ => {
             log::warn!("收到未知类型 Kafka 消息: type={}", msg_type);

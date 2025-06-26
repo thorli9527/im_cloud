@@ -5,6 +5,7 @@ use crate::manager::socket_manager::get_socket_manager;
 use common::config::KafkaConfig;
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use crate::kafka::kafka_consumer::start_consumer;
 
 /// 启动 TCP 服务 + Kafka 消费任务
 pub async fn start_server(listener: TcpListener, kafka_cfg: KafkaConfig) -> anyhow::Result<()> {
@@ -15,7 +16,7 @@ pub async fn start_server(listener: TcpListener, kafka_cfg: KafkaConfig) -> anyh
         let kafka_manager = Arc::clone(&socket_manager);
         tokio::spawn(async move {
             log::info!("🚀 Kafka 消费任务启动中...");
-            if let Err(e) = kafka_consumer::start_consumer(kafka_cfg, kafka_manager).await {
+            if let Err(e) = start_consumer(kafka_cfg, kafka_manager).await {
                 log::error!("❌ Kafka 消费失败: {:?}", e);
             }
         });
