@@ -1,7 +1,6 @@
 use crate::entitys::client_entity::ClientInfo;
 use crate::manager::common::UserId;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
-use crate::protocol::protocol::DeviceType;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::date_util::now;
@@ -9,6 +8,7 @@ use mongodb::Database;
 use mongodb::bson::doc;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use crate::protocol::auth::DeviceType;
 
 #[derive(Debug)]
 pub struct ClientService {

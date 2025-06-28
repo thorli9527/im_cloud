@@ -3,7 +3,6 @@ use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 use crate::manager::common::{SHARD_COUNT, UserId};
 use crate::manager::local_group_manager::{LocalGroupManager, LocalGroupManagerOpt};
-use crate::protocol::protocol::{DeviceType, FriendSourceType};
 use anyhow::Result;
 use async_trait::async_trait;
 use common::ClientTokenDto;
@@ -20,6 +19,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::sleep;
+use crate::protocol::auth::DeviceType;
+use crate::protocol::friend::FriendSourceType;
 
 pub const MAX_CLEAN_COUNT: usize = 100;
 pub const USER_ONLINE_TTL_SECS: u64 = 30;

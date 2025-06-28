@@ -1,6 +1,5 @@
 use crate::biz_service::cache_service::get_agent_cache;
 use crate::entitys::agent_entity::AgentInfo;
-use crate::protocol::protocol::DeviceType;
 use actix_web::HttpRequest;
 use anyhow::Result;
 use common::errors::AppError;
@@ -12,6 +11,7 @@ use serde::Serialize;
 use sha1::{Digest, Sha1};
 use std::sync::Arc;
 use utoipa::ToSchema;
+use crate::protocol::auth::DeviceType;
 
 #[derive(Debug)]
 pub struct AgentService {

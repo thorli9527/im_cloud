@@ -10,16 +10,16 @@ use prost::bytes::Bytes;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 
-use biz_service::protocol::protocol::Envelope;
-use biz_service::protocol::protocol::envelope::Payload;
-use biz_service::protocol::protocol::envelope::Payload::AuthRequest;
-use biz_service::protocol::protocol::message_content::Content;
 use rdkafka::Offset;
 use rdkafka::consumer::{CommitMode, Consumer};
 use rdkafka::topic_partition_list::TopicPartitionList;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
+use biz_service::protocol::envelope::Envelope;
+use biz_service::protocol::envelope::envelope::Payload;
+use biz_service::protocol::envelope::envelope::Payload::AuthRequest;
+use biz_service::protocol::message::message_content::Content;
 
 /// 处理每个客户端连接
 pub async fn handle_connection(stream: TcpStream) -> anyhow::Result<()> {

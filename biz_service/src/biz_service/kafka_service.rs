@@ -5,15 +5,26 @@ use prost::Message;
 use rdkafka::ClientConfig;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::producer::{FutureProducer, FutureRecord};
-use serde::Serialize;
 use std::fmt;
+use bytes::Bytes;
 use std::sync::Arc;
 use std::time::Duration;
+
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KafkaMessageType {
     FriendMsg = 1,
+    UserMessage = 2,
+    GroupMessage = 3,
+}
 
+impl KafkaMessageType {
+    pub fn from_u8(value: u8) -> Result<Self, anyhow::Error> {
+        match value {
+            1 => Ok(KafkaMessageType::FriendMsg),
+            _ => Err(anyhow!("Unknown KafkaMessageType: {}", value)),
+        }
+    }
 }
 #[derive(Clone)]
 pub struct KafkaService {
@@ -64,32 +75,13 @@ impl KafkaService {
         }
     }
 
-    /// 发送消息(json)
-    pub async fn send<T: Serialize>(&self, value: &T, key: &str, topic: &str) -> Result<(i32, i64), anyhow::Error> {
-        let payload = serde_json::to_string(value)?;
-        let record = FutureRecord::to(topic).payload(&payload).key(key);
-
-        // 增加合理超时时间以利用批处理机制
-        let timeout = Duration::from_millis(50); // 可调优
-
-        match self.producer.send(record, timeout).await {
-            Ok((partition, offset)) => {
-                log::debug!("Kafka OK => topic={}, partition={}, offset={}", topic, partition, offset);
-                Ok((partition, offset))
-            }
-            Err((err, _)) => {
-                log::error!("Kafka 发送失败: {:?}", err);
-                Err(anyhow!(err))
-            }
-        }
-    }
     /// proto专有编码与解码
-    pub async fn send_proto<M: Message>(&self, value: &M, key: &str, topic: &str) -> Result<(i32, i64), anyhow::Error> {
+    pub async fn send_proto<M: Message>(&self, msg_type: &KafkaMessageType,node_index:&u8,value: &M, key: &str, topic: &str) -> Result<(i32, i64), anyhow::Error> {
         let payload = value.encode_to_vec();
         let record = FutureRecord::to(topic).payload(&payload).key(key);
-
+    
         let timeout = Duration::from_millis(50); // 可根据吞吐量和延迟优化
-
+    
         match self.producer.send(record, timeout).await {
             Ok((partition, offset)) => {
                 log::debug!("Kafka Protobuf 发送成功 => topic={}, partition={}, offset={}", topic, partition, offset);
@@ -101,29 +93,7 @@ impl KafkaService {
             }
         }
     }
-    ///二进制
-    pub async fn send_proto_byte<M: Message>(&self, value: &M, msg_type: KafkaMessageType, key: &str, topic: &str) -> Result<(i32, i64), anyhow::Error> {
-        let mut buf = Vec::with_capacity(value.encoded_len() + 1);
-        buf.push(msg_type as u8);
-        value.encode(&mut buf)?;
 
-        let record = FutureRecord::to(topic)
-            .payload(&buf)
-            .key(key);
-
-        let timeout = Duration::from_millis(50);
-
-        match self.producer.send(record, timeout).await {
-            Ok((partition, offset)) => {
-                log::debug!("Kafka 二进制发送成功: topic={}, partition={}, offset={}", topic, partition, offset);
-                Ok((partition, offset))
-            }
-            Err((err, _)) => {
-                log::error!("Kafka 发送失败: {:?}", err);
-                Err(anyhow!(err))
-            }
-        }
-    }
 
     /// 获取单例
     pub fn get() -> Arc<Self> {

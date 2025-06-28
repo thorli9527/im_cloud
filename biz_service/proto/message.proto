@@ -1,183 +1,323 @@
 syntax = "proto3";
 
-package protocol;
+package protocol.message;
 
-import "common.proto";
+import "common.proto"; // 引入公共类型，如 UserProfile、MediaMeta 可自定义
+import "friend.proto"; // 引入公共类型，如 UserProfile、MediaMeta 可自定义
+import "group.proto"; // 引入公共类型，如 UserProfile、MediaMeta 可自定义
 
-// ========================================
-// 📨 通用消息结构体（顶层消息）
-// ========================================
-message Message {
-  string message_id = 1;            // 消息唯一 ID（可用于去重、追踪等）
-  string sender_id = 2;             // 发送者用户 ID
-  string receiver_id = 3;           // 接收者用户 ID（单聊为对方 ID，群聊为群 ID）
-  int64 timestamp = 4;              // 消息发送时间戳（毫秒）
 
-  MessageType message_type = 5;     // 消息主类型，用于快速识别渲染方式（如 TEXT、IMAGE）
-  ChatScene scene = 6;              // 会话场景：单聊、群聊等
-
-  repeated MessageContent contents = 10; // 实际内容列表，可包含多段内容（如文本+图片）
-}
-
-// ========================================
-// 💬 会话场景类型（单聊/群聊）
-// ========================================
+// ======================================
+// 💬 会话场景类型
+// ======================================
 enum ChatScene {
-  CHAT_UNKNOWN = 0; // 未知场景（兜底值）
-  SINGLE = 1;       // 单人对话
-  GROUP = 2;        // 群组会话
+  CHAT_UNKNOWN = 0; // 默认未知场景（防御值）
+  SINGLE = 1;       // 单人会话
+  GROUP = 2;        // 群聊会话
 }
 
-// ========================================
-// 🧱 消息内容结构（支持 oneof 多种类型）
-// ========================================
-message MessageContent {
-  oneof content {
-    TextMessage text = 1;             // 文本消息
-    ImageMessage image = 2;           // 图片消息
-    AudioMessage audio = 3;           // 音频消息
-    VideoMessage video = 4;           // 视频消息
-    LocationMessage location = 5;     // 位置消息
-    FileMessage file = 6;             // 文件消息
-    AVCallMessage av_call = 7;        // 音视频通话消息
-    CustomMessage custom = 8;         // 自定义结构化消息
-    EmojiMessage emoji = 9;           // 表情消息
-    RevokeMessage revoke = 10;        // 撤回消息
-    ForwardMessage forward = 11;      // 转发消息
-    QuoteMessage quote = 12;          // 引用消息
-  }
-}
-
-// ========================================
-// 📄 文本消息体
-// ========================================
-message TextMessage {
-  string text = 1; // 文本内容
-}
-
-// ========================================
-// 🖼 图片消息体
-// ========================================
-message ImageMessage {
-  string url = 1;            // 图片原图地址
-  int32 width = 2;           // 图片宽度（像素）
-  int32 height = 3;          // 图片高度（像素）
-  string thumbnail_url = 4;  // 缩略图地址（可选）
-}
-
-// ========================================
-// 🔊 音频消息体（语音）
-// ========================================
-message AudioMessage {
-  string url = 1;        // 音频文件地址
-  int32 duration = 2;    // 音频时长（单位：秒）
-}
-
-// ========================================
-// 🎥 视频消息体
-// ========================================
-message VideoMessage {
-  string url = 1;            // 视频播放地址
-  int32 duration = 2;        // 视频时长（单位：秒）
-  int32 width = 3;           // 视频画面宽度
-  int32 height = 4;          // 视频画面高度
-  string thumbnail_url = 5;  // 视频封面图地址
-}
-
-// ========================================
-// 📍 位置消息体
-// ========================================
-message LocationMessage {
-  double latitude = 1;   // 纬度
-  double longitude = 2;  // 经度
-  string address = 3;    // 详细地址信息
-  string name = 4;       // 地点名称
-}
-
-// ========================================
-// 📁 文件消息体
-// ========================================
-message FileMessage {
-  string file_name = 1;   // 文件名
-  string url = 2;         // 文件下载地址
-  int64 file_size = 3;    // 文件大小（单位：字节）
-  string file_type = 4;   // 文件 MIME 类型（如 application/pdf）
-}
-
-// ========================================
-// 📞 音视频通话消息体
-// ========================================
-enum CallStatus {
-  CALLING = 0;  // 呼叫中
-  ACCEPTED = 1; // 已接听
-  REJECTED = 2; // 已拒绝
-  MISSED = 3;   // 未接听
-  ENDED = 4;    // 已结束
-}
-
-message AVCallMessage {
-  string call_id = 1;     // 通话唯一标识 ID
-  bool is_video = 2;      // 是否为视频通话
-  CallStatus status = 3;  // 通话状态（见上方枚举）
-  int32 duration = 4;     // 实际通话时长（单位：秒）
-}
-
-// ========================================
-// 😄 表情类型定义
-// ========================================
+// ======================================
+// 😄 Emoji 类型定义（标准 + 自定义）
+// ======================================
 enum EmojiType {
-  EMOJI_UNKNOWN = 0;  // 未知类型（默认）
-  SMILE = 1; GRIN = 2; TEARS = 3; STUCK_OUT_TONGUE = 4; SCOWL = 5;
-  SHY = 6; SILENT = 7; HORROR = 8; WRONGED = 9; CRAZY = 10;
-  BEAUTIFUL = 11; SNOOZE = 12; SLEEP = 13; PIG = 14; GOOD = 15;
-  THANKS = 16; STRONG = 17; WEAK = 18; HANDSHAKE = 19; VICTORY = 20;
-  HEART = 21; BROKEN_HEART = 22; THUMBS_UP = 23; THUMBS_DOWN = 24;
-  CLAP = 25; QUESTION = 26; EXCLAMATION = 27; POOP = 28;
-  MOON = 29; SUN = 30; CAKE = 31; GIFT = 32; COFFEE = 33;
-  ROSE = 34; WILTED_ROSE = 35; KISS = 36; HUG = 37; BOMB = 38;
-  KNIFE = 39; WATERMELON = 40; BEER = 41; CAR = 42;
-  MONEY = 43; LIGHTNING = 44; FIRE = 45; PRESENT = 46;
-  MUSIC = 47; PHONE = 48;
+  EMOJI_UNKNOWN = 0;
+  SMILE = 1;
+  GRIN = 2;
+  TEARS = 3;
+  STUCK_OUT_TONGUE = 4;
+  CLAP = 25;
+  POOP = 28;
+  HEART = 21;
+  // ... 可继续扩展标准 Emoji
   CUSTOM_EMOJI = 1000; // 自定义表情（通过图片 URL 指定）
 }
 
-message EmojiMessage {
-  EmojiType emoji = 1;             // 表情类型
-  string custom_emoji_url = 2;     // 若为自定义表情，需提供 URL 地址
+// ======================================
+// 📨 顶层消息结构
+// ======================================
+message Message {
+  string message_id = 1;              // 唯一消息 ID（客户端生成或服务端补全）
+  string sender_id = 2;               // 消息发送方
+  string receiver_id = 3;             // 消息接收方（单聊为对方 ID，群聊为群 ID）
+  int64 timestamp = 4;                // 消息发送时间（毫秒时间戳）
+
+  common.MessageType message_type = 5;       // 主消息类型（用于快速渲染判断）
+  ChatScene scene = 6;                // 消息所属会话类型（单聊/群聊）
+
+  repeated MessageContent contents = 10; // 多段复合内容（如文本 + 图片）
 }
 
-// ========================================
-// 🔙 撤回消息体
-// ========================================
-message RevokeMessage {
-  string target_message_id = 1;    // 被撤回的消息 ID
-  string operator_id = 2;          // 发起撤回操作的用户 ID
-  int64 revoke_time = 3;           // 撤回发生时间（毫秒时间戳）
+// ======================================
+// 💠 消息内容结构（oneof 类型）
+// ======================================
+message MessageContent {
+  oneof content {
+    TextMessage text = 1;
+    ImageMessage image = 2;
+    AudioMessage audio = 3;
+    VideoMessage video = 4;
+    LocationMessage location = 5;
+    FileMessage file = 6;
+    AVCallMessage av_call = 7;
+    CustomMessage custom = 8;
+    EmojiMessage emoji = 9;
+    RevokeMessage revoke = 10;
+    ForwardMessage forward = 11;
+    QuoteMessage quote = 12;
+    HtmlMessage html = 13;
+    VoipMessage voip = 14;
+    NotificationMessage notification = 15;
+    SystemMessage system = 16;
+    ReminderMessage reminder = 17;
+    friend.FriendEventMessage friend_event = 18;
+    GroupEventMessage group_event = 19;
+    ContactCardMessage contact_card = 20;
+    VoteMessage vote = 21;
+    RedEnvelopeMessage red_envelope = 22;
+  }
 }
 
-// ========================================
-// 📤 转发消息体
-// ========================================
-message ForwardMessage {
-  string original_message_id = 1;  // 原始消息 ID
-  string original_sender_id = 2;   // 原发送者 ID
-  MessageType original_type = 3;   // 原消息主类型
-  string summary = 4;              // 原内容摘要（用于预览展示）
+
+
+// ===============================
+// 📄 文本消息
+// ===============================
+message TextMessage {
+  string text = 1;                      // 文本主体内容
+  repeated InlineEntity entities = 2;  // 富文本实体，如链接/@用户/话题
 }
 
-// ========================================
-// 📌 引用消息体（回复某条历史消息）
-// ========================================
-message QuoteMessage {
-  string quoted_message_id = 1;       // 被引用的历史消息 ID
-  string quoted_content_preview = 2;  // 引用的内容预览摘要（纯文本）
-  string quote_text = 3;              // 回复的正文内容
+message InlineEntity {
+  int32 start = 1;                     // 起始位置（UTF-8 字符索引）
+  int32 end = 2;                       // 结束位置（不含）
+  string type = 3;                     // 类型：link / mention / hashtag
+  string value = 4;                    // 附加值：URL、用户ID等
 }
 
-// ========================================
-// 🧩 自定义结构化消息体
-// ========================================
+// ===============================
+// 🖼️ 图片消息
+// ===============================
+message ImageMessage {
+  string url = 1;                      // 原图 URL
+  string thumbnail_url = 2;           // 缩略图 URL
+  int32 width = 3;                     // 宽度（像素）
+  int32 height = 4;                    // 高度（像素）
+  string format = 5;                   // 格式（如 jpg/png）
+  int64 size = 6;                      // 文件大小（字节）
+}
+
+// ===============================
+// 🔊 音频消息
+// ===============================
+message AudioMessage {
+  string url = 1;
+  int32 duration = 2;
+  string format = 3;
+  int64 size = 4;
+  bool is_voice = 5;                   // 是否语音（vs 音乐类音频）
+}
+
+// ===============================
+// 🎞️ 视频消息
+// ===============================
+message VideoMessage {
+  string url = 1;
+  int32 duration = 2;
+  string cover_url = 3;
+  int32 width = 4;
+  int32 height = 5;
+  string format = 6;
+  int64 size = 7;
+}
+
+// ===============================
+// 📍 位置消息
+// ===============================
+message LocationMessage {
+  double latitude = 1;
+  double longitude = 2;
+  string address = 3;
+  string poi_name = 4;
+  string thumbnail_url = 5;
+}
+
+// ===============================
+// 📁 文件消息
+// ===============================
+message FileMessage {
+  string url = 1;
+  string name = 2;
+  int64 size = 3;
+  string file_type = 4;
+  string icon_url = 5;
+}
+
+// ===============================
+// 📞 音视频通话信令
+// ===============================
+message AVCallMessage {
+  string call_id = 1;
+  string initiator_id = 2;
+  repeated string participant_ids = 3;
+  enum CallAction {
+    UNKNOWN = 0;
+    INVITE = 1;
+    ACCEPT = 2;
+    REJECT = 3;
+    CANCEL = 4;
+    END = 5;
+    TIMEOUT = 6;
+  }
+  CallAction action = 4;
+  enum CallType {
+    AUDIO = 0;
+    VIDEO = 1;
+  }
+  CallType type = 5;
+  int64 timestamp = 6;
+  int32 duration = 7;
+}
+
+// ===============================
+// 💠 自定义结构化消息
+// ===============================
 message CustomMessage {
-  string custom_type = 1;     // 自定义消息类型标识（如 "vote", "card"）
-  string json_payload = 2;    // 结构化 JSON 内容，格式由客户端约定解析
+  string custom_type = 1;
+  string json_payload = 2;
+}
+
+// ===============================
+// 😄 表情消息
+// ===============================
+message EmojiMessage {
+  EmojiType emoji = 1;
+  string custom_emoji_url = 2;
+}
+
+// ===============================
+// ⛔ 撤回消息
+// ===============================
+message RevokeMessage {
+  string target_message_id = 1;
+  string operator_id = 2;
+  int64 revoke_time = 3;
+}
+
+// ===============================
+// 📤 转发消息
+// ===============================
+message ForwardMessage {
+  string original_message_id = 1;
+  string original_sender_id = 2;
+  common.MessageType original_type = 3;
+  string summary = 4;
+}
+
+// ===============================
+// 📌 引用回复消息
+// ===============================
+message QuoteMessage {
+  string quoted_message_id = 1;
+  string quoted_content_preview = 2;
+  string quote_text = 3;
+}
+
+// ===============================
+// 🌐 HTML 卡片
+// ===============================
+message HtmlMessage {
+  string title = 1;
+  string url = 2;
+  string preview = 3;
+}
+
+// ===============================
+// 📞 VOIP 通话记录
+// ===============================
+message VoipMessage {
+  string caller_id = 1;
+  string callee_id = 2;
+  int64 duration = 3;
+  string status = 4;
+}
+
+// ===============================
+// 🔔 通知消息
+// ===============================
+message NotificationMessage {
+  string title = 1;
+  string body = 2;
+  map<string, string> metadata = 3;
+}
+
+// ===============================
+// ⚙️ 系统消息
+// ===============================
+message SystemMessage {
+  string content = 1;
+  string code = 2;
+}
+
+// ===============================
+// ⏰ 提醒事项
+// ===============================
+message ReminderMessage {
+  string text = 1;
+  int64 remind_at = 2;
+}
+
+
+// ===============================
+// 👪 群组事件
+// ===============================
+message GroupEventMessage {
+  string group_id = 1;
+  string event = 2;
+  string operator_id = 3;
+}
+
+// ===============================
+// 📇 名片消息
+// ===============================
+message ContactCardMessage {
+  string target_id = 1;
+  string display_name = 2;
+  string avatar_url = 3;
+  string card_type = 4;
+}
+
+// ===============================
+// 📊 投票消息
+// ===============================
+message VoteMessage {
+  string topic = 1;
+  repeated string options = 2;
+  map<string, int32> result = 3;
+  bool multi_choice = 4;
+}
+
+// ===============================
+// 💰 红包消息
+// ===============================
+message RedEnvelopeMessage {
+  string sender_id = 1;
+  int32 amount = 2;
+  string blessing = 3;
+  bool claimed = 4;
+}
+
+// ======================================
+// ✂️ Segment - 消息段结构（用于复合内容）
+// ======================================
+// 表示一条消息中的一个独立段（如文本段、图片段等），支持排序、编辑、标记等
+message Segment {
+  MessageContent body = 1;                // 消息段内容（如文本、图片等，使用 oneof 封装）
+
+  string segment_id = 2;                  // 段唯一标识（客户端生成或服务端补全）
+  uint64 seq_in_msg = 3;                  // 消息内顺序编号（用于前端渲染排序）
+
+  bool edited = 4;                        // 是否为编辑后的段落（true 表示被修改）
+  bool visible = 5;                       // 是否允许客户端渲染该段（false 可用于隐藏草稿等）
+
+  map<string, string> metadata = 6;       // 通用扩展字段（以字符串键值对存储 JSON 扁平数据）
 }

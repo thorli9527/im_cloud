@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package protocol;
+package protocol.gi;
 
 // ========================================
 // 👥 群成员变更事件（加人、踢人、禁言等）
@@ -10,7 +10,7 @@ message GroupMemberChange {
   string operator_id = 2;                // 操作者 ID（如群主、管理员）
   repeated string affected_users = 3;    // 被操作的用户 ID 列表（可能为多个）
   GroupChangeType change_type = 4;       // 操作类型（枚举定义如下）
-  int64 timestamp = 5;                   // 操作时间戳（毫秒）
+  uint64 timestamp = 5;                   // 操作时间戳（毫秒）
 }
 
 // ========================================
@@ -41,7 +41,7 @@ message GroupAttributeChange {
   string old_value = 3;              // 修改前的值
   string new_value = 4;              // 修改后的值
   string operator_id = 5;            // 操作者 ID（如管理员）
-  int64 timestamp = 6;               // 变更时间戳（毫秒）
+  uint64 timestamp = 6;               // 变更时间戳（毫秒）
 }
 
 // ========================================

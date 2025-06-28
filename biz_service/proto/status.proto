@@ -1,5 +1,5 @@
 syntax = "proto3";
-package protocol;
+package protocol.status;
 
 // =======================================
 // ✅ 消息已读回执（Read Receipt）

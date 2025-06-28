@@ -1,4 +1,4 @@
-use crate::entitys::mq_message_info::ChatTargetType;
+use crate::protocol::common::ChatTargetType;
 
 pub struct ReadIndex {
     pub from: String,
