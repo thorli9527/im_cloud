@@ -7,7 +7,6 @@ pub mod group_entity;
 pub mod group_member;
 pub mod mq_group_application;
 pub mod mq_group_operation_log;
-pub mod mq_message_info;
 pub mod mq_user_action;
 pub mod read_index;
 pub mod user_entity;

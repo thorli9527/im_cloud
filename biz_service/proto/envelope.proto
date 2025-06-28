@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package protocol;
+package protocol.envelope;
 
 // ================================
 // 📦 引用各类消息模块
@@ -39,33 +39,33 @@ message Envelope {
   // 每个封包只包含一种消息类型，oneof 保证结构唯一性
   oneof payload {
     // 🔐 登录认证
-    AuthRequest auth_request = 4;     // 客户端发起认证请求（连接建立后第一步）
-    AuthResponse auth_response = 5;   // 服务端返回认证结果
+    auth.AuthRequest auth_request = 4;     // 客户端发起认证请求（连接建立后第一步）
+    auth.AuthResponse auth_response = 5;   // 服务端返回认证结果
 
     // 💬 聊天消息
-    Message message = 6;              // 普通消息：文本、图片、引用等
+    message.Message message = 6;              // 普通消息：文本、图片、引用等
 
     // 🧾 消息状态类
-    ReadReceipt read_receipt = 7;     // 消息已读回执（单聊或群聊）
-    TypingNotice typing_notice = 9;   // 正在输入状态通知
-    AckMessage ack = 12;              // 通用 ACK 确认消息
-    Heartbeat heartbeat = 13;         // 心跳包（连接保活）
+    status.ReadReceipt read_receipt = 7;     // 消息已读回执（单聊或群聊）
+    status.TypingNotice typing_notice = 9;   // 正在输入状态通知
+    status.AckMessage ack = 12;              // 通用 ACK 确认消息
+    status.Heartbeat heartbeat = 13;         // 心跳包（连接保活）
 
     // 🛠️ 系统通知
-    SystemNotification system_notification = 8; // 系统通知消息（维护、封禁等）
+    system.SystemNotification system_notification = 8; // 系统通知消息（维护、封禁等）
 
     // 🤝 好友事件类
-    FriendEventMessage friend_event = 14;       // 好友请求、同意、拒绝、拉黑等事件
+    friend.FriendEventMessage friend_event = 14;       // 好友请求、同意、拒绝、拉黑等事件
 
     // 👤 用户/群组变更事件
-    UserFlush user_flush = 15;                  // 用户资料更新通知（昵称、头像等变更）
+    user.UserFlush user_flush = 15;                  // 用户资料更新通知（昵称、头像等变更）
     // 👥 群组结构事件
-    GroupMemberChange group_member_change = 10;     // 群成员增删、禁言、踢人等
-    GroupAttributeChange group_attribute_change = 11; // 群属性字段变更（单字段）
+    gi.GroupMemberChange group_member_change = 10;     // 群成员增删、禁言、踢人等
+    gi.GroupAttributeChange group_attribute_change = 11; // 群属性字段变更（单字段）
 
-    GroupCreateMessage group_create = 17;           // 创建群聊成功事件
-    GroupDismissMessage group_dismiss = 18;         // 群聊被解散通知
-    GroupTransferMessage group_transfer = 19;       // 群主转让事件
-    GroupAnnouncementMessage group_announcement = 20; // 群公告更新事件
+    gi.GroupCreateMessage group_create = 17;           // 创建群聊成功事件
+    gi.GroupDismissMessage group_dismiss = 18;         // 群聊被解散通知
+    gi.GroupTransferMessage group_transfer = 19;       // 群主转让事件
+    gi.GroupAnnouncementMessage group_announcement = 20; // 群公告更新事件
   }
 }

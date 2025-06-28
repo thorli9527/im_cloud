@@ -1,5 +1,5 @@
-use crate::biz_service::kafka_service::KafkaService;
-use crate::entitys::mq_message_info::{GroupMessage, Segment, SegmentDto};
+use std::collections::HashMap;
+use crate::biz_service::kafka_service::{KafkaMessageType, KafkaService};
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
@@ -8,6 +8,8 @@ use common::util::date_util::now;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use crate::protocol::entity::GroupMessage;
+use crate::protocol::message::Segment;
 
 #[derive(Debug)]
 pub struct GroupMessageService {
@@ -28,7 +30,7 @@ impl GroupMessageService {
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
-    pub async fn send_group_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<SegmentDto>) -> Result<GroupMessage, AppError> {
+    pub async fn send_group_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<Segment>) -> Result<GroupMessage, AppError> {
         let now_time = now();
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
@@ -43,10 +45,11 @@ impl GroupMessageService {
                 seq_in_msg: build_snow_id() as u64, // 分布式唯一顺序段号
                 edited: false,
                 visible: true,
-                metadata: None,
+                metadata: {
+                     HashMap::new()
+                },
             })
             .collect();
-
         // 构造 UserMessage 对象
         let message = GroupMessage {
             id: build_uuid(), // 或 build_snow_id().to_string()
@@ -64,7 +67,9 @@ impl GroupMessageService {
         let kafka_service = KafkaService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        kafka_service.send(&message, from, &app_config.kafka.topic_group).await?;
+        let message_type=KafkaMessageType::GroupMessage;
+        let node_index=0 as u8;
+        kafka_service.send_proto(&message_type, &node_index,&message,&message.id, &app_config.kafka.topic_group).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

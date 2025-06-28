@@ -1,6 +1,5 @@
 syntax = "proto3";
-import "google/protobuf/descriptor.proto";
-package protocol;
+package protocol.auth;
 
 // ================================
 // 📦 设备类型枚举

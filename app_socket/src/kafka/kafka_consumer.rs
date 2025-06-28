@@ -13,9 +13,6 @@ use crate::kafka::friend_msg::friend_msg_to_socket;
 use crate::manager::socket_manager::SocketManager;
 use biz_service::biz_service::kafka_service::KafkaMessageType;
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
-use biz_service::protocol::protocol::envelope::Payload;
-use biz_service::protocol::protocol::envelope::Payload::FriendEvent;
-use biz_service::protocol::protocol::{Envelope, EnvelopeType, FriendEventMessage, FriendSourceType};
 use common::config::KafkaConfig;
 use common::util::date_util::now;
 use rdkafka::config::ClientConfig;
@@ -91,17 +88,16 @@ pub async fn handle_kafka_message(msg: &OwnedMessage, socket_manager: &Arc<Socke
         return Err(anyhow!("Kafka 消息体为空"));
     }
 
-    let msg_type = payload[0];
-    let body = &payload[1..];
+    let msg_type = KafkaMessageType::from_u8(payload[0])?;
+    let node_index = payload[1];
+    let body = &payload[2..];
 
     match msg_type {
-        //好友类消息
-        x if x == KafkaMessageType::FriendMsg as u8 => {
-            //转发mq到socket 消息
+        KafkaMessageType::FriendMsg => {
             friend_msg_to_socket(body, msg, socket_manager).await?;
         }
         _ => {
-            log::warn!("收到未知类型 Kafka 消息: type={}", msg_type);
+            log::warn!("收到未知类型 Kafka 消息: {:?}", msg_type);
         }
     }
 

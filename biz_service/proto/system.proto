@@ -1,5 +1,5 @@
 syntax = "proto3";
-package protocol;
+package protocol.system;
 
 // =======================================
 // 📢 通用系统通知消息

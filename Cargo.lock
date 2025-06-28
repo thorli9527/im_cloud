@@ -752,6 +752,7 @@ dependencies = [
  "actix-web",
  "anyhow",
  "async-trait",
+ "bytes",
  "chrono",
  "common",
  "dashmap 6.1.0",

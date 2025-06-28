@@ -1,5 +1,5 @@
 syntax = "proto3";
-package protocol;
+package protocol.user;
 
 // =======================================
 // 👤 用户资料更新推送消息（UserFlush）

@@ -1,5 +1,5 @@
-use crate::biz_service::kafka_service::KafkaService;
-use crate::entitys::mq_message_info::{Segment, SegmentDto, UserMessage};
+use std::collections::HashMap;
+use crate::biz_service::kafka_service::{KafkaMessageType, KafkaService};
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
@@ -8,6 +8,8 @@ use common::util::date_util::now;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use crate::protocol::entity::UserMessage;
+use crate::protocol::message::Segment;
 
 #[derive(Debug)]
 pub struct UserMessageService {
@@ -29,8 +31,8 @@ impl UserMessageService {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
     /// 构造并保存一条用户消息，返回完整 UserMessage
-    pub async fn send_user_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<SegmentDto>) -> Result<UserMessage, AppError> {
-        let now_time = now();
+    pub async fn send_user_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<Segment>) -> Result<UserMessage, AppError> {
+        let now_time = now() as u64;
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
         }
@@ -44,7 +46,9 @@ impl UserMessageService {
                 seq_in_msg: build_snow_id() as u64, // 分布式唯一顺序段号
                 edited: false,
                 visible: true,
-                metadata: None,
+                metadata: {
+                    HashMap::new()
+                },
             })
             .collect();
 
@@ -61,12 +65,14 @@ impl UserMessageService {
             revoked: false,
             is_system: false,
             delivered: false,
-            read_time: None,
+            read_time: now_time,
         };
         let kafka_service = KafkaService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        kafka_service.send(&message, from, &app_config.kafka.topic_single).await?;
+        let msg_type: KafkaMessageType=KafkaMessageType::UserMessage;
+        let data_index=0 as u8;
+        kafka_service.send_proto( &msg_type,&data_index,&message,&message.id, &app_config.kafka.topic_single).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

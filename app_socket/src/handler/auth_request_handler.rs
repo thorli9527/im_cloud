@@ -2,9 +2,9 @@ use crate::manager::socket_manager::{ConnectionId, get_socket_manager};
 use anyhow::{Context, Result};
 use biz_service::biz_service::client_service::ClientService;
 use biz_service::manager::user_manager_core::UserManager;
-use biz_service::protocol::protocol::{AuthRequest, Envelope};
 use std::collections::HashSet;
-
+use biz_service::protocol::auth::AuthRequest;
+use biz_service::protocol::envelope::Envelope;
 pub async fn auth_request(id: &ConnectionId, data: Envelope, auth: AuthRequest) -> Result<()> {
     let user_profile_service = ClientService::get();
     let arc = UserManager::get();

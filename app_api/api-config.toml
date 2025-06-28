@@ -5,7 +5,7 @@ db_name = "im_cloud"
 url = "redis://127.0.0.1:6379/"
 [server]
 host = "127.0.0.1"
-port = 8080
+port = 8000
 [cache]
 node_id = 0
 node_total = 1

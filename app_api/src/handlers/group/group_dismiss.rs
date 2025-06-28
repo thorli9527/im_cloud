@@ -31,19 +31,30 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 )]
 #[post("/group/dismiss/{group_id}")]
 async fn group_dismiss(group_id: web::Path<String>, req: HttpRequest) -> Result<impl Responder, AppError> {
+    let group_id = group_id.into_inner();
+
+    // 1. 构建并校验身份
     let auth_header = build_header(req);
     let agent = AgentService::get().check_request(auth_header).await?;
+
+    // 2. 校验群组是否存在
     let group_service = GroupService::get();
+    let group_info = match group_service.find_by_group_id(&group_id).await {
+        Ok(info) => info,
+        Err(_) => return Err(BizError("group.not.found".to_string())),
+    };
 
-    let info = group_service.find_by_group_id(&*group_id).await;
-    if info.is_err() {
-        return Err(BizError("group.not.found".to_string()));
-    }
-
+    // 3. 删除群成员和群信息
     let group_member_service = GroupMemberService::get();
-    group_member_service.dao.delete_by_id(&*group_id).await?;
-    group_service.dao.delete_by_id(&*group_id).await?;
-    GroupManager::get().dismiss_group(&*group_id).await?;
-    GroupOperationLogService::get().add_log(&agent.id, &*group_id, "", None, GroupOperationType::Dismiss).await?;
+    group_member_service.dao.delete_by_id(&group_id).await?;
+    group_service.dao.delete_by_id(&group_id).await?;
+
+    // 4. 通知管理器更新缓存等状态
+    GroupManager::get().dismiss_group(&group_id).await?;
+
+    // 5. 写入操作日志 并发通知
+    GroupOperationLogService::get().add_log(&agent.id, &group_id, "", None, GroupOperationType::Dismiss).await?;
+
+    // 6. 返回结果
     Ok(web::Json(result()))
 }

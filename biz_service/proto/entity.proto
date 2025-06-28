@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package protocol.entity;
+import "message.proto";  // 聊天消息结构
+
+// 用户消息结构
+message UserMessage {
+  // 全局唯一消息 ID（如雪花 ID）
+  string id = 1;
+
+  // 所属商户
+  string agent_id = 2;
+
+  // 所属用户 ID
+  string from = 3;
+
+  // 目标 ID
+  string to = 4;
+
+  // 消息复合内容（支持结构化消息段）
+  repeated message.Segment content = 5;
+
+  // 创建时间（Unix 秒时间戳）
+  uint64 created_time = 6;
+
+  // 最后更新时间（Unix 秒时间戳）
+  uint64 updated_time = 7;
+
+  // 是否被撤回
+  bool revoked = 8;
+
+  // 是否为系统消息
+  bool is_system = 9;
+
+  // 是否已发送到 MQ
+  bool sync_mq_status = 10;
+
+  // 是否已送达客户端
+  bool delivered = 11;
+
+  // 阅读时间戳（可选）
+  uint64 read_time = 12;
+}
+
+
+// 群组消息结构
+message GroupMessage {
+  // 全局唯一消息 ID（如雪花 ID）
+  string id = 1;
+
+  // 所属商户
+  string agent_id = 2;
+
+  // 所属群组 ID
+  string to = 3;
+
+  // 发送者用户 ID
+  string from = 4;
+
+  // 消息复合内容（支持结构化消息段）
+  repeated message.Segment content = 5;
+
+  // 创建时间（Unix 秒时间戳）
+  uint64 create_time = 6;
+
+  // 最后更新时间（Unix 秒时间戳）
+  uint64 update_time = 7;
+
+  // 群内顺序号（用于顺序拉取）
+  uint64 seq = 8;
+
+  // 是否已发送到 MQ
+  bool sync_mq_status = 9;
+
+  // 是否被撤回
+  bool revoked = 10;
+
+  // 是否为系统消息（可用于区分人工发送和自动提示）
+  bool is_system = 11;
+}
