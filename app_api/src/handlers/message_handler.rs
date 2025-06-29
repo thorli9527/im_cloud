@@ -1,14 +1,14 @@
 use crate::result::result;
-use actix_web::{HttpRequest, Responder, web};
-use biz_service::biz_service::agent_service::{AgentService, build_header};
+use actix_web::{web, HttpRequest, Responder};
+use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::mq_message_group_service::GroupMessageService;
 use biz_service::biz_service::mq_message_user_service::UserMessageService;
+use biz_service::protocol::common::ChatTargetType;
+use biz_service::protocol::message::Segment;
 use common::errors::AppError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
-use biz_service::protocol::common::ChatTargetType;
-use biz_service::protocol::message::Segment;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {}
 

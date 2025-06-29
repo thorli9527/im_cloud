@@ -1,6 +1,6 @@
 use actix_web::middleware::Logger;
 use actix_web::rt::Runtime;
-use actix_web::{App, HttpServer, cookie, web};
+use actix_web::{cookie, web, App, HttpServer};
 use app_api::handlers;
 use biz_service::biz_service::kafka_service::KafkaService;
 use biz_service::manager;
@@ -8,11 +8,11 @@ use common::config::{AppConfig, ServerRes};
 use common::errors::AppError;
 use common::redis::redis_template::RedisTemplate;
 use deadpool_redis::{
-    Connection, Manager, Pool, PoolConfig, Runtime as RedisRuntime,
-    redis::{FromRedisValue, cmd},
+    redis::{cmd, FromRedisValue}, Connection, Manager, Pool, PoolConfig,
+    Runtime as RedisRuntime,
 };
 use env_logger::Builder;
-use log::{LevelFilter, info, warn};
+use log::{info, warn, LevelFilter};
 use mongodb::options::ClientOptions;
 use mongodb::{Client, Database};
 use std::str::FromStr;

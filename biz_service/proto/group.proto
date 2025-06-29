@@ -1,64 +1,52 @@
 syntax = "proto3";
 
-package protocol.gi;
-
-// ========================================
-// 👥 群成员变更事件（加人、踢人、禁言等）
-// ========================================
-message GroupMemberChange {
-  string group_id = 1;                   // 群组 ID
-  string operator_id = 2;                // 操作者 ID（如群主、管理员）
-  repeated string affected_users = 3;    // 被操作的用户 ID 列表（可能为多个）
-  GroupChangeType change_type = 4;       // 操作类型（枚举定义如下）
-  uint64 timestamp = 5;                   // 操作时间戳（毫秒）
-}
-
+package protocol.group;
 // ========================================
 // 🔁 群成员变更类型（操作类型枚举）
 // ========================================
-enum GroupChangeType {
-  GROUP_CHANGE_UNKNOWN = 0; // 未知操作
+enum GroupEventType {
+  // === 公共: 通用/容错 ===
+  GROUP_CHANGE_UNKNOWN = 0;     // 未知类型（容错）
 
-  GROUP_ADD = 1;            // 添加成员
-  GROUP_REMOVE = 2;         // 移除成员
-  GROUP_MUTE = 3;           // 禁言成员
-  GROUP_UNMUTE = 4;         // 解除禁言
-  GROUP_PROMOTE = 5;        // 升为管理员
-  GROUP_DEMOTE = 6;         // 降为普通成员
-  GROUP_INVITE = 7;         // 邀请加入
-  GROUP_LEAVE = 8;          // 主动退出群聊
-  GROUP_KICK = 9;           // 踢出群聊（等价于 REMOVE，可细分）
-  GROUP_REJOIN = 10;        // 重新加入群聊
+  // === 👥 群成员操作 ===
+  GROUP_ADD = 1;                // 添加成员
+  GROUP_REMOVE = 2;             // 移除成员
+  GROUP_MUTE = 3;               // 禁言成员
+  GROUP_UNMUTE = 4;             // 解除禁言
+  GROUP_PROMOTE = 5;            // 升为管理员
+  GROUP_DEMOTE = 6;             // 降为普通成员
+  GROUP_INVITE = 7;             // 邀请加入
+  GROUP_LEAVE = 8;              // 主动退出群聊
+  GROUP_KICK = 9;               // 踢出群聊（等价于 REMOVE）
+  GROUP_REJOIN = 10;            // 重新加入群聊
+  GROUP_TRANSFER_OWNER = 11;    // 转让群主（新增）
+
+  // === 🛠 群属性操作 ===
+  CHANGE_NAME = 100;            // 修改群名称
+  CHANGE_AVATAR = 101;          // 修改头像
+  CHANGE_NOTICE = 102;          // 修改公告
+  CHANGE_MUTE_ALL = 103;        // 修改全体禁言状态
+  CHANGE_INVITE_ONLY = 104;     // 修改邀请权限
+  CHANGE_HISTORY_VISIBLE = 105; // 修改历史消息可见性
+  CHANGE_MAX_MEMBER_LIMIT = 106;// 修改最大成员数
+  CHANGE_VERIFICATION_TYPE = 107;// 修改加群验证方式
 }
 
+// ========================================
+// 📦 群事件通用消息（成员、属性、转让群主）
+// ========================================
+message GroupEventMessage {
+  string group_id = 1;                     // 群组 ID
+  GroupEventType event_type = 2;           // 事件类型
 
-// ========================================
-// 🛠 群属性变更通知（单字段修改）
-// ========================================
-message GroupAttributeChange {
-  string group_id = 1;               // 群组 ID
-  GroupAttributeKey key = 2;         // 被修改的字段键名（使用枚举，见下）
-  string old_value = 3;              // 修改前的值
-  string new_value = 4;              // 修改后的值
-  string operator_id = 5;            // 操作者 ID（如管理员）
-  uint64 timestamp = 6;               // 变更时间戳（毫秒）
+  string operator_id = 3;                  // 发起者（操作者）用户 ID
+  repeated string affected_user_ids = 4;   // 被操作的用户 ID（适用于成员操作/群主转让）
+
+  string old_value = 5;                    // 旧值（仅属性变更或转让使用）
+  string new_value = 6;                    // 新值（仅属性变更或转让使用）
+
+  uint64 timestamp = 7;                    // 操作时间戳（毫秒）
 }
-
-// ========================================
-// 🧾 群字段枚举（仅允许可修改字段）
-// ========================================
-enum GroupAttributeKey {
-  ATTRIBUTE_UNKNOWN = 0;      // 未知字段（容错）
-  NAME = 1;                   // 群名称
-  AVATAR = 2;                 // 群头像 URL
-  NOTICE = 3;                 // 群公告（文本）
-  MUTE_ALL = 4;               // 全体禁言状态（true/false）
-  INVITE_ONLY = 5;            // 是否仅群主/管理员可邀请（true/false）
-  HISTORY_VISIBLE = 6;        // 历史消息是否可见
-  MAX_MEMBER_LIMIT = 7;       // 群成员上限
-  VERIFICATION_TYPE = 8;      // 加群验证方式（开放/需审批/关闭）
-}
-
 // ========================================
 // ➕ 群创建事件消息（通常由服务端广播）
 // ========================================
@@ -79,22 +67,3 @@ message GroupDismissMessage {
   int64 dismissed_at = 3;       // 解散时间戳（毫秒）
 }
 
-// ========================================
-// 👑 群主转让事件
-// ========================================
-message GroupTransferMessage {
-  string group_id = 1;          // 群组 ID
-  string old_owner_id = 2;      // 原群主 ID
-  string new_owner_id = 3;      // 新群主 ID
-  int64 timestamp = 4;          // 转让时间戳（毫秒）
-}
-
-// ========================================
-// 📣 群公告更新消息
-// ========================================
-message GroupAnnouncementMessage {
-  string group_id = 1;          // 群组 ID
-  string content = 2;           // 公告内容（纯文本）
-  string operator_id = 3;       // 公告发布者 ID
-  int64 timestamp = 4;          // 发布时间戳（毫秒）
-}

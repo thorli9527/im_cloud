@@ -1,6 +1,6 @@
-use crate::result::{ApiResponse, result_data};
-use actix_web::{HttpRequest, Responder, post, web};
-use biz_service::biz_service::agent_service::{AgentService, build_header};
+use crate::result::{result_data, ApiResponse};
+use actix_web::{post, web, HttpRequest, Responder};
+use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use common::errors::AppError;
 use serde::{Deserialize, Serialize};

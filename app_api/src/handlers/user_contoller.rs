@@ -1,7 +1,7 @@
-use crate::result::{ApiResponse, result, result_data};
-use actix_web::{HttpRequest, Responder, post, web};
+use crate::result::{result, result_data, ApiResponse};
+use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_const::redis_const::CLIENT_TOKEN_KEY;
-use biz_service::biz_service::agent_service::{AgentService, build_header};
+use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::client_service::ClientService;
 use biz_service::biz_service::mq_user_action_service::UserActionLogService;
 use biz_service::entitys::client_entity::ClientInfo;

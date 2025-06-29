@@ -1,6 +1,6 @@
-use crate::result::{ApiResponse, result};
-use actix_web::{HttpRequest, Responder, post, web};
-use biz_service::biz_service::agent_service::{AgentService, build_header};
+use crate::result::{result, ApiResponse};
+use actix_web::{post, web, HttpRequest, Responder};
+use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::entitys::group_entity::GroupInfo;

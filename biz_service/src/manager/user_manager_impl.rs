@@ -1,24 +1,24 @@
 use crate::biz_service::agent_service::AgentService;
 use crate::biz_service::friend_service::UserFriendService;
-use crate::biz_service::kafka_service::{KafkaMessageType, KafkaService};
+use crate::biz_service::kafka_service::{ByteMessageType, KafkaService};
 use crate::entitys::client_entity::ClientInfo;
 use crate::manager::common::UserId;
-use crate::manager::user_manager_core::{USER_ONLINE_TTL_SECS, UserManager, UserManagerOpt};
+use crate::manager::user_manager_core::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
+use crate::protocol::auth::DeviceType;
+use crate::protocol::friend::{EventStatus, FriendEventMessage, FriendEventType, FriendSourceType};
 use actix_web::cookie::time::macros::time;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
-use common::ClientTokenDto;
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::repository_util::Repository;
 use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
+use common::ClientTokenDto;
 use dashmap::DashMap;
 use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
 use tokio::try_join;
-use crate::protocol::auth::DeviceType;
-use crate::protocol::friend::{EventStatus, FriendEventMessage, FriendEventType, FriendSourceType};
 
 #[async_trait]
 impl UserManagerOpt for UserManager {
@@ -200,7 +200,7 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(&user_id, &friend_id), (&friend_id, &user_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&KafkaMessageType::FriendMsg,&node_index,&event, &event.event_id, topic).await {
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendMsg, &node_index, &event, &event.event_id, topic).await {
                 log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
             }
         }
@@ -253,7 +253,7 @@ impl UserManagerOpt for UserManager {
         for (from, to) in [(user_id, friend_id), (friend_id, user_id)] {
             let event = make_event(from, to);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&KafkaMessageType::FriendMsg,&node_index,&event, &event.event_id, topic).await {
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendMsg, &node_index, &event, &event.event_id, topic).await {
                 log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
             }
         }
@@ -415,7 +415,7 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&KafkaMessageType::FriendMsg,&node_index,&event, &event.event_id, topic).await {
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendMsg, &node_index, &event, &event.event_id, topic).await {
                 log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
             }
         }
@@ -497,7 +497,7 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&KafkaMessageType::FriendMsg,&node_index,&event, &event.event_id, topic).await {
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendMsg, &node_index, &event, &event.event_id, topic).await {
                 log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
             }
         }

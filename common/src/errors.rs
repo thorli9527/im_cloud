@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, ResponseError};
-use deadpool_redis::PoolError;
 use deadpool_redis::redis::RedisError;
+use deadpool_redis::PoolError;
 use log::error;
 use mongodb::error::Error as MongoError;
 use serde::Serialize;

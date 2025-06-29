@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use dashmap::DashMap;
 use futures::TryFutureExt;
@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::kafka::friend_msg::friend_msg_to_socket;
 use crate::manager::socket_manager::SocketManager;
-use biz_service::biz_service::kafka_service::KafkaMessageType;
+use biz_service::biz_service::kafka_service::ByteMessageType;
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
 use common::config::KafkaConfig;
 use common::util::date_util::now;
@@ -88,12 +88,12 @@ pub async fn handle_kafka_message(msg: &OwnedMessage, socket_manager: &Arc<Socke
         return Err(anyhow!("Kafka 消息体为空"));
     }
 
-    let msg_type = KafkaMessageType::from_u8(payload[0])?;
+    let msg_type = ByteMessageType::from_u8(payload[0])?;
     let node_index = payload[1];
     let body = &payload[2..];
 
     match msg_type {
-        KafkaMessageType::FriendMsg => {
+        ByteMessageType::FriendMsg => {
             friend_msg_to_socket(body, msg, socket_manager).await?;
         }
         _ => {

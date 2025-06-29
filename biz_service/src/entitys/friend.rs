@@ -1,6 +1,6 @@
+use crate::protocol::friend::FriendSourceType;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use crate::protocol::friend::{EventStatus, FriendEventType, FriendSourceType};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct FriendInfo {

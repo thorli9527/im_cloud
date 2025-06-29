@@ -1,11 +1,11 @@
 use crate::handle_connection;
 use crate::handle_connection::handle_connection;
 use crate::kafka::kafka_consumer;
+use crate::kafka::kafka_consumer::start_consumer;
 use crate::manager::socket_manager::get_socket_manager;
 use common::config::KafkaConfig;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use crate::kafka::kafka_consumer::start_consumer;
 
 /// 启动 TCP 服务 + Kafka 消费任务
 pub async fn start_server(listener: TcpListener, kafka_cfg: KafkaConfig) -> anyhow::Result<()> {

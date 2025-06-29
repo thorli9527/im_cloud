@@ -1,14 +1,12 @@
 use crate::entitys::group_entity::GroupInfo;
-use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
+use crate::entitys::group_member::GroupRole;
 use crate::manager::common::UserId;
-use crate::manager::local_group_manager::{LocalGroupManager, LocalGroupManagerOpt};
-use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
+use crate::manager::local_group_manager::LocalGroupManager;
 use anyhow::Result;
 use async_trait::async_trait;
-use dashmap::DashSet;
 use deadpool_redis::{
-    Pool as RedisPool, Pool,
-    redis::{AsyncCommands, cmd},
+    redis::AsyncCommands, Pool as RedisPool,
+    Pool,
 };
 use once_cell::sync::OnceCell;
 use std::sync::Arc;

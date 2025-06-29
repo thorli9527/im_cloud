@@ -1,5 +1,5 @@
 use crate::repository_util::OrderType;
-use mongodb::bson::{Bson, Document, doc};
+use mongodb::bson::{doc, Bson, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

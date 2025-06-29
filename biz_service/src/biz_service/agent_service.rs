@@ -1,17 +1,17 @@
 use crate::biz_service::cache_service::get_agent_cache;
 use crate::entitys::agent_entity::AgentInfo;
+use crate::protocol::auth::DeviceType;
 use actix_web::HttpRequest;
 use anyhow::Result;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
-use mongodb::Database;
 use mongodb::bson::doc;
+use mongodb::Database;
 use once_cell::sync::OnceCell;
 use serde::Serialize;
 use sha1::{Digest, Sha1};
 use std::sync::Arc;
 use utoipa::ToSchema;
-use crate::protocol::auth::DeviceType;
 
 #[derive(Debug)]
 pub struct AgentService {

@@ -4,9 +4,6 @@ pub mod auth {
 pub mod common {
     include!("protocol_common.rs");
 }
-pub mod envelope {
-    include!("protocol_envelope.rs");
-}
 pub mod friend {
     include!("protocol_friend.rs");
 }

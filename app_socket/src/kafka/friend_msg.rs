@@ -1,19 +1,13 @@
-use crate::kafka::kafka_consumer::{PendingMeta, get_pending_acks};
+use crate::kafka::kafka_consumer::{get_pending_acks, PendingMeta};
 use crate::manager::socket_manager::SocketManager;
-use anyhow::{Result, anyhow};
+use anyhow::Result;
+use biz_service::biz_service::kafka_service::{ByteMessageType, KafkaService};
+use biz_service::protocol::friend::FriendEventMessage;
 use bytes::Buf;
-use bytes::Bytes;
-use common::util::date_util::now;
-use log::{info, warn};
+use common::config::AppConfig;
 use prost::Message;
 use rdkafka::message::{Message as KafkaMessageTrait, OwnedMessage};
 use std::sync::Arc;
-use pulsar::Payload;
-use biz_service::biz_service::kafka_service::{KafkaMessageType, KafkaService};
-use biz_service::protocol::common::MessageType::FriendEvent;
-use biz_service::protocol::envelope::{envelope, Envelope, EnvelopeType};
-use biz_service::protocol::friend::FriendEventMessage;
-use common::config::AppConfig;
 
 pub async fn friend_msg_to_socket(mut body: impl Buf, msg: &OwnedMessage, socket_manager: &Arc<SocketManager>) -> Result<()> {
     let mut message = FriendEventMessage::decode(&mut body)?;
@@ -37,6 +31,6 @@ pub async fn friend_msg_to_socket(mut body: impl Buf, msg: &OwnedMessage, socket
     let app_config = AppConfig::get();
     let node_index=0 as u8;
     let topic = &app_config.kafka.topic_single;
-    kafka_service.send_proto(&KafkaMessageType::FriendMsg,&node_index,&friend_event,&friend_event.event_id,topic).await?;
+    kafka_service.send_proto(&ByteMessageType::FriendMsg, &node_index, &friend_event, &friend_event.event_id, topic).await?;
     Ok(())
 }

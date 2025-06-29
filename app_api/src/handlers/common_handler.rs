@@ -1,5 +1,5 @@
 use crate::result::result;
-use actix_web::{Responder, get, web};
+use actix_web::{get, web, Responder};
 use common::errors::AppError;
 use utoipa::ToSchema;
 

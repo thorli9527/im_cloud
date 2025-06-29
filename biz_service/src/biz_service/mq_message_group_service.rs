@@ -1,5 +1,6 @@
-use std::collections::HashMap;
-use crate::biz_service::kafka_service::{KafkaMessageType, KafkaService};
+use crate::biz_service::kafka_service::{ByteMessageType, KafkaService};
+use crate::protocol::entity::GroupMessage;
+use crate::protocol::message::Segment;
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
@@ -7,9 +8,8 @@ use common::util::common_utils::{build_snow_id, build_uuid};
 use common::util::date_util::now;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
+use std::collections::HashMap;
 use std::sync::Arc;
-use crate::protocol::entity::GroupMessage;
-use crate::protocol::message::Segment;
 
 #[derive(Debug)]
 pub struct GroupMessageService {
@@ -67,7 +67,7 @@ impl GroupMessageService {
         let kafka_service = KafkaService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        let message_type=KafkaMessageType::GroupMessage;
+        let message_type= ByteMessageType::GroupMessage;
         let node_index=0 as u8;
         kafka_service.send_proto(&message_type, &node_index,&message,&message.id, &app_config.kafka.topic_group).await?;
         // 持久化

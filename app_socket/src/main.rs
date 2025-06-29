@@ -1,5 +1,5 @@
 use app_socket::manager;
-use app_socket::manager::socket_manager::{SocketManager, get_socket_manager};
+use app_socket::manager::socket_manager::{get_socket_manager, SocketManager};
 use app_socket::server::start_server;
 use biz_service::biz_service::kafka_service::KafkaService;
 use common::config::AppConfig;

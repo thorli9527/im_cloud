@@ -1,31 +1,40 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Error};
+use bytes::Bytes;
 use common::config::KafkaConfig;
 use once_cell::sync::OnceCell;
 use prost::Message;
-use rdkafka::ClientConfig;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::ClientConfig;
 use std::fmt;
-use bytes::Bytes;
 use std::sync::Arc;
 use std::time::Duration;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum KafkaMessageType {
+pub enum ByteMessageType {
     FriendMsg = 1,
     UserMessage = 2,
     GroupMessage = 3,
+    Heartbeat = 4,
+    SystemNotification = 5,
+    AckMessage = 6,
 }
 
-impl KafkaMessageType {
-    pub fn from_u8(value: u8) -> Result<Self, anyhow::Error> {
+impl ByteMessageType {
+    pub fn from_u8(value: u8) -> Result<Self, Error> {
         match value {
-            1 => Ok(KafkaMessageType::FriendMsg),
-            _ => Err(anyhow!("Unknown KafkaMessageType: {}", value)),
+            1 => Ok(ByteMessageType::FriendMsg),
+            2 => Ok(ByteMessageType::UserMessage),
+            3 => Ok(ByteMessageType::GroupMessage),
+            4 => Ok(ByteMessageType::Heartbeat),
+            5 => Ok(ByteMessageType::SystemNotification),
+            6 => Ok(ByteMessageType::AckMessage),
+            _ => Err(anyhow!("Unknown ByteMessageType: {}", value)),
         }
     }
 }
+
 #[derive(Clone)]
 pub struct KafkaService {
     producer: FutureProducer,
@@ -76,7 +85,7 @@ impl KafkaService {
     }
 
     /// proto专有编码与解码
-    pub async fn send_proto<M: Message>(&self, msg_type: &KafkaMessageType,node_index:&u8,value: &M, key: &str, topic: &str) -> Result<(i32, i64), anyhow::Error> {
+    pub async fn send_proto<M: Message>(&self, msg_type: &ByteMessageType, node_index:&u8, value: &M, key: &str, topic: &str) -> Result<(i32, i64), anyhow::Error> {
         let payload = value.encode_to_vec();
         let record = FutureRecord::to(topic).payload(&payload).key(key);
     

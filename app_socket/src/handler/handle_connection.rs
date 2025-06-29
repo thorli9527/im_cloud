@@ -1,25 +1,31 @@
 use crate::kafka::kafka_consumer::*;
-use crate::manager::socket_manager::{ConnectionId, ConnectionInfo, ConnectionMeta, get_socket_manager};
+use crate::manager::socket_manager::{get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta};
 
 use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
 
+use anyhow::anyhow;
+use anyhow::Result;
+use biz_service::biz_service::kafka_service::ByteMessageType;
+use biz_service::protocol;
+use biz_service::protocol::entity::UserMessage;
+use biz_service::protocol::friend::FriendEventMessage;
+use biz_service::protocol::message::message_content::Content;
+use biz_service::protocol::message::GroupEventMessage;
+use biz_service::protocol::status::{AckMessage, Heartbeat};
+use biz_service::protocol::system::SystemEventMessage;
+use bytes::Buf;
 use futures::{SinkExt, StreamExt};
-use prost::Message;
 use prost::bytes::Bytes;
-use std::sync::Arc;
-use std::sync::atomic::AtomicU64;
-
-use rdkafka::Offset;
+use prost::Message;
 use rdkafka::consumer::{CommitMode, Consumer};
 use rdkafka::topic_partition_list::TopicPartitionList;
+use rdkafka::Offset;
+use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-use biz_service::protocol::envelope::Envelope;
-use biz_service::protocol::envelope::envelope::Payload;
-use biz_service::protocol::envelope::envelope::Payload::AuthRequest;
-use biz_service::protocol::message::message_content::Content;
 
 /// 处理每个客户端连接
 pub async fn handle_connection(stream: TcpStream) -> anyhow::Result<()> {
@@ -46,72 +52,49 @@ pub async fn handle_connection(stream: TcpStream) -> anyhow::Result<()> {
     });
 
     // 主循环读取客户端消息
-    while let Some(frame) = reader.next().await {
-        let bytes = frame?;
+    async fn read_loop(
+        reader: &mut FramedRead<tokio::net::tcp::OwnedReadHalf, LengthDelimitedCodec>,
+        conn_key: ConnectionId,
+    ) -> Result<()> {
+        while let Some(frame) = reader.next().await {
+            let mut bytes = frame?;
 
-        match Envelope::decode(bytes.clone()) {
-            Ok(envelope) => match envelope.payload {
-                Some(AuthRequest(auth)) => {
-                    log::info!("🔐 收到 Auth 请求: token={}, client_id={}", auth.token, auth.uid);
-                    // 可扩展调用 handler 模块
+            if bytes.len() < 1 {
+                return Err(anyhow!("数据包长度不足"));
+            }
+
+            let type_code = bytes.get_u8(); // 取出类型字节
+            let message_type = ByteMessageType::from_u8(type_code)?;
+
+            match message_type {
+                ByteMessageType::FriendMsg => {
+                    let msg = FriendEventMessage::decode(bytes)?;
+                    // handle_friend_message(conn_key.clone(), msg).await?;
                 }
-
-                Some(Payload::Ack(ack)) => {
-                    let msg_id = &ack.message_id;
-                    let pending_acks = get_pending_acks();
-
-                    if let Some((_, pending_meta)) = pending_acks.remove(msg_id) {
-                        let consumer = get_consumer().expect("Kafka 消费者未初始化");
-                        let mut tpl = TopicPartitionList::new();
-
-                        // 构造正确的 Offset 提交对象
-                        if tpl.add_partition_offset(&pending_meta.topic, pending_meta.partition, Offset::Offset(pending_meta.offset + 1)).is_ok() {
-                            if let Err(e) = consumer.commit(&tpl, CommitMode::Async) {
-                                log::error!("❌ Kafka 提交失败 [{}]: {:?}", msg_id, e);
-                            } else {
-                                log::info!("✅ Kafka 消息提交成功 [{}]", msg_id);
-                            }
-                        } else {
-                            log::warn!("⚠️ 构建 TopicPartitionList 失败 [{}]", msg_id);
-                        }
-                    } else {
-                        log::warn!("⚠️ 找不到待确认的消息 [{}]", msg_id);
-                    }
+                ByteMessageType::UserMessage => {
+                    let msg = UserMessage::decode(bytes)?;
+                    // handle_user_message(conn_key.clone(), msg).await?;
                 }
-
-                Some(Payload::Message(msg)) => {
-                    for item in msg.contents {
-                        if let Some(content) = item.content {
-                            match content {
-                                Content::Text(text) => {
-                                    log::info!("📨 文本消息 [{}]: {}", msg.sender_id, text.text);
-                                }
-                                other => {
-                                    log::debug!("📥 收到其他消息类型: {:?}", other);
-                                }
-                            }
-                        }
-                    }
+                ByteMessageType::GroupMessage => {
+                    let msg = GroupEventMessage::decode(bytes)?;
+                    // handle_group_message(conn_key.clone(), msg).await?;
                 }
-
-                Some(Payload::Heartbeat(_)) => {
-                    // connection.last_heartbeat.store(now() as u64, Ordering::SeqCst);
-                    log::debug!("💓 心跳更新: {:?}", conn_id);
+                ByteMessageType::Heartbeat => {
+                    let msg = Heartbeat::decode(bytes)?;
+                    // handle_group_message(conn_key.clone(), msg).await?;
+                }               
+                ByteMessageType::SystemNotification => {
+                    let msg = SystemEventMessage::decode(bytes)?;
+                    // handle_group_message(conn_key.clone(), msg).await?;
                 }
-
-                Some(unknown) => {
-                    log::debug!("⚠️ 未处理的消息类型: {:?}", unknown);
+                ByteMessageType::AckMessage => {
+                    let msg = AckMessage::decode(bytes)?;
+                    // handle_group_message(conn_key.clone(), msg).await?;
                 }
-
-                None => {
-                    log::warn!("⚠️ 收到空 Payload 消息");
-                }
-            },
-
-            Err(e) => {
-                log::error!("❌ Envelope 解码失败: {:?}", e);
             }
         }
+
+        Ok(())
     }
 
     manager.remove(&conn_key);

@@ -1,10 +1,8 @@
 use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 use crate::manager::common::UserId;
-use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use async_trait::async_trait;
 use dashmap::{DashMap, DashSet};
-use once_cell::sync::OnceCell;
 use std::sync::Arc;
 
 pub const SHARD_COUNT: usize = 16;

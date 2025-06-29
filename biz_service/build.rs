@@ -14,7 +14,6 @@ fn main() {
             &[
                 "proto/auth.proto",
                 "proto/common.proto",
-                "proto/envelope.proto",
                 "proto/friend.proto",
                 "proto/group.proto",
                 "proto/message.proto",
