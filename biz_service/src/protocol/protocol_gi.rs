@@ -18,8 +18,8 @@ pub struct GroupMemberChange {
     #[prost(enumeration = "GroupChangeType", tag = "4")]
     pub change_type: i32,
     /// 操作时间戳（毫秒）
-    #[prost(int64, tag = "5")]
-    pub timestamp: i64,
+    #[prost(uint64, tag = "5")]
+    pub timestamp: u64,
 }
 /// ========================================
 /// 🛠 群属性变更通知（单字段修改）
@@ -43,8 +43,8 @@ pub struct GroupAttributeChange {
     #[prost(string, tag = "5")]
     pub operator_id: ::prost::alloc::string::String,
     /// 变更时间戳（毫秒）
-    #[prost(int64, tag = "6")]
-    pub timestamp: i64,
+    #[prost(uint64, tag = "6")]
+    pub timestamp: u64,
 }
 /// ========================================
 /// ➕ 群创建事件消息（通常由服务端广播）

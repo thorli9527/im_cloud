@@ -55,8 +55,8 @@ message FriendEventMessage {
 
   EventStatus status = 6;         // 当前事件的状态（待处理 / 已完成 / 已撤销）
 
-  uint64 created_at = 7;           // 事件创建时间（毫秒时间戳）
-  uint64 updated_at = 8;           // 最近更新时间（如处理、撤销时间）
+  int64 created_at = 7;           // 事件创建时间（毫秒时间戳）
+  int64 updated_at = 8;           // 最近更新时间（如处理、撤销时间）
 
   FriendSourceType source_type = 9; // 添加来源类型（扫码/手机号/后台等）
 }

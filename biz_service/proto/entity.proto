@@ -21,10 +21,10 @@ message UserMessage {
   repeated message.Segment content = 5;
 
   // 创建时间（Unix 秒时间戳）
-  uint64 created_time = 6;
+  int64 created_time = 6;
 
   // 最后更新时间（Unix 秒时间戳）
-  uint64 updated_time = 7;
+  int64 updated_time = 7;
 
   // 是否被撤回
   bool revoked = 8;
@@ -39,7 +39,7 @@ message UserMessage {
   bool delivered = 11;
 
   // 阅读时间戳（可选）
-  uint64 read_time = 12;
+  int64 read_time = 12;
 }
 
 
@@ -61,13 +61,13 @@ message GroupMessage {
   repeated message.Segment content = 5;
 
   // 创建时间（Unix 秒时间戳）
-  uint64 create_time = 6;
+  int64 create_time = 6;
 
   // 最后更新时间（Unix 秒时间戳）
-  uint64 update_time = 7;
+  int64 update_time = 7;
 
   // 群内顺序号（用于顺序拉取）
-  uint64 seq = 8;
+  int64 seq = 8;
 
   // 是否已发送到 MQ
   bool sync_mq_status = 9;

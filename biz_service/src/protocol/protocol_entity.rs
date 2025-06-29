@@ -19,11 +19,11 @@ pub struct UserMessage {
     #[prost(message, repeated, tag = "5")]
     pub content: ::prost::alloc::vec::Vec<super::message::Segment>,
     /// 创建时间（Unix 秒时间戳）
-    #[prost(uint64, tag = "6")]
-    pub created_time: u64,
+    #[prost(int64, tag = "6")]
+    pub created_time: i64,
     /// 最后更新时间（Unix 秒时间戳）
-    #[prost(uint64, tag = "7")]
-    pub updated_time: u64,
+    #[prost(int64, tag = "7")]
+    pub updated_time: i64,
     /// 是否被撤回
     #[prost(bool, tag = "8")]
     pub revoked: bool,
@@ -37,8 +37,8 @@ pub struct UserMessage {
     #[prost(bool, tag = "11")]
     pub delivered: bool,
     /// 阅读时间戳（可选）
-    #[prost(uint64, tag = "12")]
-    pub read_time: u64,
+    #[prost(int64, tag = "12")]
+    pub read_time: i64,
 }
 /// 群组消息结构
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

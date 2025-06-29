@@ -32,7 +32,7 @@ impl UserMessageService {
     }
     /// 构造并保存一条用户消息，返回完整 UserMessage
     pub async fn send_user_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<Segment>) -> Result<UserMessage, AppError> {
-        let now_time = now() as u64;
+        let now_time = now() ;
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
         }
