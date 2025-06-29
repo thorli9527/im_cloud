@@ -78,6 +78,49 @@ pub struct SendVerificationCodeResponse {
     #[prost(int64, tag = "4")]
     pub expired_in: i64,
 }
+/// =======================================
+/// 🟢 用户上线消息（OnlineStatus）
+/// =======================================
+/// 表示某个用户刚刚上线，服务端可用于广播通知。
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OnlineStatus {
+    /// 上线用户 ID
+    #[prost(string, tag = "1")]
+    pub user_id: ::prost::alloc::string::String,
+    /// 上线设备类型（如 mobile/web/pc）
+    #[prost(enumeration = "DeviceType", tag = "2")]
+    pub device_type: i32,
+    /// 客户端实例 ID（可用于多端区分）
+    #[prost(string, tag = "3")]
+    pub client_id: ::prost::alloc::string::String,
+    /// 上线时间戳（毫秒）
+    #[prost(int64, tag = "4")]
+    pub login_time: i64,
+}
+/// =======================================
+/// 🔴 用户下线消息（OfflineStatus）
+/// =======================================
+/// 表示某个用户从某设备下线，服务端可用于状态同步或通知。
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OfflineStatus {
+    /// 下线用户 ID
+    #[prost(string, tag = "1")]
+    pub user_id: ::prost::alloc::string::String,
+    /// 下线设备类型（如 mobile/web/pc）
+    #[prost(enumeration = "DeviceType", tag = "2")]
+    pub device_type: i32,
+    /// 客户端实例 ID（可用于多端区分）
+    #[prost(string, tag = "3")]
+    pub client_id: ::prost::alloc::string::String,
+    /// 下线时间戳（毫秒）
+    #[prost(int64, tag = "4")]
+    pub logout_time: i64,
+    /// 可选：下线原因，如超时、手动退出、被踢等
+    #[prost(string, tag = "5")]
+    pub reason: ::prost::alloc::string::String,
+}
 /// ================================
 /// 📦 设备类型枚举
 /// ================================

@@ -1,11 +1,11 @@
-use anyhow::{anyhow, Error};
+use anyhow::{Error, Result, anyhow};
 use bytes::Bytes;
 use common::config::KafkaConfig;
 use once_cell::sync::OnceCell;
 use prost::Message;
+use rdkafka::ClientConfig;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::producer::{FutureProducer, FutureRecord};
-use rdkafka::ClientConfig;
 use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
@@ -84,25 +84,28 @@ impl KafkaService {
         }
     }
 
-    /// proto专有编码与解码
-    pub async fn send_proto<M: Message>(&self, msg_type: &ByteMessageType, node_index:&u8, value: &M, key: &str, topic: &str) -> Result<(i32, i64), anyhow::Error> {
-        let payload = value.encode_to_vec();
+    /// 带类型标识的 Protobuf 消息发送（首字节 + Protobuf）
+    pub async fn send_proto<M: Message>(&self, msg_type: &ByteMessageType, node_index: &u8, value: &M, key: &str, topic: &str) -> Result<()> {
+        let mut payload = Vec::with_capacity(1 + value.encoded_len());
+        // 1️⃣ 插入类型码为首字节
+        payload.push(*msg_type as u8);
+        // 2️⃣ 编码 Protobuf 数据到后续部分
+        value.encode(&mut payload)?;
+        // 3️⃣ 构造 Kafka Record
         let record = FutureRecord::to(topic).payload(&payload).key(key);
-    
-        let timeout = Duration::from_millis(50); // 可根据吞吐量和延迟优化
-    
+        let timeout = Duration::from_millis(50);
+
         match self.producer.send(record, timeout).await {
             Ok((partition, offset)) => {
-                log::debug!("Kafka Protobuf 发送成功 => topic={}, partition={}, offset={}", topic, partition, offset);
-                Ok((partition, offset))
+                log::debug!("✅ Kafka Protobuf 发送成功 => topic={}, partition={}, offset={}", topic, partition, offset);
+                Ok(())
             }
             Err((err, _)) => {
-                log::error!("Kafka Protobuf 发送失败: {:?}", err);
+                log::error!("❌ Kafka Protobuf 发送失败: {:?}", err);
                 Err(anyhow!(err))
             }
         }
     }
-
 
     /// 获取单例
     pub fn get() -> Arc<Self> {

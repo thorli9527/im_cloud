@@ -10,8 +10,8 @@ pub mod friend {
 pub mod entity {
     include!("protocol_entity.rs");
 }
-pub mod gi {
-    include!("protocol_gi.rs");
+pub mod group {
+    include!("protocol_group.rs");
 }
 
 pub mod message {
