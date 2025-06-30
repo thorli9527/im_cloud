@@ -67,7 +67,7 @@ impl GroupMessageService {
         let kafka_service = KafkaService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        let message_type= ByteMessageType::GroupMessage;
+        let message_type= ByteMessageType::GroupMessageType;
         let node_index=0 as u8;
         kafka_service.send_proto(&message_type, &node_index,&message,&message.id, &app_config.kafka.topic_group).await?;
         // 持久化

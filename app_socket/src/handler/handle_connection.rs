@@ -26,6 +26,7 @@ use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
+use biz_service::protocol::auth::AuthRequest;
 
 /// 处理每个客户端连接
 pub async fn handle_connection(stream: TcpStream) -> anyhow::Result<()> {
@@ -67,27 +68,31 @@ pub async fn handle_connection(stream: TcpStream) -> anyhow::Result<()> {
             let message_type = ByteMessageType::from_u8(type_code)?;
 
             match message_type {
-                ByteMessageType::FriendMsg => {
+                ByteMessageType::AuthType => {
+                    let auth_request = AuthRequest::decode(bytes)?;
+                    // handle_friend_message(conn_key.clone(), msg).await?;
+                }
+                ByteMessageType::FriendType => {
                     let msg = FriendEventMessage::decode(bytes)?;
                     // handle_friend_message(conn_key.clone(), msg).await?;
                 }
-                ByteMessageType::UserMessage => {
+                ByteMessageType::UserMessageType => {
                     let msg = UserMessage::decode(bytes)?;
                     // handle_user_message(conn_key.clone(), msg).await?;
                 }
-                ByteMessageType::GroupMessage => {
+                ByteMessageType::GroupMessageType => {
                     let msg = GroupEventMessage::decode(bytes)?;
                     // handle_group_message(conn_key.clone(), msg).await?;
                 }
-                ByteMessageType::Heartbeat => {
+                ByteMessageType::HeartbeatType => {
                     let msg = Heartbeat::decode(bytes)?;
                     // handle_group_message(conn_key.clone(), msg).await?;
                 }               
-                ByteMessageType::SystemNotification => {
+                ByteMessageType::SystemNotificationType => {
                     let msg = SystemEventMessage::decode(bytes)?;
                     // handle_group_message(conn_key.clone(), msg).await?;
                 }
-                ByteMessageType::AckMessage => {
+                ByteMessageType::AckType => {
                     let msg = AckMessage::decode(bytes)?;
                     // handle_group_message(conn_key.clone(), msg).await?;
                 }

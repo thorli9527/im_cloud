@@ -91,7 +91,7 @@ pub async fn handle_kafka_message(msg: &OwnedMessage, socket_manager: &Arc<Socke
     let msg_type = ByteMessageType::from_u8(payload[0])?;
     let body = &payload[1..];
     match msg_type {
-        ByteMessageType::FriendMsg => {
+        ByteMessageType::FriendType => {
             friend_msg_to_socket(body, msg, socket_manager).await?;
         }
         _ => {

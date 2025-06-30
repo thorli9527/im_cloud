@@ -13,23 +13,24 @@ use std::time::Duration;
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ByteMessageType {
-    FriendMsg = 1,
-    UserMessage = 2,
-    GroupMessage = 3,
-    Heartbeat = 4,
-    SystemNotification = 5,
-    AckMessage = 6,
+    AckType = 1,
+    AuthType = 2,
+    FriendType = 3,
+    UserMessageType = 4,
+    GroupMessageType = 5,
+    HeartbeatType = 6,
+    SystemNotificationType = 7,
 }
 
 impl ByteMessageType {
     pub fn from_u8(value: u8) -> Result<Self, Error> {
         match value {
-            1 => Ok(ByteMessageType::FriendMsg),
-            2 => Ok(ByteMessageType::UserMessage),
-            3 => Ok(ByteMessageType::GroupMessage),
-            4 => Ok(ByteMessageType::Heartbeat),
-            5 => Ok(ByteMessageType::SystemNotification),
-            6 => Ok(ByteMessageType::AckMessage),
+            1 => Ok(ByteMessageType::FriendType),
+            2 => Ok(ByteMessageType::UserMessageType),
+            3 => Ok(ByteMessageType::GroupMessageType),
+            4 => Ok(ByteMessageType::HeartbeatType),
+            5 => Ok(ByteMessageType::SystemNotificationType),
+            6 => Ok(ByteMessageType::AckType),
             _ => Err(anyhow!("Unknown ByteMessageType: {}", value)),
         }
     }

@@ -31,6 +31,6 @@ pub async fn friend_msg_to_socket(mut body: impl Buf, msg: &OwnedMessage, socket
     let app_config = AppConfig::get();
     let node_index=0 as u8;
     let topic = &app_config.kafka.topic_single;
-    kafka_service.send_proto(&ByteMessageType::FriendMsg, &node_index, &friend_event, &friend_event.event_id, topic).await?;
+    kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &friend_event, &friend_event.event_id, topic).await?;
     Ok(())
 }

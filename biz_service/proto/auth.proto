@@ -18,7 +18,6 @@ enum DeviceType {
 message AuthRequest {
   string message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
   string token = 2;          // 客户端的身份凭证（如登录后返回的 token 或 API key）
-  string uid = 3;      // 客户端标识符，用于唯一标识连接源（可为设备 ID、UUID 等）
   string ip = 4;        //请求ip
   DeviceType device_type = 5; // 客户端设备类型，用于区分来源平台
 }

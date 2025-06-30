@@ -70,7 +70,7 @@ impl UserMessageService {
         let kafka_service = KafkaService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        let msg_type: ByteMessageType = ByteMessageType::UserMessage;
+        let msg_type: ByteMessageType = ByteMessageType::UserMessageType;
         let data_index=0 as u8;
         kafka_service.send_proto( &msg_type,&data_index,&message,&message.id, &app_config.kafka.topic_single).await?;
         // 持久化

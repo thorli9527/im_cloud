@@ -200,7 +200,7 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(&user_id, &friend_id), (&friend_id, &user_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendMsg, &node_index, &event, &event.event_id, topic).await {
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.event_id, topic).await {
                 log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
             }
         }
@@ -253,7 +253,7 @@ impl UserManagerOpt for UserManager {
         for (from, to) in [(user_id, friend_id), (friend_id, user_id)] {
             let event = make_event(from, to);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendMsg, &node_index, &event, &event.event_id, topic).await {
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.event_id, topic).await {
                 log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
             }
         }
@@ -415,7 +415,7 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendMsg, &node_index, &event, &event.event_id, topic).await {
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.event_id, topic).await {
                 log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
             }
         }
@@ -497,7 +497,7 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendMsg, &node_index, &event, &event.event_id, topic).await {
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.event_id, topic).await {
                 log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
             }
         }

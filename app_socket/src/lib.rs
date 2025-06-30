@@ -1,5 +1,4 @@
 extern crate core;
-
 pub mod handler;
 mod kafka;
 pub mod manager;

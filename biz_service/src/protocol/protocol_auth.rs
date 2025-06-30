@@ -11,9 +11,6 @@ pub struct AuthRequest {
     /// 客户端的身份凭证（如登录后返回的 token 或 API key）
     #[prost(string, tag = "2")]
     pub token: ::prost::alloc::string::String,
-    /// 客户端标识符，用于唯一标识连接源（可为设备 ID、UUID 等）
-    #[prost(string, tag = "3")]
-    pub uid: ::prost::alloc::string::String,
     /// 请求ip
     #[prost(string, tag = "4")]
     pub ip: ::prost::alloc::string::String,
