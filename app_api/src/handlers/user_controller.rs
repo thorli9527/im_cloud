@@ -1,5 +1,6 @@
 use crate::result::{result, result_data, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
+use deadpool_redis::redis::AsyncCommands;
 use biz_service::biz_const::redis_const::CLIENT_TOKEN_KEY;
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::client_service::ClientService;
@@ -12,13 +13,14 @@ use common::errors::AppError::BizError;
 use common::redis::redis_template::RedisTemplate;
 use common::redis::redis_template::ValueOps;
 use common::repository_util::Repository;
-use common::util::common_utils::{as_ref_to_string, build_uuid};
+use common::util::common_utils::{as_ref_to_string, build_md5_with_key, build_uuid};
 use common::util::date_util::time_to_str;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
 use validator::Validate;
+use common::config::AppConfig;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_create);
@@ -26,15 +28,19 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_info);
     cfg.service(user_refresh);
     cfg.service(user_expire);
+    cfg.service(user_generate_token);
+    cfg.service(user_change_pass);
+    cfg.service(user_set_password);
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema, Default, Validate)]
 #[serde(rename_all = "camelCase")]
-struct TokenDto {
+struct UserCreateDto {
     #[validate(length(min = 2, max = 32, message = "uid 不能为空，且长度至少为2位 最大32位"))]
     uid: String,
     #[validate(length(min = 2, max = 32, message = "name 不能为空，且长度至少为 2位,最大为 32位"))]
     name: String,
     avatar: Option<String>,
+    password: Option<String>,
 }
 
 #[utoipa::path(
@@ -49,13 +55,13 @@ struct TokenDto {
         ("timestamp" = i64, Header, description = "时间戳"),
         ("signature" = String, Header, description = "签名")
     ),
-    request_body = TokenDto,
+    request_body = UserCreateDto,
     responses(
         (status = 200, description = "Hello response", body = ApiResponse<String>)
     )
 )]
 #[post("/user/create")]
-async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn user_create(dto: web::Json<UserCreateDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     dto.validate()?;
     let auth_header = build_header(req);
     let agent_service = AgentService::get();
@@ -75,12 +81,178 @@ async fn user_create(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl 
         return Ok(web::Json(result_data(value)));
     }
 
-    let user = client_service.new_data(agent.id.clone(), &dto.uid.clone(), dto.name.clone(), dto.avatar.clone()).await?;
+    let user = client_service.new_data(agent.id.clone(), &dto.uid.clone(), dto.name.clone(), dto.avatar.clone(),dto.password.clone()).await?;
     let token_key = user_manager.build_token(&user.agent_id, &user.uid, auth_header.unwrap().device_type).await?;
     user_manager.sync_user(user).await?;
-    let value = json!({"uid":dto.uid,"token":token_key,"avatar":dto.avatar});
+    let value = json!({"token":token_key,"avatar":dto.avatar});
     Ok(web::Json(result_data(value)))
 }
+
+
+
+#[derive(Debug, Serialize, Deserialize, ToSchema, Default, Validate)]
+#[serde(rename_all = "camelCase")]
+struct TokenDto{
+    uid: String,
+}
+#[utoipa::path(
+    post,
+    path = "/user/token/generate",
+    tag = "用户管理",
+    summary = "生成用户 Token",
+    params(
+        ("appKey" = String, Header, description = "应用 key"),
+        ("nonce" = String, Header, description = "随机字符串"),
+        ("timestamp" = i64, Header, description = "时间戳"),
+        ("signature" = String, Header, description = "签名")
+    ),
+    request_body = TokenDto,
+    responses(
+        (status = 200, description = "Token生成成功", body = ApiResponse<String>)
+    )
+)]
+#[post("/user/token/generate")]
+async fn user_generate_token(dto: web::Json<TokenDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+    dto.validate()?;
+    let auth_header = build_header(req);
+    let agent = AgentService::get().check_request(auth_header.clone()).await?;
+    let user_manager = UserManager::get();
+    // 查询用户是否存在
+    let user = match user_manager.get_user_info(&agent.id, &dto.uid).await? {
+        Some(u) => u,
+        None => {
+           return Err(AppError::BizError("User not found".to_string()));
+        }
+    };
+
+    // 生成 token 并保存到 redis
+    let token_key = user_manager
+        .build_token(&user.agent_id, &user.uid, auth_header.unwrap().device_type)
+        .await?;
+
+    let value = json!({
+        "token": token_key,
+        "avatar": user.avatar
+    });
+    
+    //增加下线通知 待用户用新的token上
+    
+    Ok(web::Json(result_data(value)))
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[serde(rename_all = "camelCase")]
+struct ChangePasswordDto {
+    #[validate(length(min = 32, message = "token不能为空且长度必须大于32位"))]
+    token:String,
+
+    #[validate(length(min = 6, message = "旧密码不能为空且长度必须大于6位"))]
+    old_password: String,
+
+    #[validate(length(min = 6, message = "新密码不能为空且长度必须大于6位"))]
+    new_password: String,
+}
+#[utoipa::path(
+    post,
+    path = "/user/change_password",
+    request_body = ChangePasswordDto,
+    params(
+        ("appKey" = String, Header, description = "应用 key"),
+        ("nonce" = String, Header, description = "随机字符串"),
+        ("timestamp" = i64, Header, description = "时间戳"),
+        ("signature" = String, Header, description = "签名")
+    ),
+    responses(
+        (status = 200, description = "Hello response", body = ApiResponse<String>)
+    ),
+    tag = "用户管理",
+    operation_id = "changeUserPassword",
+    security(
+        ("BearerAuth" = [])
+    )
+)]
+#[post("/user/change_password")]
+async fn user_change_pass(dto: web::Json<ChangePasswordDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+    dto.validate()?;
+    let user_manager = UserManager::get();
+    let client_service = ClientService::get();
+    let app_config = AppConfig::get();
+    let client_token=user_manager.get_client_token(&dto.token).await?;
+    let client_opt = user_manager.get_user_info(&client_token.agent_id, &client_token.uid).await?;
+    let client = match client_opt {
+        Some(c) => c,
+        None => return Err(BizError("用户不存在".into()).into()),
+    };
+
+    // 校验旧密码
+    if let Some(stored_password) = &client.password {
+        let input_old = build_md5_with_key(&dto.old_password, &app_config.sys.md5_key);
+        let stored_hash = build_md5_with_key(stored_password, &app_config.sys.md5_key);
+        if input_old != stored_hash {
+            return Err(BizError("旧密码不正确".into()).into());
+        }
+    } else {
+        return Err(BizError("未设置密码".into()).into());
+    }
+
+    // 更新新密码
+    let hashed_password = build_md5_with_key(&dto.new_password, &app_config.sys.md5_key);
+    client_service
+        .dao
+        .update(doc! { "_id": &client.id }, doc! { "password": &hashed_password })
+        .await?;
+    user_manager.clear_tokens_by_user(&client.agent_id, &client.uid).await?;
+    Ok(web::Json(result()))
+}
+
+
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[serde(rename_all = "camelCase")]
+struct SetPasswordDto {
+    #[validate(length(min = 2, message = "uid 不能为空"))]
+    uid: String,
+
+    #[validate(length(min = 6, message = "密码长度至少为 6 个字符"))]
+    password: String,
+}
+#[utoipa::path(
+    post,
+    path = "/user/set_password",
+    request_body = SetPasswordDto,
+    responses(
+        (status = 200, description = "Hello response", body = ApiResponse<String>)
+    ),
+    tag = "用户管理",
+    operation_id = "setUserPassword",
+    security(
+        ("BearerAuth" = [])
+    )
+)]
+#[post("/user/set_password")]
+async fn user_set_password(dto: web::Json<SetPasswordDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+    dto.validate()?;
+    let auth_header = build_header(req);
+    let agent = AgentService::get().check_request(auth_header).await?;
+    let user_manager = UserManager::get();
+    let client_service = ClientService::get();
+    let app_config = AppConfig::get();
+
+    let client_opt = user_manager.get_user_info(&agent.id, &dto.uid).await?;
+    let client = match client_opt {
+        Some(c) => c,
+        None => return Err(BizError("用户不存在".into()).into()),
+    };
+
+    let hashed_password = build_md5_with_key(&dto.password, &app_config.sys.md5_key);
+    client_service
+        .dao
+        .update(doc! { "_id": &client.id }, doc! { "password": &hashed_password })
+        .await?;
+    user_manager.clear_tokens_by_user(&agent.id, &dto.uid).await?;
+    Ok(web::Json(result()))
+}
+
+
 //锁定用户
 #[utoipa::path(
     post,

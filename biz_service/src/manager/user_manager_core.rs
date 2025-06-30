@@ -103,6 +103,10 @@ pub trait UserManagerOpt: Send + Sync {
     async fn delete_token(&self, token: &str) -> Result<()>;
     /// 验证用户的访问令牌，返回用户ID或错误
     async fn verify_token(&self, token: &str) -> Result<bool>;
+    /// 清空某用户所有 token
+    async fn clear_tokens_by_user(&self, agent_id: &str, user_id: &UserId) -> Result<()>;
+    ///查询用户token
+    async fn get_token_by_uid_device(&self, agent_id: &str, user_id: &UserId, device_type: DeviceType) -> Result<Option<String>>;
     /// 获取用户的访问令牌信息
     async fn get_client_token(&self, token: &str) -> Result<ClientTokenDto>;
     /// 根据令牌查找用户信息

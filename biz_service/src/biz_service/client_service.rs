@@ -9,6 +9,9 @@ use mongodb::bson::doc;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use utoipa::openapi::security::Password;
+use common::config::AppConfig;
+use common::util::common_utils::{build_md5, build_md5_with_key};
 
 #[derive(Debug)]
 pub struct ClientService {
@@ -20,14 +23,22 @@ impl ClientService {
         let collection = db.collection("client");
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
-    pub async fn new_data(&self, agent_id: String, user_id: &UserId, name: String, avatar: Option<String>) -> Result<ClientInfo> {
+    pub async fn new_data(&self, agent_id: String, user_id: &UserId, name: String, avatar: Option<String>,password: Option<String>) -> Result<ClientInfo> {
         let mut user = ClientInfo::default();
+        
         user.agent_id = agent_id;
         user.name = name;
         user.avatar = avatar;
         user.enable = true;
         user.uid = user_id.to_string();
         user.agent_id_uid = format!("{}_{}", user.agent_id, user.uid);
+        if password.is_some() {
+            let md5_key=&AppConfig::get().sys.md5_key;
+            let password=password.unwrap();
+            if !password.is_empty(){
+                user.password= Some(build_md5_with_key(&password,&md5_key));
+            }
+        }
         self.dao.insert(&user).await?;
         Ok(user)
     }

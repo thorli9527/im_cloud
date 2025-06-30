@@ -96,52 +96,90 @@ impl UserManagerOpt for UserManager {
         Ok(result)
     }
 
-    async fn build_token(&self, agent_id: &str, user_id: &UserId, device_type: DeviceType) -> Result<String> {
+    /// 构建 Token：写入主数据、索引、集合（反向查找用）
+    async fn build_token(&self, agent_id: &str, uid: &UserId, device_type: DeviceType) -> Result<String> {
         let token_key = build_uuid();
-        let key = format!("token:{}", token_key);
+        let token_data_key = format!("token:{}", token_key);
+        let token_index_key = format!("token:index:{}:{}:{}", agent_id, uid, device_type as u8);
+        let token_set_key = format!("token:uid:{}:{}", agent_id, uid);
+
+        let dto = ClientTokenDto {
+            agent_id: agent_id.to_string(),
+            uid: uid.clone(),
+            device_type: device_type as u8,
+        };
+
+        let token_str = serde_json::to_string(&dto).context("序列化 ClientTokenDto 失败")?;
         let mut conn = self.pool.get().await?;
-        let dto = ClientTokenDto { agent_id: agent_id.to_string(), user_id: user_id.clone(), device_type: device_type as u8 };
-        let token_str = serde_json::to_string(&dto).context("序列化 TokenDto 失败")?;
-        let _: () = conn.set_ex(key, token_str, 3600).await?;
+
+        // 主数据 & 单设备索引
+        let _:()=conn.set_ex(&token_data_key, token_str, 3600).await?;
+        let _:()=conn.set_ex(&token_index_key, &token_key, 3600).await?;
+
+        // 添加到 uid 所有 token 集合（便于注销所有 token）
+        let _:()=conn.sadd(&token_set_key, &token_key).await?;
+        let _:()=conn.expire(&token_set_key, 3600).await?;
+
         Ok(token_key)
     }
-
-    async fn delete_token(&self, token: &str) -> Result<()> {
-        let key = format!("token:{}", token);
+    /// 获取指定 uid + 设备的 token（单设备支持）
+    async fn get_token_by_uid_device(&self, agent_id: &str, uid: &UserId, device_type: DeviceType) -> Result<Option<String>> {
         let mut conn = self.pool.get().await?;
-        let _: () = conn.del(&key).await.context("删除 token 失败")?;
+        let index_key = format!("token:index:{}:{}:{}", agent_id, uid, device_type as u8);
+        let token: Option<String> = conn.get(&index_key).await.context("获取 token 索引失败")?;
+        Ok(token)
+    }
+    /// 删除指定 token（包括索引 + 主数据 + 集合成员）
+    /// 删除指定 token（包括索引 + 主数据 + 集合成员）
+    async fn delete_token(&self, token: &str) -> Result<()> {
+        let mut conn = self.pool.get().await?;
+        let token_key = format!("token:{}", token);
+
+        if let Ok(json) = conn.get::<_, String>(&token_key).await {
+            if let Ok(dto) = serde_json::from_str::<ClientTokenDto>(&json) {
+                let index_key = format!("token:index:{}:{}:{}", dto.agent_id, dto.uid, dto.device_type);
+                let token_set_key = format!("token:uid:{}:{}", dto.agent_id, dto.uid);
+
+                let _:()=conn.del(index_key).await?;
+                let _:()=conn.srem(token_set_key, token).await?;
+            }
+        }
+
+        let _:()=conn.del(&token_key).await.context("删除 token 主数据失败")?;
         Ok(())
     }
-
+    /// 清空某用户所有 token（通过集合 smembers）
+    async fn clear_tokens_by_user(&self, agent_id: &str, user_id: &UserId) -> Result<()> {
+        let token_set_key = format!("token:uid:{}:{}", agent_id, user_id);
+        let mut conn = self.pool.get().await?;
+        let tokens: Vec<String> = conn.smembers(&token_set_key).await.unwrap_or_default();
+        for token in tokens {
+            self.delete_token(&token).await?;
+        }
+        let _:()=conn.del(&token_set_key).await?;
+        Ok(())
+    }
+    /// 检查 token 是否存在
     async fn verify_token(&self, token: &str) -> Result<bool> {
         let mut conn = self.pool.get().await?;
-        let key = format!("token:{}", token);
-        let exists: bool = conn.exists(&key).await.context("检查 token 是否存在失败")?;
+        let exists: bool = conn.exists(format!("token:{}", token)).await.context("检查 token 失败")?;
         Ok(exists)
     }
 
+
+    /// 获取 token 对应的客户端身份
     async fn get_client_token(&self, token: &str) -> Result<ClientTokenDto> {
         let mut conn = self.pool.get().await?;
-        let key = format!("token:{}", token);
-        let json: String = conn.get(&key).await.context("获取 token 数据失败")?;
-        let dto: ClientTokenDto = serde_json::from_str(&json).context("反序列化 ClientTokenDto 失败")?;
-        Ok(dto)
+        let json: String = conn.get(format!("token:{}", token)).await.context("获取 token 数据失败")?;
+        serde_json::from_str(&json).context("反序列化 ClientTokenDto 失败")
     }
 
+    /// 通过 token 查找用户完整信息
     async fn find_user_by_token(&self, token: &str) -> Result<Option<ClientInfo>> {
-        let mut conn = self.pool.get().await?;
-        let key = format!("token:{}", token);
-        let json: Option<String> = conn.get(&key).await?;
-        if let Some(data) = json {
-            let dto: ClientTokenDto = serde_json::from_str(&data).context("反序列化 ClientTokenDto 失败")?;
-            let result = self
-                .get_user_info(&dto.agent_id, &dto.user_id)
-                .await
-                .context("获取用户信息失败")?
-                .ok_or_else(|| AppError::BizError("用户不存在".to_string()))?;
-            return Ok(Some(result));
-        }
-        Ok(None)
+        let dto = self.get_client_token(token).await?;
+        let user = self.get_user_info(&dto.agent_id, &dto.uid).await?
+            .ok_or_else(|| AppError::BizError("用户不存在".to_string()))?;
+        Ok(Some(user))
     }
 
     async fn add_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId, nickname: &Option<String>, source_type: &FriendSourceType, remark: &Option<String>) -> Result<()> {

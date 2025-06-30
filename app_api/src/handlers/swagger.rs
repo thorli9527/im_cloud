@@ -1,4 +1,4 @@
-use crate::handlers::frend_handler::*;
+use crate::handlers::friend_handler::*;
 use crate::handlers::group::group_create::*;
 use crate::handlers::group::group_dismiss::*;
 use crate::handlers::group::group_quit::*;
@@ -8,7 +8,8 @@ use crate::handlers::group_member::group_member_join::*;
 use crate::handlers::group_member::group_member_page::*;
 use crate::handlers::group_member::group_member_refresh::*;
 use crate::handlers::group_member::group_member_remove::*;
-use crate::handlers::user_contoller::*;
+use crate::handlers::user_controller::*;
+use crate::handlers::auth_handler::*;
 
 use crate::result::ApiResponse;
 use actix_web::{get, web, HttpResponse, Responder};
@@ -21,11 +22,15 @@ use utoipa::OpenApi;
     paths(
         //用户-管理
         user_create,
+        user_generate_token,
+        user_change_pass,
+        user_set_password,
         user_lock,
         user_un_lock,
         user_refresh,
         user_info,
         user_expire,
+        user_login,
 
         //群-管理
         group_create,

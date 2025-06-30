@@ -23,6 +23,7 @@ pub enum FriendPolicy {
 pub struct ClientInfo {
     pub id: String,                                     // 用户id
     pub name: String,                                   //用户名
+    pub password: Option<String>,                               //密码
     pub uid: String,                                    //客户端用户id
     pub alias: String,                                  //客户端用户昵称
     pub enable: bool,                                   //用户启用状态                   封号

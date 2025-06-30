@@ -67,7 +67,9 @@ impl UserActionLogService {
         action_log.action = UserActionType::Knockout;
         client_service.dao.up_property(&result.id, "lock", true).await?;
         result.lock = true;
-        UserManager::get().sync_user(result).await?;
+        let user_manager = UserManager::get();
+        user_manager.sync_user(result).await?;
+        user_manager.clear_tokens_by_user(agent_id, uid).await?;
         // 插入操作记录日志
         self.dao.insert(&action_log).await?;
         Ok(())
