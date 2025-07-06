@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -11,9 +11,10 @@ use once_cell::sync::OnceCell;
 use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
+use biz_service::protocol::common::ByteMessageType;
 
 /// 客户端连接唯一标识
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash,Debug)]
 pub struct ConnectionId(pub String);
 
 /// 连接元信息（用户、设备、客户端等）
@@ -85,7 +86,30 @@ impl SocketManager {
         let conn = self.connections.get(id).ok_or(SendError::ConnectionNotFound)?;
         conn.sender.send(bytes).map_err(|_| SendError::ChannelClosed)
     }
+    pub fn send_to_connection_proto<M: Message>(
+        &self,
+        id: &ConnectionId,
+        msg_type: &ByteMessageType,
+        msg: &M,
+    ) -> Result<(), SendError> {
+        let mut buf = Vec::with_capacity(128);
+        buf.push(*msg_type as u8); // 消息类型前缀
+        msg.encode(&mut buf).map_err(|_| SendError::EncodeError)?;
+        self.send_to_connection(id, Bytes::from(buf))
+    }
 
+    pub fn send_to_user_proto<M: Message>(
+        &self,
+        user_id: &str,
+        msg_type: &ByteMessageType,
+        msg: &M,
+        device_filter: Option<DeviceType>,
+    ) -> Result<(), SendError> {
+        let mut buf = Vec::with_capacity(128);
+        buf.push(*msg_type as u8);
+        msg.encode(&mut buf).map_err(|_| SendError::EncodeError)?;
+        self.send_to_user(user_id, Bytes::from(buf), device_filter)
+    }
     /// 获取用户所有连接
     pub fn get_connections_by_user(&self, user_id: &str) -> Vec<ConnectionInfo> {
         self.user_index
@@ -136,6 +160,7 @@ impl SocketManager {
             Ok(())
         }
     }
+
 }
 
 static SOCKET_MANAGER: OnceCell<Arc<SocketManager>> = OnceCell::new();

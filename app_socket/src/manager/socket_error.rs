@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub enum SendError {
     ConnectionNotFound,
-    EncodeFailed(prost::EncodeError),
+    EncodeError,
     ChannelClosed,
 }

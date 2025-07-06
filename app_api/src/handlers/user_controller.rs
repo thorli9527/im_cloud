@@ -29,7 +29,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_refresh);
     cfg.service(user_expire);
     cfg.service(user_generate_token);
-    cfg.service(user_change_pass);
     cfg.service(user_set_password);
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema, Default, Validate)]
@@ -40,6 +39,7 @@ struct UserCreateDto {
     #[validate(length(min = 2, max = 32, message = "name 不能为空，且长度至少为 2位,最大为 32位"))]
     name: String,
     avatar: Option<String>,
+    username: Option<String>,
     password: Option<String>,
 }
 
@@ -81,8 +81,8 @@ async fn user_create(dto: web::Json<UserCreateDto>, req: HttpRequest) -> Result<
         return Ok(web::Json(result_data(value)));
     }
 
-    let user = client_service.new_data(agent.id.clone(), &dto.uid.clone(), dto.name.clone(), dto.avatar.clone(),dto.password.clone()).await?;
-    let token_key = user_manager.build_token(&user.agent_id, &user.uid, auth_header.unwrap().device_type).await?;
+    let user = client_service.new_data(agent.id.clone(), &dto.uid.clone(), dto.name.clone(), dto.avatar.clone(),dto.username.clone(),dto.password.clone()).await?;
+    let token_key = user_manager.build_token(&user.agent_id, &user.uid, &auth_header.unwrap().device_type).await?;
     user_manager.sync_user(user).await?;
     let value = json!({"token":token_key,"avatar":dto.avatar});
     Ok(web::Json(result_data(value)))
@@ -127,7 +127,7 @@ async fn user_generate_token(dto: web::Json<TokenDto>, req: HttpRequest) -> Resu
 
     // 生成 token 并保存到 redis
     let token_key = user_manager
-        .build_token(&user.agent_id, &user.uid, auth_header.unwrap().device_type)
+        .build_token(&user.agent_id, &user.uid, &auth_header.unwrap().device_type)
         .await?;
 
     let value = json!({
@@ -139,72 +139,6 @@ async fn user_generate_token(dto: web::Json<TokenDto>, req: HttpRequest) -> Resu
     
     Ok(web::Json(result_data(value)))
 }
-
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct ChangePasswordDto {
-    #[validate(length(min = 32, message = "token不能为空且长度必须大于32位"))]
-    token:String,
-
-    #[validate(length(min = 6, message = "旧密码不能为空且长度必须大于6位"))]
-    old_password: String,
-
-    #[validate(length(min = 6, message = "新密码不能为空且长度必须大于6位"))]
-    new_password: String,
-}
-#[utoipa::path(
-    post,
-    path = "/user/change_password",
-    request_body = ChangePasswordDto,
-    params(
-        ("appKey" = String, Header, description = "应用 key"),
-        ("nonce" = String, Header, description = "随机字符串"),
-        ("timestamp" = i64, Header, description = "时间戳"),
-        ("signature" = String, Header, description = "签名")
-    ),
-    responses(
-        (status = 200, description = "Hello response", body = ApiResponse<String>)
-    ),
-    tag = "用户管理",
-    operation_id = "changeUserPassword",
-    security(
-        ("BearerAuth" = [])
-    )
-)]
-#[post("/user/change_password")]
-async fn user_change_pass(dto: web::Json<ChangePasswordDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
-    dto.validate()?;
-    let user_manager = UserManager::get();
-    let client_service = ClientService::get();
-    let app_config = AppConfig::get();
-    let client_token=user_manager.get_client_token(&dto.token).await?;
-    let client_opt = user_manager.get_user_info(&client_token.agent_id, &client_token.uid).await?;
-    let client = match client_opt {
-        Some(c) => c,
-        None => return Err(BizError("用户不存在".into()).into()),
-    };
-
-    // 校验旧密码
-    if let Some(stored_password) = &client.password {
-        let input_old = build_md5_with_key(&dto.old_password, &app_config.sys.md5_key);
-        let stored_hash = build_md5_with_key(stored_password, &app_config.sys.md5_key);
-        if input_old != stored_hash {
-            return Err(BizError("旧密码不正确".into()).into());
-        }
-    } else {
-        return Err(BizError("未设置密码".into()).into());
-    }
-
-    // 更新新密码
-    let hashed_password = build_md5_with_key(&dto.new_password, &app_config.sys.md5_key);
-    client_service
-        .dao
-        .update(doc! { "_id": &client.id }, doc! { "password": &hashed_password })
-        .await?;
-    user_manager.clear_tokens_by_user(&client.agent_id, &client.uid).await?;
-    Ok(web::Json(result()))
-}
-
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 #[serde(rename_all = "camelCase")]

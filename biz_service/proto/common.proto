@@ -7,7 +7,7 @@ package protocol.common;
 // ======================================
 // 每条消息将根据其主内容赋予一个主类型，便于前端渲染和后端分类处理。
 // 注意：具体内容仍以 MessageContent 的 oneof 实体为准，MessageType 仅为索引分类用途。
-enum MessageType {
+enum ContentType {
   UNKNOWN = 0;          // 未知类型：默认值，用于防御性处理或解析失败情况
   TEXT = 1;             // 文本消息：纯文本内容
   IMAGE = 2;            // 图片消息：包含图片地址、尺寸、缩略图等信息
@@ -39,4 +39,21 @@ enum ChatTargetType{
   UN_KNOWN = 0;          // 未知类型：默认值，用于防御性处理或解析失败情况
   GROUP=1;
   Single=2;
+}
+
+enum ByteMessageType {
+  UNKNOWN_BYTE_MESSAGE_TYPE = 0;
+  AuthReqMsg = 1;
+  AuthRepMsg = 2;
+  SendVerificationCodeReqMsg = 3;
+  SendVerificationCodeRepMsg = 4;
+  OnlineStatusMsg = 5;
+  OfflineStatueMsg = 6;
+  UserMsg = 7;
+  GroupMsg = 8;
+  FriendEventMsg = 9;
+  GroupCreateMsg = 10;
+  GroupDismissMsg = 11;
+  SystemNotificationMsg = 12;
+  UserFlushMsg = 13;
 }

@@ -25,7 +25,7 @@ fn main() {
             &["proto"], // proto 根目录
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
-    let out_dir = PathBuf::from("src/protocol");
+    let out_dir = PathBuf::from("src/protocol/");
 
     for entry in fs::read_dir(&out_dir).expect("无法读取目录") {
         let entry = entry.expect("无法读取文件项");

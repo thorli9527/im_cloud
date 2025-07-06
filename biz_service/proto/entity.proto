@@ -4,9 +4,8 @@ package protocol.entity;
 import "message.proto";  // 聊天消息结构
 
 // 用户消息结构
-message UserMessage {
-  // 全局唯一消息 ID（如雪花 ID）
-  string id = 1;
+message UserMsg {
+  string message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
 
   // 所属商户
   string agent_id = 2;
@@ -44,9 +43,8 @@ message UserMessage {
 
 
 // 群组消息结构
-message GroupMessage {
-  // 全局唯一消息 ID（如雪花 ID）
-  string id = 1;
+message GroupMsg{
+  string message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
 
   // 所属商户
   string agent_id = 2;

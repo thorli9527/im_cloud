@@ -1,13 +1,13 @@
-use crate::protocol::friend::FriendEventMessage;
 use common::repository_util::BaseRepository;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use crate::protocol::friend::FriendEventMsg;
 
 /// 好友事件服务
 #[derive(Debug)]
 pub struct FriendEventService {
-    pub dao: BaseRepository<FriendEventMessage>,
+    pub dao: BaseRepository<FriendEventMsg>,
 }
 
 impl FriendEventService {

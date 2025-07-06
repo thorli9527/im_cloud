@@ -390,10 +390,11 @@ dependencies = [
  "chrono",
  "common",
  "config",
- "dashmap 7.0.0-rc2",
+ "dashmap",
  "deadpool-redis",
  "env_logger",
  "futures",
+ "lazy_static",
  "log",
  "mongodb",
  "once_cell",
@@ -404,6 +405,7 @@ dependencies = [
  "rdkafka",
  "serde",
  "serde_json",
+ "time",
  "tokio",
  "tokio-util",
  "tonic",
@@ -756,7 +758,7 @@ dependencies = [
  "bytes",
  "chrono",
  "common",
- "dashmap 6.1.0",
+ "dashmap",
  "deadpool-redis",
  "futures-util",
  "fxhash",
@@ -1220,20 +1222,6 @@ dependencies = [
  "hashbrown 0.14.5",
  "lock_api",
  "once_cell",
- "parking_lot_core",
-]
-
-[[package]]
-name = "dashmap"
-version = "7.0.0-rc2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4a1e35a65fe0538a60167f0ada6e195ad5d477f6ddae273943596d4a1a5730b"
-dependencies = [
- "cfg-if",
- "crossbeam-utils",
- "equivalent",
- "hashbrown 0.15.4",
- "lock_api",
  "parking_lot_core",
 ]
 

@@ -11,12 +11,12 @@ use uuid::Uuid;
 
 use crate::kafka::friend_msg::friend_msg_to_socket;
 use crate::manager::socket_manager::SocketManager;
-use biz_service::biz_service::kafka_service::ByteMessageType;
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
 use common::config::KafkaConfig;
 use common::util::date_util::now;
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
+use biz_service::protocol::common::ByteMessageType;
 
 type MessageId = String;
 
@@ -88,7 +88,8 @@ pub async fn handle_kafka_message(msg: &OwnedMessage, socket_manager: &Arc<Socke
         return Err(anyhow!("Kafka 消息体为空"));
     }
 
-    let msg_type = ByteMessageType::from_u8(payload[0])?;
+    let msg_type = ByteMessageType::from_i32(payload[0] as i32)
+        .ok_or_else(|| anyhow!("无效的 ByteMessageType: {}", payload[0]))?;
     let body = &payload[1..];
     match msg_type {
         ByteMessageType::FriendType => {

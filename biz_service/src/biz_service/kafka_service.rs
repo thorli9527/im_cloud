@@ -9,32 +9,8 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
+use crate::protocol::common::ByteMessageType;
 
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ByteMessageType {
-    AckType = 1,
-    AuthType = 2,
-    FriendType = 3,
-    UserMessageType = 4,
-    GroupMessageType = 5,
-    HeartbeatType = 6,
-    SystemNotificationType = 7,
-}
-
-impl ByteMessageType {
-    pub fn from_u8(value: u8) -> Result<Self, Error> {
-        match value {
-            1 => Ok(ByteMessageType::FriendType),
-            2 => Ok(ByteMessageType::UserMessageType),
-            3 => Ok(ByteMessageType::GroupMessageType),
-            4 => Ok(ByteMessageType::HeartbeatType),
-            5 => Ok(ByteMessageType::SystemNotificationType),
-            6 => Ok(ByteMessageType::AckType),
-            _ => Err(anyhow!("Unknown ByteMessageType: {}", value)),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct KafkaService {

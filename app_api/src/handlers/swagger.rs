@@ -23,7 +23,6 @@ use utoipa::OpenApi;
         //用户-管理
         user_create,
         user_generate_token,
-        user_change_pass,
         user_set_password,
         user_lock,
         user_un_lock,

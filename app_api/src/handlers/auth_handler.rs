@@ -5,6 +5,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
+use biz_service::protocol::auth::DeviceType;
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::errors::AppError::BizError;
@@ -18,10 +19,12 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 #[serde(rename_all = "camelCase")]
 struct LoginDto {
     #[validate(length(min = 2, message = "uid 不能为空"))]
-    uid: String,
-
+    username: String,
     #[validate(length(min = 6, message = "密码不能为空且长度必须大于6位"))]
     password: String,
+    #[validate(length(min = 16, message = "应用app_key不能为空且长度必须等于32位"))]
+    app_key: String,
+    device_type: DeviceType,
 }
 
 
@@ -36,15 +39,15 @@ struct LoginDto {
     )
 )]
 #[post("/user/login")]
-async fn user_login(dto: web::Json<LoginDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn user_login(dto: web::Json<LoginDto>) -> Result<impl Responder, AppError> {
     dto.validate()?;
-    let auth_header = build_header(req);
-    let agent = AgentService::get().check_request(auth_header.clone()).await?;
+    let agent_service = AgentService::get();
+    let agent = agent_service.find_by_app_key(&dto.app_key).await?;
     let user_manager = UserManager::get();
     let app_config = AppConfig::get();
 
     // 查询用户
-    let client_opt = user_manager.get_user_info(&agent.id, &dto.uid).await?;
+    let client_opt = user_manager.get_user_info_by_name(&agent.id, &dto.username).await?;
     let client = match client_opt {
         Some(c) => c,
         None => return Err(BizError("用户不存在".into()).into()),
@@ -53,9 +56,8 @@ async fn user_login(dto: web::Json<LoginDto>, req: HttpRequest) -> Result<impl R
     // 校验密码
     if let Some(stored_password) = &client.password {
         let input_hash = build_md5_with_key(&dto.password, &app_config.sys.md5_key);
-        let stored_hash = build_md5_with_key(stored_password, &app_config.sys.md5_key); // 注意：密码存储结构可能已加密
 
-        if input_hash != stored_hash {
+        if &input_hash != stored_password {
             return Err(BizError("密码错误".into()).into());
         }
     } else {
@@ -64,11 +66,12 @@ async fn user_login(dto: web::Json<LoginDto>, req: HttpRequest) -> Result<impl R
 
     // 生成 token
     let token = user_manager
-        .build_token(&agent.id, &dto.uid, auth_header.unwrap().device_type)
+        .build_token(&agent.id, &client.uid, &dto.device_type)
         .await?;
 
     let value = json!({
         "token": token,
+        "username":client.username,
         "avatar": client.avatar
     });
 

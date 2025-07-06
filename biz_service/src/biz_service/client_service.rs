@@ -23,7 +23,7 @@ impl ClientService {
         let collection = db.collection("client");
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
-    pub async fn new_data(&self, agent_id: String, user_id: &UserId, name: String, avatar: Option<String>,password: Option<String>) -> Result<ClientInfo> {
+    pub async fn new_data(&self, agent_id: String, user_id: &UserId, name: String, avatar: Option<String>,username: Option<String>,password: Option<String>) -> Result<ClientInfo> {
         let mut user = ClientInfo::default();
         
         user.agent_id = agent_id;
@@ -37,6 +37,12 @@ impl ClientService {
             let password=password.unwrap();
             if !password.is_empty(){
                 user.password= Some(build_md5_with_key(&password,&md5_key));
+            }
+        }
+        if username.is_some() {
+            let username=username.unwrap();
+            if !username.is_empty(){
+                user.username= Some(username);
             }
         }
         self.dao.insert(&user).await?;
@@ -81,7 +87,7 @@ impl ClientService {
         //
     }
 
-    pub async fn build_token(&self, agent_id: &str, uid: &UserId, device_type: DeviceType) -> Result<()> {
+    pub async fn build_token(&self, agent_id: &str, uid: &UserId, device_type: &DeviceType) -> Result<()> {
         let user_manager = UserManager::get();
         user_manager.build_token(agent_id, uid, device_type).await?;
         Ok(())

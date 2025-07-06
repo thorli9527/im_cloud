@@ -35,35 +35,38 @@ enum GroupEventType {
 // ========================================
 // 📦 群事件通用消息（成员、属性、转让群主）
 // ========================================
-message GroupEventMessage {
-  string group_id = 1;                     // 群组 ID
-  GroupEventType event_type = 2;           // 事件类型
+message GroupEventContent {
+  string message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
+  string group_id = 2;                     // 群组 ID
+  GroupEventType event_type = 3;           // 事件类型
 
-  string operator_id = 3;                  // 发起者（操作者）用户 ID
-  repeated string affected_user_ids = 4;   // 被操作的用户 ID（适用于成员操作/群主转让）
+  string operator_id = 4;                  // 发起者（操作者）用户 ID
+  repeated string affected_user_ids = 5;   // 被操作的用户 ID（适用于成员操作/群主转让）
 
-  string old_value = 5;                    // 旧值（仅属性变更或转让使用）
-  string new_value = 6;                    // 新值（仅属性变更或转让使用）
+  string old_value = 6;                    // 旧值（仅属性变更或转让使用）
+  string new_value = 7;                    // 新值（仅属性变更或转让使用）
 
-  uint64 timestamp = 7;                    // 操作时间戳（毫秒）
+  uint64 timestamp = 8;                    // 操作时间戳（毫秒）
 }
 // ========================================
 // ➕ 群创建事件消息（通常由服务端广播）
 // ========================================
-message GroupCreateMessage {
-  string group_id = 1;                  // 新建群组 ID
-  string creator_id = 2;                // 创建者用户 ID
-  repeated string member_ids = 3;       // 初始成员列表（包含创建者）
-  string group_name = 4;                // 群名称
-  int64 created_at = 5;                 // 群创建时间戳（毫秒）
+message GroupCreateMsg {
+  string message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
+  string group_id = 2;                  // 新建群组 ID
+  string creator_id = 3;                // 创建者用户 ID
+  repeated string member_ids = 4;       // 初始成员列表（包含创建者）
+  string group_name = 5;                // 群名称
+  int64 created_at = 6;                 // 群创建时间戳（毫秒）
 }
 
 // ========================================
 // ❌ 群解散通知
 // ========================================
-message GroupDismissMessage {
-  string group_id = 1;          // 被解散的群组 ID
-  string operator_id = 2;       // 解散操作者 ID（如群主、系统管理员）
-  int64 dismissed_at = 3;       // 解散时间戳（毫秒）
+message GroupDismissMsg {
+  string message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
+  string group_id = 2;          // 被解散的群组 ID
+  string operator_id = 3;       // 解散操作者 ID（如群主、系统管理员）
+  int64 dismissed_at = 4;       // 解散时间戳（毫秒）
 }
 

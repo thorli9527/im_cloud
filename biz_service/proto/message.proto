@@ -3,9 +3,6 @@ syntax = "proto3";
 package protocol.message;
 
 import "common.proto"; // 引入公共类型，如 UserProfile、MediaMeta 可自定义
-import "friend.proto"; // 引入公共类型，如 UserProfile、MediaMeta 可自定义
-import "group.proto"; // 引入公共类型，如 UserProfile、MediaMeta 可自定义
-
 
 // ======================================
 // 💬 会话场景类型
@@ -35,13 +32,13 @@ enum EmojiType {
 // ======================================
 // 📨 顶层消息结构
 // ======================================
-message Message {
+message Content {
   string message_id = 1;              // 唯一消息 ID（客户端生成或服务端补全）
   string sender_id = 2;               // 消息发送方
   string receiver_id = 3;             // 消息接收方（单聊为对方 ID，群聊为群 ID）
   int64 timestamp = 4;                // 消息发送时间（毫秒时间戳）
 
-  common.MessageType message_type = 5;       // 主消息类型（用于快速渲染判断）
+  common.ContentType message_type = 5;       // 主消息类型（用于快速渲染判断）
   ChatScene scene = 6;                // 消息所属会话类型（单聊/群聊）
 
   repeated MessageContent contents = 10; // 多段复合内容（如文本 + 图片）
@@ -52,28 +49,27 @@ message Message {
 // ======================================
 message MessageContent {
   oneof content {
-    TextMessage text = 1;
-    ImageMessage image = 2;
-    AudioMessage audio = 3;
-    VideoMessage video = 4;
-    LocationMessage location = 5;
-    FileMessage file = 6;
-    AVCallMessage av_call = 7;
-    CustomMessage custom = 8;
-    EmojiMessage emoji = 9;
-    RevokeMessage revoke = 10;
-    ForwardMessage forward = 11;
-    QuoteMessage quote = 12;
-    HtmlMessage html = 13;
-    VoipMessage voip = 14;
-    NotificationMessage notification = 15;
-    SystemMessage system = 16;
-    ReminderMessage reminder = 17;
-    friend.FriendEventMessage friend_event = 18;
-    GroupEventMessage group_event = 19;
-    ContactCardMessage contact_card = 20;
-    VoteMessage vote = 21;
-    RedEnvelopeMessage red_envelope = 22;
+    TextContent text = 1;
+    ImageContent image = 2;
+    AudioContent audio = 3;
+    VideoContent video = 4;
+    LocationContent location = 5;
+    FileContent file = 6;
+    AVCallContent av_call = 7;
+    CustomContent custom = 8;
+    EmojiContent emoji = 9;
+    RevokeContent revoke = 10;
+    ForwardContent forward = 11;
+    QuoteContent quote = 12;
+    HtmlContent html = 13;
+    VoipContent voip = 14;
+    NotificationContent notification = 15;
+    SystemContent system = 16;
+    ReminderContent reminder = 17;
+    GroupEventContent group_event = 18;
+    ContactCardContent contact_card = 19;
+    VoteContent vote = 20;
+    RedEnvelopeContent red_envelope = 21;
   }
 }
 
@@ -82,7 +78,7 @@ message MessageContent {
 // ===============================
 // 📄 文本消息
 // ===============================
-message TextMessage {
+message TextContent {
   string text = 1;                      // 文本主体内容
   repeated InlineEntity entities = 2;  // 富文本实体，如链接/@用户/话题
 }
@@ -97,7 +93,7 @@ message InlineEntity {
 // ===============================
 // 🖼️ 图片消息
 // ===============================
-message ImageMessage {
+message ImageContent {
   string url = 1;                      // 原图 URL
   string thumbnail_url = 2;           // 缩略图 URL
   int32 width = 3;                     // 宽度（像素）
@@ -109,7 +105,7 @@ message ImageMessage {
 // ===============================
 // 🔊 音频消息
 // ===============================
-message AudioMessage {
+message AudioContent {
   string url = 1;
   int32 duration = 2;
   string format = 3;
@@ -120,7 +116,7 @@ message AudioMessage {
 // ===============================
 // 🎞️ 视频消息
 // ===============================
-message VideoMessage {
+message VideoContent {
   string url = 1;
   int32 duration = 2;
   string cover_url = 3;
@@ -133,7 +129,7 @@ message VideoMessage {
 // ===============================
 // 📍 位置消息
 // ===============================
-message LocationMessage {
+message LocationContent {
   double latitude = 1;
   double longitude = 2;
   string address = 3;
@@ -144,7 +140,7 @@ message LocationMessage {
 // ===============================
 // 📁 文件消息
 // ===============================
-message FileMessage {
+message FileContent {
   string url = 1;
   string name = 2;
   int64 size = 3;
@@ -155,7 +151,7 @@ message FileMessage {
 // ===============================
 // 📞 音视频通话信令
 // ===============================
-message AVCallMessage {
+message AVCallContent {
   string call_id = 1;
   string initiator_id = 2;
   repeated string participant_ids = 3;
@@ -181,7 +177,7 @@ message AVCallMessage {
 // ===============================
 // 💠 自定义结构化消息
 // ===============================
-message CustomMessage {
+message CustomContent {
   string custom_type = 1;
   string json_payload = 2;
 }
@@ -189,7 +185,7 @@ message CustomMessage {
 // ===============================
 // 😄 表情消息
 // ===============================
-message EmojiMessage {
+message EmojiContent {
   EmojiType emoji = 1;
   string custom_emoji_url = 2;
 }
@@ -197,7 +193,7 @@ message EmojiMessage {
 // ===============================
 // ⛔ 撤回消息
 // ===============================
-message RevokeMessage {
+message RevokeContent {
   string target_message_id = 1;
   string operator_id = 2;
   int64 revoke_time = 3;
@@ -206,17 +202,17 @@ message RevokeMessage {
 // ===============================
 // 📤 转发消息
 // ===============================
-message ForwardMessage {
+message ForwardContent {
   string original_message_id = 1;
   string original_sender_id = 2;
-  common.MessageType original_type = 3;
+  common.ContentType original_type = 3;
   string summary = 4;
 }
 
 // ===============================
 // 📌 引用回复消息
 // ===============================
-message QuoteMessage {
+message QuoteContent {
   string quoted_message_id = 1;
   string quoted_content_preview = 2;
   string quote_text = 3;
@@ -225,7 +221,7 @@ message QuoteMessage {
 // ===============================
 // 🌐 HTML 卡片
 // ===============================
-message HtmlMessage {
+message HtmlContent {
   string title = 1;
   string url = 2;
   string preview = 3;
@@ -234,7 +230,7 @@ message HtmlMessage {
 // ===============================
 // 📞 VOIP 通话记录
 // ===============================
-message VoipMessage {
+message VoipContent {
   string caller_id = 1;
   string callee_id = 2;
   int64 duration = 3;
@@ -244,7 +240,7 @@ message VoipMessage {
 // ===============================
 // 🔔 通知消息
 // ===============================
-message NotificationMessage {
+message NotificationContent {
   string title = 1;
   string body = 2;
   map<string, string> metadata = 3;
@@ -253,7 +249,7 @@ message NotificationMessage {
 // ===============================
 // ⚙️ 系统消息
 // ===============================
-message SystemMessage {
+message SystemContent {
   string content = 1;
   string code = 2;
 }
@@ -261,7 +257,7 @@ message SystemMessage {
 // ===============================
 // ⏰ 提醒事项
 // ===============================
-message ReminderMessage {
+message ReminderContent {
   string text = 1;
   int64 remind_at = 2;
 }
@@ -270,7 +266,7 @@ message ReminderMessage {
 // ===============================
 // 👪 群组事件
 // ===============================
-message GroupEventMessage {
+message GroupEventContent {
   string group_id = 1;
   string event = 2;
   string operator_id = 3;
@@ -279,7 +275,7 @@ message GroupEventMessage {
 // ===============================
 // 📇 名片消息
 // ===============================
-message ContactCardMessage {
+message ContactCardContent {
   string target_id = 1;
   string display_name = 2;
   string avatar_url = 3;
@@ -289,7 +285,7 @@ message ContactCardMessage {
 // ===============================
 // 📊 投票消息
 // ===============================
-message VoteMessage {
+message VoteContent {
   string topic = 1;
   repeated string options = 2;
   map<string, int32> result = 3;
@@ -299,7 +295,7 @@ message VoteMessage {
 // ===============================
 // 💰 红包消息
 // ===============================
-message RedEnvelopeMessage {
+message RedEnvelopeContent {
   string sender_id = 1;
   int32 amount = 2;
   string blessing = 3;

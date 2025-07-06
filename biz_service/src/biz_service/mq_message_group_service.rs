@@ -1,5 +1,3 @@
-use crate::biz_service::kafka_service::{ByteMessageType, KafkaService};
-use crate::protocol::entity::GroupMessage;
 use crate::protocol::message::Segment;
 use common::config::AppConfig;
 use common::errors::AppError;
@@ -10,10 +8,13 @@ use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::biz_service::kafka_service::KafkaService;
+use crate::protocol::common::ByteMessageType;
+use crate::protocol::entity::GroupMsg;
 
 #[derive(Debug)]
 pub struct GroupMessageService {
-    pub dao: BaseRepository<GroupMessage>,
+    pub dao: BaseRepository<GroupMsg>,
 }
 
 impl GroupMessageService {
@@ -30,7 +31,7 @@ impl GroupMessageService {
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
-    pub async fn send_group_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<Segment>) -> Result<GroupMessage, AppError> {
+    pub async fn send_group_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<Segment>) -> Result<GroupMsg, AppError> {
         let now_time = now();
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
@@ -51,8 +52,8 @@ impl GroupMessageService {
             })
             .collect();
         // 构造 UserMessage 对象
-        let message = GroupMessage {
-            id: build_uuid(), // 或 build_snow_id().to_string()
+        let message = GroupMsg {
+            message_id: build_uuid(), // 或 build_snow_id().to_string()
             agent_id: agent_id.to_string(),
             from: from.to_string(),
             sync_mq_status: true,
@@ -69,7 +70,7 @@ impl GroupMessageService {
         let app_config = AppConfig::get();
         let message_type= ByteMessageType::GroupMessageType;
         let node_index=0 as u8;
-        kafka_service.send_proto(&message_type, &node_index,&message,&message.id, &app_config.kafka.topic_group).await?;
+        kafka_service.send_proto(&message_type, &node_index,&message,&message.message_id, &app_config.kafka.topic_group).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

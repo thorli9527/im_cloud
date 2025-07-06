@@ -7,7 +7,7 @@ package protocol.user;
 // 用于通知客户端“某个用户资料已被修改”，例如昵称、头像、状态等。
 // 常见触发：用户主动修改资料、后台修改资料、服务端同步触发。
 // 客户端收到后应刷新本地缓存信息。
-message UserFlush {
+message UserFlushMsg {
   string uid = 1;                   // 被更新的用户 ID（资料发生变更的对象）
   string operator_id = 2;               // 操作者 ID（通常为本人，也可能为管理员或系统）
 

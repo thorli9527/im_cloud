@@ -1,12 +1,11 @@
 use crate::biz_service::agent_service::AgentService;
 use crate::biz_service::friend_service::UserFriendService;
-use crate::biz_service::kafka_service::{ByteMessageType, KafkaService};
 use crate::entitys::client_entity::ClientInfo;
 use crate::manager::common::UserId;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
 use crate::protocol::auth::DeviceType;
-use crate::protocol::friend::{EventStatus, FriendEventMessage, FriendEventType, FriendSourceType};
 use actix_web::cookie::time::macros::time;
+use actix_web::web::get;
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use common::config::AppConfig;
@@ -19,6 +18,10 @@ use dashmap::DashMap;
 use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
 use tokio::try_join;
+use crate::biz_service::client_service::ClientService;
+use crate::biz_service::kafka_service::KafkaService;
+use crate::protocol::common::ByteMessageType;
+use crate::protocol::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
 
 #[async_trait]
 impl UserManagerOpt for UserManager {
@@ -80,33 +83,51 @@ impl UserManagerOpt for UserManager {
         Ok(())
     }
 
+    /// 优先查 Redis，否则从 MongoDB 兜底并写入 Redis
     async fn get_user_info(&self, agent_id: &str, user_id: &UserId) -> Result<Option<ClientInfo>> {
         let mut conn = self.pool.get().await?;
         let key = format!("agent:{}:client:{}", agent_id, user_id);
-        let json: Option<String> = conn.get(&key).await?;
 
-        let result = match json {
-            Some(data) => {
-                let client: ClientInfo = serde_json::from_str(&data)?;
-                Some(client)
-            }
-            None => None,
-        };
+        // 1. 尝试从 Redis 获取
+        if let Ok(Some(cached_json)) = conn.get::<_, Option<String>>(&key).await {
+            let parsed = serde_json::from_str(&cached_json)?;
+            return Ok(Some(parsed));
+        }
 
-        Ok(result)
+        // 2. Redis 未命中，从 MongoDB 查找
+        let client_service = ClientService::get();
+        let client_opt = client_service.dao
+            .find_one(doc! { "agentId": agent_id, "userId": user_id })
+            .await?;
+
+        // 3. 如果查到，写回 Redis（可设置过期）
+        if let Some(ref client) = client_opt {
+            let json = serde_json::to_string(client)?;
+            let _: () = conn.set_ex(&key, json, 3600).await?;
+        }
+
+        Ok(client_opt)
+    }
+
+    async fn get_user_info_by_name(&self, agent_id: &str, name: &str) -> Result<Option<ClientInfo>> {
+        let client_service = ClientService::get();
+        let client_opt = client_service.dao
+            .find_one(doc! { "agent_id": agent_id, "username": name })
+            .await?;
+       return Ok(client_opt);
     }
 
     /// 构建 Token：写入主数据、索引、集合（反向查找用）
-    async fn build_token(&self, agent_id: &str, uid: &UserId, device_type: DeviceType) -> Result<String> {
+    async fn build_token(&self, agent_id: &str, uid: &UserId, device_type: &DeviceType) -> Result<String> {
         let token_key = build_uuid();
         let token_data_key = format!("token:{}", token_key);
-        let token_index_key = format!("token:index:{}:{}:{}", agent_id, uid, device_type as u8);
+        let token_index_key = format!("token:index:{}:{}:{}", agent_id, uid, *device_type as u8);
         let token_set_key = format!("token:uid:{}:{}", agent_id, uid);
 
         let dto = ClientTokenDto {
             agent_id: agent_id.to_string(),
             uid: uid.clone(),
-            device_type: device_type as u8,
+            device_type: *device_type as u8,
         };
 
         let token_str = serde_json::to_string(&dto).context("序列化 ClientTokenDto 失败")?;
@@ -222,8 +243,8 @@ impl UserManagerOpt for UserManager {
         let time = now();
 
         // 构造好友事件
-        let make_event = |from_uid: &str, to_uid: &str| FriendEventMessage {
-            event_id: build_uuid(),
+        let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
+            message_id: build_uuid(),
             from_uid: from_uid.to_string(),
             to_uid: to_uid.to_string(),
             event_type: FriendEventType::FriendAddForce as i32,
@@ -238,8 +259,8 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(&user_id, &friend_id), (&friend_id, &user_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.event_id, topic).await {
-                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.message_id, topic).await {
+                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.message_id, e);
             }
         }
         Ok(())
@@ -276,8 +297,8 @@ impl UserManagerOpt for UserManager {
         let topic = &app_config.kafka.topic_single;
         let time = now();
 
-        let make_event = |from_uid: &UserId, to_uid: &UserId| FriendEventMessage {
-            event_id: build_uuid(), // 为删除事件生成唯一 ID
+        let make_event = |from_uid: &UserId, to_uid: &UserId| FriendEventMsg {
+            message_id: build_uuid(), // 为删除事件生成唯一 ID
             from_uid: from_uid.to_string(),
             to_uid: to_uid.to_string(),
             event_type: FriendEventType::FriendRemove as i32,
@@ -291,8 +312,8 @@ impl UserManagerOpt for UserManager {
         for (from, to) in [(user_id, friend_id), (friend_id, user_id)] {
             let event = make_event(from, to);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.event_id, topic).await {
-                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.message_id, topic).await {
+                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.message_id, e);
             }
         }
 
@@ -437,8 +458,8 @@ impl UserManagerOpt for UserManager {
         let time = now();
 
         // 构造好友事件
-        let make_event = |from_uid: &str, to_uid: &str| FriendEventMessage {
-            event_id: build_uuid(),
+        let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
+            message_id: build_uuid(),
             from_uid: from_uid.to_string(),
             to_uid: to_uid.to_string(),
             event_type: FriendEventType::FriendBlock as i32,
@@ -453,8 +474,8 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.event_id, topic).await {
-                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.message_id, topic).await {
+                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.message_id, e);
             }
         }
         Ok(())
@@ -516,8 +537,8 @@ impl UserManagerOpt for UserManager {
         // ---------- 4. 可选：发送 Kafka 取消拉黑事件 ----------
         let time = now();
         // 构造好友事件
-        let make_event = |from_uid: &str, to_uid: &str| FriendEventMessage {
-            event_id: build_uuid(),
+        let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
+            message_id: build_uuid(),
             from_uid: from_uid.to_string(),
             to_uid: to_uid.to_string(),
             event_type: FriendEventType::FriendUnblock as i32,
@@ -535,10 +556,12 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.event_id, topic).await {
-                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.event_id, e);
+            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.message_id, topic).await {
+                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.message_id, e);
             }
         }
         Ok(())
     }
+
+
 }

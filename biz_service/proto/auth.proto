@@ -15,7 +15,7 @@ enum DeviceType {
 // ================================
 // 🔐 客户端发起的认证请求消息
 // ================================
-message AuthRequest {
+message AuthReqMsg {
   string message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
   string token = 2;          // 客户端的身份凭证（如登录后返回的 token 或 API key）
   string ip = 4;        //请求ip
@@ -25,7 +25,7 @@ message AuthRequest {
 // ================================
 // 🛡️ 服务端返回的认证响应
 // ================================
-message AuthResponse {
+message AuthRepMsg {
   string message_id = 1;     // 响应对应的消息 ID（与请求中的保持一致）
   bool success = 2;          // 认证是否成功
   string message = 3;        // 额外提示信息，如错误原因或成功说明
@@ -35,7 +35,7 @@ message AuthResponse {
 // ========================================
 // 📩 发送验证码请求
 // ========================================
-message SendVerificationCodeRequest {
+message SendVerificationCodeReqMsg {
   string message_id = 1;        // 唯一请求 ID（用于追踪或幂等处理）
   string receiver = 2;          // 接收目标（手机号或邮箱）
   string channel = 3;           // 渠道类型（如 sms / email / voice）
@@ -46,7 +46,7 @@ message SendVerificationCodeRequest {
 // ========================================
 // ✅ 发送验证码响应
 // ========================================
-message SendVerificationCodeResponse {
+message SendVerificationCodeRepMsg {
   string message_id = 1;        // 与请求一致的 ID
   bool success = 2;             // 是否发送成功
   string message = 3;           // 附加消息，如错误提示
@@ -57,21 +57,23 @@ message SendVerificationCodeResponse {
 // 🟢 用户上线消息（OnlineStatus）
 // =======================================
 // 表示某个用户刚刚上线，服务端可用于广播通知。
-message OnlineStatus {
-  string user_id = 1;         // 上线用户 ID
-  DeviceType device_type = 2;     // 上线设备类型（如 mobile/web/pc）
-  string client_id = 3;       // 客户端实例 ID（可用于多端区分）
-  int64 login_time = 4;       // 上线时间戳（毫秒）
+message OnlineStatusMsg {
+  string message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
+  string uid = 2;         // 上线用户 ID
+  DeviceType device_type = 3;     // 上线设备类型（如 mobile/web/pc）
+  string client_id = 4;       // 客户端实例 ID（可用于多端区分）
+  int64 login_time = 5;       // 上线时间戳（毫秒）
 }
 
 // =======================================
 // 🔴 用户下线消息（OfflineStatus）
 // =======================================
 // 表示某个用户从某设备下线，服务端可用于状态同步或通知。
-message OfflineStatus {
-  string user_id = 1;         // 下线用户 ID
-  DeviceType device_type = 2;     // 下线设备类型（如 mobile/web/pc）
-  string client_id = 3;       // 客户端实例 ID（可用于多端区分）
-  int64 logout_time = 4;      // 下线时间戳（毫秒）
-  string reason = 5;          // 可选：下线原因，如超时、手动退出、被踢等
+message OfflineStatueMsg {
+  string message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
+  string uid = 2;         // 下线用户 ID
+  DeviceType device_type = 3;     // 下线设备类型（如 mobile/web/pc）
+  string client_id = 4;       // 客户端实例 ID（可用于多端区分）
+  int64 logout_time = 5;      // 下线时间戳（毫秒）
+  string reason = 6;          // 可选：下线原因，如超时、手动退出、被踢等
 }

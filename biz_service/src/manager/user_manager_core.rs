@@ -97,8 +97,10 @@ pub trait UserManagerOpt: Send + Sync {
     async fn remove_user(&self, agent_id: &str, user_id: &UserId) -> Result<()>;
     /// 获取用户的在线状态
     async fn get_user_info(&self, agent_id: &str, user_id: &UserId) -> Result<Option<ClientInfo>>;
+
+    async fn get_user_info_by_name(&self, agent_id: &str, name: &str) -> Result<Option<ClientInfo>>;
     /// 构建用户的访问令牌（例如JWT或其他形式的认证令牌）
-    async fn build_token(&self, agent_id: &str, user_id: &UserId, device_type: DeviceType) -> Result<String>;
+    async fn build_token(&self, agent_id: &str, user_id: &UserId, device_type: &DeviceType) -> Result<String>;
     /// 删除用户的访问令牌
     async fn delete_token(&self, token: &str) -> Result<()>;
     /// 验证用户的访问令牌，返回用户ID或错误
