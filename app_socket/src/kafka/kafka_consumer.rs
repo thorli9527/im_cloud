@@ -7,6 +7,7 @@ use prost::Message;
 use rdkafka::message::{Message as KafkaMessageTrait, OwnedMessage};
 use serde::Deserialize;
 use std::sync::Arc;
+use log::{debug, warn};
 use uuid::Uuid;
 
 use crate::kafka::friend_msg::friend_msg_to_socket;
@@ -18,7 +19,7 @@ use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 use biz_service::protocol::common::ByteMessageType;
 
-type MessageId = String;
+type MessageId = u64;
 
 /// Kafka 消息分发结构体
 #[derive(Debug, Deserialize)]
@@ -81,7 +82,10 @@ pub async fn start_consumer(kafka_cfg: KafkaConfig, socket_manager: Arc<SocketMa
     }
 }
 
-pub async fn handle_kafka_message(msg: &OwnedMessage, socket_manager: &Arc<SocketManager>) -> Result<()> {
+pub async fn handle_kafka_message(
+    msg: &OwnedMessage,
+    socket_manager: &Arc<SocketManager>,
+) -> Result<()> {
     let payload = msg.payload().ok_or_else(|| anyhow!("Kafka 消息为空"))?;
 
     if payload.is_empty() {
@@ -90,13 +94,39 @@ pub async fn handle_kafka_message(msg: &OwnedMessage, socket_manager: &Arc<Socke
 
     let msg_type = ByteMessageType::from_i32(payload[0] as i32)
         .ok_or_else(|| anyhow!("无效的 ByteMessageType: {}", payload[0]))?;
+
     let body = &payload[1..];
+
     match msg_type {
-        ByteMessageType::FriendType => {
+        ByteMessageType::SystemNotificationMsgType => {
+        }
+        ByteMessageType::UserFlushMsgType => {
+        }
+
+        // 10~19 用户在线状态
+        ByteMessageType::OnlineStatusMsgType => {
+        }
+        ByteMessageType::OfflineStatusMsgType => {
+        }
+
+        // 20~29 聊天消息
+        ByteMessageType::UserMsgType => {
+        }
+        ByteMessageType::GroupMsgType => {
+        }
+
+        // 30~39 好友 & 群组事件
+        ByteMessageType::FriendEventMsgType => {
             friend_msg_to_socket(body, msg, socket_manager).await?;
         }
+        ByteMessageType::GroupCreateMsgType => {
+           
+        }
+        ByteMessageType::GroupDismissMsgType => {
+        }
+
         _ => {
-            log::warn!("收到未知类型 Kafka 消息: {:?}", msg_type);
+            return Err(anyhow!("无效的 ByteMessageType: {}", payload[0]));
         }
     }
 

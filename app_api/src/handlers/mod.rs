@@ -5,10 +5,7 @@ mod group_member;
 mod message_handler;
 mod swagger;
 mod user_controller;
-mod auth_handler;
-
 use actix_web::web;
-
 pub fn configure(cfg: &mut web::ServiceConfig) {
     swagger::configure(cfg);
     common_handler::configure(cfg);
@@ -17,5 +14,4 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     user_controller::configure(cfg);
     message_handler::configure(cfg);
     friend_handler::configure(cfg);
-    auth_handler::configure(cfg);
 }

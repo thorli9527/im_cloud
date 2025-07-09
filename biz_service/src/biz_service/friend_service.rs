@@ -56,7 +56,7 @@ impl UserFriendService {
     }
 
     /// 添加好友（可配置昵称/来源等）
-    pub async fn add_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId, nickname: &Option<String>, source_type: &FriendSourceType, remark: &Option<String>) -> Result<String> {
+    pub async fn add_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId, nickname: Option<&str>, source_type: &FriendSourceType, remark: Option<&str>) -> Result<String> {
         // 校验对方存在
         let client_opt = UserManager::get().get_user_info(agent_id, friend_id).await?;
         if client_opt.is_none() {
@@ -79,7 +79,7 @@ impl UserFriendService {
             agent_id: agent_id.to_string(),
             uid: uid.to_string(),
             friend_id: friend_id.to_string(),
-            nickname: nickname.clone(),
+            nickname: nickname.map(|s| s.to_string()),
             remark: None,
             is_blocked: false,
             source_type: source_type.clone(),

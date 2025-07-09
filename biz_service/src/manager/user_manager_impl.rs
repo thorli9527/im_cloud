@@ -1,567 +1,299 @@
-use crate::biz_service::agent_service::AgentService;
-use crate::biz_service::friend_service::UserFriendService;
-use crate::entitys::client_entity::ClientInfo;
-use crate::manager::common::UserId;
-use crate::manager::user_manager_core::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
-use crate::protocol::auth::DeviceType;
-use actix_web::cookie::time::macros::time;
-use actix_web::web::get;
-use anyhow::{anyhow, Context, Result};
-use async_trait::async_trait;
+use std::collections::HashMap;
+use std::sync::atomic::Ordering;
+use std::time::Duration;
+use deadpool_redis::redis::{cmd, AsyncCommands};
 use common::config::AppConfig;
-use common::errors::AppError;
-use common::repository_util::Repository;
-use common::util::common_utils::build_uuid;
-use common::util::date_util::now;
-use common::ClientTokenDto;
-use dashmap::DashMap;
-use deadpool_redis::redis::AsyncCommands;
-use mongodb::bson::doc;
-use tokio::try_join;
-use crate::biz_service::client_service::ClientService;
-use crate::biz_service::kafka_service::KafkaService;
-use crate::protocol::common::ByteMessageType;
-use crate::protocol::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
-
-#[async_trait]
-impl UserManagerOpt for UserManager {
-    async fn online(&self, agent_id: &str, user_id: &UserId, device_type: DeviceType) -> anyhow::Result<()> {
-        if self.use_local_cache {
-            self.get_online_shard(&user_id).insert(user_id.to_string(), device_type);
-        }
-        let mut conn = self.pool.get().await?;
-        let i = device_type as u8;
-        let redis_online_key = format!("online:user:agent:{}:{}:{}", agent_id, user_id, i);
-        let _: () = conn.set_ex(redis_online_key, i.to_string(), USER_ONLINE_TTL_SECS).await?;
-        
-        Ok(())
-    }
-
-    async fn offline(&self, agent_id: &str, user_id: &UserId, device_type: DeviceType) -> anyhow::Result<()> {
-        if self.use_local_cache {
-            self.get_online_shard(&user_id).insert(user_id.to_string(), device_type);
-        }
-        let mut conn = self.pool.get().await?;
-        let i = device_type as u8;
-        let redis_online_key = format!("online:user:agent:{}:{}:{}", agent_id, user_id, i);
-        let _: () = conn.del(redis_online_key).await?;
-        //let payload = serde_json::to_string(&UserEvent::Online { user_id: user_id.to_string(), device })?;
-        //发消息 下线
-        Ok(())
-    }
-
-    async fn is_online(&self, agent_id: &str, user_id: &UserId) -> anyhow::Result<bool> {
-        if self.use_local_cache {
-            let shard = self.get_online_shard(&user_id);
-            return Ok(shard.contains_key(user_id));
-        }
-        let mut conn = self.pool.get().await?;
-        let redis_online_key = format!("online:user:agent:{}:{}", agent_id, user_id);
-        let exists: bool = conn.exists(redis_online_key).await?;
-        Ok(exists)
-    }
-
-    async fn sync_user(&self, _user: ClientInfo) -> anyhow::Result<()> {
-        let user_id = &_user.uid;
-        let mut conn = self.pool.get().await?;
-        let user_info_json = serde_json::to_string(&_user)?;
-        let string = format!("agent:{}:client:{}", &_user.agent_id, user_id);
-        let _: () = conn.set(string, user_info_json).await?;
-        Ok(())
-    }
-
-    async fn remove_user(&self, agent_id: &str, user_id: &UserId) -> Result<()> {
-        if self.use_local_cache {
-            self.get_online_shard(user_id).remove(user_id.as_str());
-        }
-        let mut conn = self.pool.get().await?;
-        let redis_online_key = format!("online:user:agent:{}:{}", agent_id, user_id);
-        let _: () = conn.del(redis_online_key).await.context("删除在线状态失败")?;
-        let key = format!("agent:{}:client:{}", agent_id, user_id);
-        let _: () = conn.del(&key).await.context("删除用户缓存失败")?;
-        // 发消息 册除用户
-        Ok(())
-    }
-
-    /// 优先查 Redis，否则从 MongoDB 兜底并写入 Redis
-    async fn get_user_info(&self, agent_id: &str, user_id: &UserId) -> Result<Option<ClientInfo>> {
-        let mut conn = self.pool.get().await?;
-        let key = format!("agent:{}:client:{}", agent_id, user_id);
-
-        // 1. 尝试从 Redis 获取
-        if let Ok(Some(cached_json)) = conn.get::<_, Option<String>>(&key).await {
-            let parsed = serde_json::from_str(&cached_json)?;
-            return Ok(Some(parsed));
-        }
-
-        // 2. Redis 未命中，从 MongoDB 查找
-        let client_service = ClientService::get();
-        let client_opt = client_service.dao
-            .find_one(doc! { "agentId": agent_id, "userId": user_id })
-            .await?;
-
-        // 3. 如果查到，写回 Redis（可设置过期）
-        if let Some(ref client) = client_opt {
-            let json = serde_json::to_string(client)?;
-            let _: () = conn.set_ex(&key, json, 3600).await?;
-        }
-
-        Ok(client_opt)
-    }
-
-    async fn get_user_info_by_name(&self, agent_id: &str, name: &str) -> Result<Option<ClientInfo>> {
-        let client_service = ClientService::get();
-        let client_opt = client_service.dao
-            .find_one(doc! { "agent_id": agent_id, "username": name })
-            .await?;
-       return Ok(client_opt);
-    }
-
-    /// 构建 Token：写入主数据、索引、集合（反向查找用）
-    async fn build_token(&self, agent_id: &str, uid: &UserId, device_type: &DeviceType) -> Result<String> {
-        let token_key = build_uuid();
-        let token_data_key = format!("token:{}", token_key);
-        let token_index_key = format!("token:index:{}:{}:{}", agent_id, uid, *device_type as u8);
-        let token_set_key = format!("token:uid:{}:{}", agent_id, uid);
-
-        let dto = ClientTokenDto {
-            agent_id: agent_id.to_string(),
-            uid: uid.clone(),
-            device_type: *device_type as u8,
+use common::util::common_utils::build_md5_with_key;
+use crate::biz_service::agent_service::AgentService;
+use crate::entitys::group_entity::GroupInfo;
+use crate::entitys::group_member::GroupMemberMeta;
+use crate::manager::common::SHARD_COUNT;
+use crate::manager::local_group_manager::LocalGroupManagerOpt;
+use once_cell::sync::OnceCell;
+use tokio::time::sleep;
+pub const MAX_CLEAN_COUNT: usize = 100;
+pub const USER_ONLINE_TTL_SECS: u64 = 30;
+pub const STREAM_KEY: &str = "user:events";
+pub const CONSUMER_GROUP: &str = "user_events_group";
+pub const CONSUMER_NAME: &str = "user_manager";
+impl UserManager {
+    /// 构造新的 UserManager 实例
+    ///
+    /// # 参数
+    /// - `pool`: Redis 连接池
+    /// - `node_id`: 当前节点编号
+    /// - `node_total`: 节点总数
+    /// - `shard_count`: 本地在线缓存分片数量
+    /// - `use_local_cache`: 是否启用本地缓存
+    /// - `group_map`: 预初始化的分片群组缓存结构
+    pub fn new(pool: RedisPool, use_local_cache: bool) -> Self {
+        let online_shards = (0..SHARD_COUNT).map(|_| DashMap::new()).collect();
+        let local_group_manager = LocalGroupManager::get();
+        let manager = Self {
+            pool,
+            local_online_shards: Arc::new(online_shards),
+            local_group_manager,
+            is_initialized: Arc::new(AtomicBool::new(false)),
+            init_notify: Arc::new(Notify::new()),
+            use_local_cache,
+            friend_map: Arc::new(DashMap::<String, DashMap<UserId, ()>>::new()),
         };
 
-        let token_str = serde_json::to_string(&dto).context("序列化 ClientTokenDto 失败")?;
-        let mut conn = self.pool.get().await?;
+        if !use_local_cache {
+            manager.init(manager.clone());
+            return manager;
+        }
 
-        // 主数据 & 单设备索引
-        let _:()=conn.set_ex(&token_data_key, token_str, 3600).await?;
-        let _:()=conn.set_ex(&token_index_key, &token_key, 3600).await?;
-
-        // 添加到 uid 所有 token 集合（便于注销所有 token）
-        let _:()=conn.sadd(&token_set_key, &token_key).await?;
-        let _:()=conn.expire(&token_set_key, 3600).await?;
-
-        Ok(token_key)
-    }
-    /// 获取指定 uid + 设备的 token（单设备支持）
-    async fn get_token_by_uid_device(&self, agent_id: &str, uid: &UserId, device_type: DeviceType) -> Result<Option<String>> {
-        let mut conn = self.pool.get().await?;
-        let index_key = format!("token:index:{}:{}:{}", agent_id, uid, device_type as u8);
-        let token: Option<String> = conn.get(&index_key).await.context("获取 token 索引失败")?;
-        Ok(token)
-    }
-    /// 删除指定 token（包括索引 + 主数据 + 集合成员）
-    /// 删除指定 token（包括索引 + 主数据 + 集合成员）
-    async fn delete_token(&self, token: &str) -> Result<()> {
-        let mut conn = self.pool.get().await?;
-        let token_key = format!("token:{}", token);
-
-        if let Ok(json) = conn.get::<_, String>(&token_key).await {
-            if let Ok(dto) = serde_json::from_str::<ClientTokenDto>(&json) {
-                let index_key = format!("token:index:{}:{}:{}", dto.agent_id, dto.uid, dto.device_type);
-                let token_set_key = format!("token:uid:{}:{}", dto.agent_id, dto.uid);
-
-                let _:()=conn.del(index_key).await?;
-                let _:()=conn.srem(token_set_key, token).await?;
+        let manager_clone = manager.clone();
+        tokio::spawn(async move {
+            if manager_clone.use_local_cache {
+                if let Err(e) = manager_clone.initialize_from_redis().await {
+                    eprintln!("[RedisUserManager] 初始化失败: {:?}", e);
+                }
             }
-        }
-
-        let _:()=conn.del(&token_key).await.context("删除 token 主数据失败")?;
-        Ok(())
-    }
-    /// 清空某用户所有 token（通过集合 smembers）
-    async fn clear_tokens_by_user(&self, agent_id: &str, user_id: &UserId) -> Result<()> {
-        let token_set_key = format!("token:uid:{}:{}", agent_id, user_id);
-        let mut conn = self.pool.get().await?;
-        let tokens: Vec<String> = conn.smembers(&token_set_key).await.unwrap_or_default();
-        for token in tokens {
-            self.delete_token(&token).await?;
-        }
-        let _:()=conn.del(&token_set_key).await?;
-        Ok(())
-    }
-    /// 检查 token 是否存在
-    async fn verify_token(&self, token: &str) -> Result<bool> {
-        let mut conn = self.pool.get().await?;
-        let exists: bool = conn.exists(format!("token:{}", token)).await.context("检查 token 失败")?;
-        Ok(exists)
-    }
-
-
-    /// 获取 token 对应的客户端身份
-    async fn get_client_token(&self, token: &str) -> Result<ClientTokenDto> {
-        let mut conn = self.pool.get().await?;
-        let json: String = conn.get(format!("token:{}", token)).await.context("获取 token 数据失败")?;
-        serde_json::from_str(&json).context("反序列化 ClientTokenDto 失败")
-    }
-
-    /// 通过 token 查找用户完整信息
-    async fn find_user_by_token(&self, token: &str) -> Result<Option<ClientInfo>> {
-        let dto = self.get_client_token(token).await?;
-        let user = self.get_user_info(&dto.agent_id, &dto.uid).await?
-            .ok_or_else(|| AppError::BizError("用户不存在".to_string()))?;
-        Ok(Some(user))
-    }
-
-    async fn add_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId, nickname: &Option<String>, source_type: &FriendSourceType, remark: &Option<String>) -> Result<()> {
-        // ---------- 1. 验证用户和好友存在 ----------
-        let user_manager = UserManager::get();
-        let (client_opt, friend_opt) = try_join!(user_manager.get_user_info(agent_id, user_id), user_manager.get_user_info(agent_id, friend_id))?;
-
-        let client_info = client_opt.ok_or_else(|| anyhow!("用户 {} 不存在", user_id))?;
-        let friend_info = friend_opt.ok_or_else(|| anyhow!("好友 {} 不存在", friend_id))?;
-
-        // ---------- 2. 准备昵称 ----------
-        let nickname_to_friend = nickname.as_ref().cloned().unwrap_or_else(|| friend_info.alias.clone());
-        let nickname_to_user = client_info.alias.clone();
-
-        // ---------- 3. Redis 写入 ----------
-        let redis_key = |uid: &UserId| format!("friend:user:{}:{}", agent_id, uid);
-        let mut conn = self.pool.get().await?;
-        let _: () = conn.sadd(redis_key(user_id), friend_id).await?;
-        let _: () = conn.sadd(redis_key(friend_id), user_id).await?;
-
-        // ---------- 4. 本地缓存写入（可选） ----------
-        if self.use_local_cache {
-            let cache_key = |uid: &UserId| format!("{}:{}", agent_id, uid);
-            let insert_cache = |key: String, id: &UserId| {
-                self.friend_map.entry(key).or_insert_with(DashMap::new).insert(id.clone(), ());
-            };
-            insert_cache(cache_key(user_id), friend_id);
-            insert_cache(cache_key(friend_id), user_id);
-        }
-
-        // ---------- 5. 数据库持久化 ----------
-        let friend_service = UserFriendService::get();
-         friend_service.add_friend(agent_id, user_id, friend_id, &Some(nickname_to_friend), source_type, remark).await?;
-         friend_service.add_friend(agent_id, friend_id, user_id, &Some(nickname_to_user), source_type, remark).await?;
-
-        // ---------- 6. Kafka 消息通知 ----------
-        let kafka_service = KafkaService::get();
-        let app_config = AppConfig::get();
-        let topic = &app_config.kafka.topic_single;
-        let time = now();
-
-        // 构造好友事件
-        let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
-            message_id: build_uuid(),
-            from_uid: from_uid.to_string(),
-            to_uid: to_uid.to_string(),
-            event_type: FriendEventType::FriendAddForce as i32,
-            message: String::new(),
-            status: EventStatus::Done as i32,
-            source_type: FriendSourceType::FriendSourceSystem as i32,
-            created_at: time,
-            updated_at: time,
-        };
-
-        // 同步通知双方
-        for (form_uid, to_uid) in [(&user_id, &friend_id), (&friend_id, &user_id)] {
-            let event = make_event(form_uid, to_uid);
-            let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.message_id, topic).await {
-                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.message_id, e);
+            if let Err(e) = manager_clone.start_stream_event_consumer().await {
+                eprintln!("[RedisUserManager] 消费器启动失败: {:?}", e);
             }
-        }
-        Ok(())
-    }
+            manager_clone.is_initialized.store(true, Ordering::SeqCst);
+            manager_clone.init_notify.notify_waiters();
+            println!("[RedisUserManager] ✅ 初始化完成");
+        });
 
-    async fn remove_friend(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()> {
-        // ---------- 1. 删除 Redis 中的双向关系 ----------
-        let redis_key = |uid: &UserId| format!("friend:user:{}:{}", agent_id, uid);
+        let cleaner = manager.clone();
+        tokio::spawn(async move {
+            loop {
+                sleep(Duration::from_secs(300)).await;
+                if let Err(e) = cleaner.clean().await {
+                    eprintln!("[RedisUserManager] ❌ 清理空群组失败: {:?}", e);
+                }
+            }
+        });
+        manager.init(manager.clone());
+        manager
+    }
+    /// 清理本地在线缓存（可选：按条件/全量）
+    /// - 若启用本地缓存，则遍历每个分片中的用户，检查其是否仍在 Redis 中存在在线记录。
+    /// - 若 Redis 无对应数据，则删除本地项。
+    pub async fn clean_local_online_cache(&self) -> anyhow::Result<usize> {
+        if !self.use_local_cache {
+            return Ok(0); // 未启用缓存则跳过
+        }
+
         let mut conn = self.pool.get().await?;
+        let mut removed_count = 0;
 
-        let _: () = conn.srem(redis_key(user_id), friend_id).await?;
-        let _: () = conn.srem(redis_key(friend_id), user_id).await?;
+        for shard in self.local_online_shards.iter() {
+            let users: Vec<UserId> = shard.iter().map(|e| e.key().clone()).collect();
+            for user_id in users {
+                let redis_key_prefix = format!("online:user:agent:");
+                let pattern = format!("{}*:{}:*", redis_key_prefix, user_id);
 
-        // ---------- 2. 删除本地缓存关系 ----------
-        if self.use_local_cache {
-            let cache_key = |uid: &UserId| format!("{}:{}", agent_id, uid);
+                // 检查 Redis 是否存在该用户在线记录（模糊匹配 agent_id + device_type）
+                let exists: Vec<String> = cmd("KEYS")
+                    .arg(&pattern)
+                    .query_async(&mut conn)
+                    .await
+                    .unwrap_or_default();
 
-            if let Some(map1) = self.friend_map.get(&cache_key(user_id)) {
-                map1.remove(friend_id);
-            }
-            if let Some(map2) = self.friend_map.get(&cache_key(friend_id)) {
-                map2.remove(user_id);
-            }
-        }
-
-        // ---------- 3. 删除数据库中的双向记录 ----------
-        let friend_service = UserFriendService::get();
-        friend_service.remove_friend(agent_id, user_id, friend_id).await?;
-        friend_service.remove_friend(agent_id, friend_id, user_id).await?;
-
-        // ---------- 4. 发送 Kafka 通知（可选） ----------
-        let kafka_service = KafkaService::get();
-        let app_config = AppConfig::get();
-        let topic = &app_config.kafka.topic_single;
-        let time = now();
-
-        let make_event = |from_uid: &UserId, to_uid: &UserId| FriendEventMsg {
-            message_id: build_uuid(), // 为删除事件生成唯一 ID
-            from_uid: from_uid.to_string(),
-            to_uid: to_uid.to_string(),
-            event_type: FriendEventType::FriendRemove as i32,
-            source_type: FriendSourceType::FriendSourceSystem as i32,
-            message: String::new(),
-            status: EventStatus::Done as i32,
-            created_at: time,
-            updated_at: time,
-        };
-
-        for (from, to) in [(user_id, friend_id), (friend_id, user_id)] {
-            let event = make_event(from, to);
-            let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.message_id, topic).await {
-                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.message_id, e);
-            }
-        }
-
-        Ok(())
-    }
-
-    async fn is_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<bool> {
-        // 1. 本地缓存
-        if self.use_local_cache {
-            let key = format!("{}:{}", agent_id, uid);
-            if let Some(map) = self.friend_map.get(&key) {
-                if map.contains_key(friend_id) {
-                    return Ok(true);
+                if exists.is_empty() {
+                    shard.remove(&user_id);
+                    removed_count += 1;
+                    println!("[UserManager] 🧹 清理离线用户缓存: {}", user_id);
                 }
             }
         }
 
-        // 2. Redis 查询
-        let redis_key = format!("friend:user:{}:{}", agent_id, uid);
-        let mut conn = self.pool.get().await?;
-        let exists: bool = conn.sismember(&redis_key, friend_id).await.context("Redis SISMEMBER 查询失败")?;
-
-        if exists {
-            return Ok(true);
-        }
-
-        // 3. MongoDB 兜底
-        let filter = doc! {
-            "agent_id": agent_id,
-            "uid": uid.to_string(),
-            "friend_id": friend_id.to_string(),
-            "friend_status": 1 // 限定必须是 Accepted 状态
-        };
-        let friend_service = UserFriendService::get();
-        let exists_in_db = friend_service.dao.find_one(filter).await.map(|opt| opt.is_some()).unwrap_or(false);
-        Ok(exists_in_db)
+        println!(
+            "[UserManager] ✅ 在线缓存清理完成，总计 {} 个用户",
+            removed_count
+        );
+        Ok(removed_count)
     }
-
-    async fn get_friends(&self, agent_id: &str, user_id: &UserId) -> Result<Vec<UserId>> {
-        let cache_key = format!("{}:{}", agent_id, user_id);
-
-        // 1. 本地缓存优先
-        if self.use_local_cache {
-            if let Some(map) = self.friend_map.get(&cache_key) {
-                let friends: Vec<UserId> = map.iter().map(|kv| kv.key().clone()).collect();
-                return Ok(friends);
-            }
-        }
-
-        // 2. Redis 查询
-        let redis_key = format!("friend:user:{}:{}", agent_id, user_id);
+    pub async fn initialize_from_redis(&self) -> anyhow::Result<()> {
         let mut conn = self.pool.get().await?;
-        let redis_friends: Vec<String> = conn.smembers(&redis_key).await.context("Redis SMEMBERS 获取好友列表失败")?;
 
-        // 如果 Redis 命中，直接返回
-        if !redis_friends.is_empty() {
-            return Ok(redis_friends);
-        }
+        // ----------------- 加载用户在线状态 -----------------
+        let mut cursor = 0u64;
+        loop {
+            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg("online:user:*")
+                .arg("COUNT")
+                .arg(100)
+                .query_async(&mut conn)
+                .await?;
 
-        let friend_service = UserFriendService::get();
-        // 3. MongoDB 兜底查询
-        let filter = doc! {
-            "agent_id": agent_id,
-            "uid": user_id.to_string(),
-            "friend_status": 1, // 只取已接受的关系
-        };
-        let mongo_friends = friend_service.dao.query(filter).await.unwrap_or_default().into_iter().map(|f| f.friend_id).collect::<Vec<UserId>>();
-
-        // 同步回 Redis 和本地缓存（可选）
-        if !mongo_friends.is_empty() {
-            let _: () = conn.sadd(&redis_key, &mongo_friends).await.unwrap_or_default();
-
-            if self.use_local_cache {
-                let map = self.friend_map.entry(cache_key.clone()).or_insert_with(DashMap::new);
-                for fid in &mongo_friends {
-                    map.insert(fid.clone(), ());
+            for key in keys {
+                if let Some(key) = key.strip_prefix("online:user:") {
+                    let parts: Vec<&str> = key.split(':').collect();
+                    if parts.len() >= 4 {
+                        let user_id = parts[2].to_string();
+                        let device_type: u8 = parts[3].parse().unwrap_or(0);
+                        // self.get_online_shard(&user_id).insert(user_id.clone(), DeviceType::from_str_name("WEB".as_str()));
+                    }
                 }
             }
+
+            if next_cursor == 0 {
+                break;
+            }
+            cursor = next_cursor;
         }
 
-        Ok(mongo_friends)
-    }
+        // ----------------- 加载群组信息 -----------------
+        let mut cursor = 0u64;
+        loop {
+            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg("group:info:*")
+                .arg("COUNT")
+                .arg(100)
+                .query_async(&mut conn)
+                .await?;
 
-    async fn friend_block(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()> {
-        let friend_service = UserFriendService::get();
-
-        // ---------- 1. 校验是否有好友关系 ----------
-        let mut is_friend = false;
-
-        // 本地缓存
-        if self.use_local_cache {
-            let key = format!("{}:{}", agent_id, user_id);
-            if let Some(map) = self.friend_map.get(&key) {
-                if map.contains_key(friend_id) {
-                    is_friend = true;
+            for key in keys {
+                let json: Option<String> = conn.get(&key).await?;
+                if let Some(json) = json {
+                    let info: GroupInfo = serde_json::from_str(&json)?;
+                    self.local_group_manager.init_group(info);
                 }
             }
+
+            if next_cursor == 0 {
+                break;
+            }
+            cursor = next_cursor;
         }
 
-        let mut conn = self.pool.get().await?;
+        // ----------------- 加载群组成员和成员元信息 -----------------
+        let mut cursor = 0u64;
+        loop {
+            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg("group:member:*")
+                .arg("COUNT")
+                .arg(100)
+                .query_async(&mut conn)
+                .await?;
 
-        // Redis 判断
-        if !is_friend {
-            let redis_key = format!("friend:user:{}:{}", agent_id, user_id);
-            let exists: bool = conn.sismember(&redis_key, friend_id).await.unwrap_or(false);
-            if exists {
-                is_friend = true;
+            for key in keys {
+                if let Some(group_id) = key.strip_prefix("group:member:") {
+                    let members: Vec<String> = conn.smembers(&key).await.unwrap_or_default();
+
+                    // 获取成员元信息哈希表
+                    let meta_key = format!("group:meta:{}", group_id);
+                    let metas: HashMap<String, String> =
+                        conn.hgetall(&meta_key).await.unwrap_or_default();
+
+                    for uid in members {
+                        if let Some(meta_json) = metas.get(&uid) {
+                            if let Ok(meta) = serde_json::from_str::<GroupMemberMeta>(meta_json) {
+                                // 使用完整信息添加成员到本地缓存
+                                self.local_group_manager.add_user(
+                                    group_id,
+                                    &uid,
+                                    Some(meta.mute),
+                                    meta.alias.as_deref().unwrap_or(""),
+                                    &meta.role,
+                                );
+                            } else {
+                                // fallback: 没有 meta 结构，使用默认 role/alias/mute
+                                self.local_group_manager.add_user(
+                                    group_id,
+                                    &uid,
+                                    None,
+                                    "",
+                                    &GroupRole::Member,
+                                );
+                            }
+                        } else {
+                            // fallback: meta 不存在
+                            self.local_group_manager.add_user(
+                                group_id,
+                                &uid,
+                                None,
+                                "",
+                                &GroupRole::Member,
+                            );
+                        }
+                    }
+                }
+            }
+
+            if next_cursor == 0 {
+                break;
+            }
+            cursor = next_cursor;
+        }
+
+        // ----------------- 加载好友信息 -----------------
+        cursor = 0u64;
+        loop {
+            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg("friend:user:*")
+                .arg("COUNT")
+                .arg(100)
+                .query_async(&mut conn)
+                .await?;
+
+            for key in keys {
+                if let Some(suffix) = key.strip_prefix("friend:user:") {
+                    let parts: Vec<&str> = suffix.split(':').collect();
+                    if parts.len() == 2 {
+                        let agent_id = parts[0];
+                        let user_id = parts[1];
+                        let full_key = format!("{}:{}", agent_id, user_id);
+
+                        let friends: Vec<String> = conn.smembers(&key).await.unwrap_or_default();
+                        let map = DashMap::new();
+                        for friend_id in friends {
+                            map.insert(friend_id, ());
+                        }
+                        self.friend_map.insert(full_key, map);
+                    }
+                }
+            }
+
+            if next_cursor == 0 {
+                break;
             }
         }
 
-        // Mongo 判断
-        let mongo_friend = if !is_friend {
-            // 此处也顺便获取记录用于更新
-            friend_service.get_friend_detail(agent_id, user_id, friend_id).await?
-        } else {
-            None
-        };
-
-        // 三层都找不到关系才报错
-        if !is_friend && mongo_friend.is_none() {
-            return Err(anyhow!("用户 {} 与 {} 非好友关系，无法拉黑", user_id, friend_id));
-        }
-        let friend_info = mongo_friend.unwrap();
-        // ---------- 2. 更新数据库标记 is_blocked ----------
-        if friend_info.is_blocked {
-            // ---------- 3. Redis 添加黑名单集合 ----------
-            let redis_block_key = format!("block:user:{}:{}", agent_id, user_id);
-            let _: () = conn.sadd(&redis_block_key, friend_id).await?;
-            // 已拉黑，无需重复操作
-            return Ok(());
-        }
-        // 提交更新
-        friend_service.dao.up_property(&friend_info.id, "is_blocked", true).await?;
-        // ---------- 3. Redis 添加黑名单集合 ----------
-        let redis_block_key = format!("block:user:{}:{}", agent_id, user_id);
-        let _: () = conn.sadd(&redis_block_key, friend_id).await?;
-        // ---------- 4. 可选：发送 Kafka 拉黑事件 ----------
-        // ---------- 6. Kafka 消息通知 ----------
-        let kafka_service = KafkaService::get();
-        let app_config = AppConfig::get();
-        let topic = &app_config.kafka.topic_single;
-        let time = now();
-
-        // 构造好友事件
-        let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
-            message_id: build_uuid(),
-            from_uid: from_uid.to_string(),
-            to_uid: to_uid.to_string(),
-            event_type: FriendEventType::FriendBlock as i32,
-            message: String::new(),
-            status: EventStatus::Done as i32,
-            source_type: FriendSourceType::FriendSourceSystem as i32,
-            created_at: time,
-            updated_at: time,
-        };
-
-        // 同步通知
-        for (form_uid, to_uid) in [(user_id, &friend_id)] {
-            let event = make_event(form_uid, to_uid);
-            let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.message_id, topic).await {
-                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.message_id, e);
-            }
-        }
+        println!("[UserManager] ✅ 本地缓存初始化完成（在线状态 + 群组信息 + 成员）");
         Ok(())
     }
 
-    async fn friend_unblock(&self, agent_id: &str, user_id: &UserId, friend_id: &UserId) -> Result<()> {
-        let friend_service = UserFriendService::get();
-
-        // ---------- 1. 校验是否有好友关系 ----------
-        let mut is_friend = false;
-
-        // 本地缓存
-        if self.use_local_cache {
-            let key = format!("{}:{}", agent_id, user_id);
-            if let Some(map) = self.friend_map.get(&key) {
-                if map.contains_key(friend_id) {
-                    is_friend = true;
-                }
-            }
-        }
-
-        let mut conn = self.pool.get().await?;
-
-        // Redis 判断
-        if !is_friend {
-            let redis_key = format!("friend:user:{}:{}", agent_id, user_id);
-            let exists: bool = conn.sismember(&redis_key, friend_id).await.unwrap_or(false);
-            if exists {
-                is_friend = true;
-            }
-        }
-
-        // Mongo 判断
-        let mongo_friend = if !is_friend {
-            // 此处也顺便获取记录用于更新
-            friend_service.get_friend_detail(agent_id, user_id, friend_id).await?
-        } else {
-            None
-        };
-
-        // 三层都找不到关系才报错
-        if !is_friend && mongo_friend.is_none() {
-            return Err(anyhow!("用户 {} 与 {} 非好友关系，无法拉黑", user_id, friend_id));
-        }
-        let friend_info = mongo_friend.unwrap();
-        // ---------- 2. 更新数据库标记 is_blocked ----------
-        if !friend_info.is_blocked {
-            // ---------- 3. Redis 删除黑名单集合 ----------
-            let redis_block_key = format!("block:user:{}:{}", agent_id, user_id);
-            let _: () = conn.srem(&redis_block_key, friend_id).await?;
-            // 已拉黑，无需重复操作
-            return Ok(());
-        }
-        // 提交更新
-        friend_service.dao.up_property(&friend_info.id, "is_blocked", false).await?;
-        // ---------- 3. Redis 删除黑名单集合 ----------
-        let redis_block_key = format!("block:user:{}:{}", agent_id, user_id);
-        let _: () = conn.srem(&redis_block_key, friend_id).await?;
-        // ---------- 4. 可选：发送 Kafka 取消拉黑事件 ----------
-        let time = now();
-        // 构造好友事件
-        let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
-            message_id: build_uuid(),
-            from_uid: from_uid.to_string(),
-            to_uid: to_uid.to_string(),
-            event_type: FriendEventType::FriendUnblock as i32,
-            message: String::new(),
-            status: EventStatus::Done as i32,
-            source_type: FriendSourceType::FriendSourceSystem as i32,
-            created_at: time,
-            updated_at: time,
-        };
-        // ---------- 6. Kafka 消息通知 ----------
-        let kafka_service = KafkaService::get();
-        let app_config = AppConfig::get();
-        let topic = &app_config.kafka.topic_single;
-        // 同步通知双方
-        for (form_uid, to_uid) in [(user_id, &friend_id)] {
-            let event = make_event(form_uid, to_uid);
-            let node_index=0 as u8;
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendType, &node_index, &event, &event.message_id, topic).await {
-                log::warn!("Kafka 消息发送失败 [{}]: {:?}", event.message_id, e);
-            }
-        }
+    pub async fn start_stream_event_consumer(&self) -> anyhow::Result<()> {
         Ok(())
     }
+   
+    pub async fn clean(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    /// 获取用户分片
+    pub fn get_online_shard(&self, user_id: &UserId) -> &DashMap<UserId, DashMap<DeviceType, ()>> {
+        let hash = fxhash::hash32(user_id.as_bytes());
+        &self.local_online_shards[(hash as usize) % SHARD_COUNT]
+    }
 
+    pub fn init(&self, instance: UserManager) {
+        INSTANCE
+            .set(Arc::new(instance))
+            .expect("INSTANCE already initialized");
+    }
 
+    /// 获取全局实例（未初始化会 panic）
+    pub fn get() -> Arc<Self> {
+        INSTANCE
+            .get()
+            .expect("UserManager is not initialized")
+            .clone()
+    }
 }
+
+static INSTANCE: OnceCell<Arc<UserManager>> = OnceCell::new();

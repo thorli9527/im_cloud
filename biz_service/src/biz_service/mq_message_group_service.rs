@@ -8,6 +8,7 @@ use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::sync::Arc;
+use serde::de::Unexpected::Option;
 use crate::biz_service::kafka_service::KafkaService;
 use crate::protocol::common::ByteMessageType;
 use crate::protocol::entity::GroupMsg;
@@ -53,7 +54,7 @@ impl GroupMessageService {
             .collect();
         // 构造 UserMessage 对象
         let message = GroupMsg {
-            message_id: build_uuid(), // 或 build_snow_id().to_string()
+            message_id: Some(build_snow_id()),
             agent_id: agent_id.to_string(),
             from: from.to_string(),
             sync_mq_status: true,
@@ -68,9 +69,9 @@ impl GroupMessageService {
         let kafka_service = KafkaService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        let message_type= ByteMessageType::GroupMessageType;
+        let message_type= ByteMessageType::GroupMsgType;
         let node_index=0 as u8;
-        kafka_service.send_proto(&message_type, &node_index,&message,&message.message_id, &app_config.kafka.topic_group).await?;
+        kafka_service.send_proto(&message_type, &node_index,&message,&message.message_id.unwrap().to_string(), &app_config.kafka.topic_group).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

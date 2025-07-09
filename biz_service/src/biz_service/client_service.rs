@@ -48,7 +48,7 @@ impl ClientService {
         self.dao.insert(&user).await?;
         Ok(user)
     }
-
+    
     pub async fn find_by_user_id(&self, agent_id: impl AsRef<str>, user_id: &UserId) -> Result<Option<ClientInfo>> {
         let option = UserManager::get().get_user_info(agent_id.as_ref(), user_id).await?;
         Ok(option.map(|mut client| {
@@ -78,6 +78,8 @@ impl ClientService {
         }
         Ok(())
     }
+
+  
 
     pub async fn verify_token(&self, token: &str) -> Result<bool> {
         Ok(UserManager::get().verify_token(token).await?)

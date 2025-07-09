@@ -9,7 +9,6 @@ use crate::handlers::group_member::group_member_page::*;
 use crate::handlers::group_member::group_member_refresh::*;
 use crate::handlers::group_member::group_member_remove::*;
 use crate::handlers::user_controller::*;
-use crate::handlers::auth_handler::*;
 
 use crate::result::ApiResponse;
 use actix_web::{get, web, HttpResponse, Responder};
@@ -29,7 +28,6 @@ use utoipa::OpenApi;
         user_refresh,
         user_info,
         user_expire,
-        user_login,
 
         //群-管理
         group_create,

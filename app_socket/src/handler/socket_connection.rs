@@ -14,11 +14,16 @@ use rdkafka::types::RDKafkaApiKey::Heartbeat;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-use biz_service::protocol::auth::AuthReqMsg;
+use biz_service::protocol::auth::{DeviceType, LoginReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeRepMsg, SendVerificationCodeReqMsg};
+use biz_service::protocol::common::ByteMessageType::OfflineStatusMsgType;
 use biz_service::protocol::entity::{GroupMsg, UserMsg};
 use biz_service::protocol::friend::FriendEventMsg;
+use biz_service::protocol::group::{GroupCreateMsg, GroupDismissMsg};
 use biz_service::protocol::status::{AckMsg, HeartbeatMsg};
 use biz_service::protocol::system::SystemNotificationMsg;
+use biz_service::protocol::user::UserFlushMsg;
+use crate::handler::login_handler::handle_login;
+use crate::handler::logout_handler::handle_logout;
 use crate::heartbeat_handler::{start_heartbeat_tasks, stop_heartbeat_tasks};
 
 /// 客户端连接处理入口
@@ -64,7 +69,7 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
         conn_key.clone(),
         last_heartbeat.clone(),
     )
-    .await;
+        .await;
 
     // 清理资源
     manager.remove(&conn_key);
@@ -91,31 +96,63 @@ async fn read_loop(
             .unwrap_or(ByteMessageType::UnknownByteMessageType);
 
         match message_type {
-            ByteMessageType::AuthType => {
-                let _ = AuthReqMsg::decode(bytes)?;
-                log::info!("🛂 收到认证消息");
+            ByteMessageType::LoginReqMsgType => {
+                let login_req = LoginReqMsg::decode(bytes)?;
+                let i = login_req.device_type as i32;
+                let device_type = DeviceType::from_i32(i).unwrap();
+                let message_id = login_req.message_id.unwrap();
+                handle_login(&message_id, &login_req.username, &login_req.password, &login_req.app_key, &device_type).await?;
+                log::info!("🛂 收到w登录请求");
             }
-            ByteMessageType::FriendType => {
-                let _ = FriendEventMsg::decode(bytes)?;
-                log::debug!("👥 好友事件处理");
+            ByteMessageType::LogoutReqMsgType => {
+                let login_req = LoginReqMsg::decode(bytes)?;
+                let i = login_req.device_type as i32;
+                let device_type = DeviceType::from_i32(i).unwrap();
+                let message_id = login_req.message_id.unwrap();
+                // handle_logout(message_id, &login_req.agent_id, &login_req.uid, &login_req.token, &login_req.device_type).await?;
+                log::info!("🛂 收到w登录请求");
             }
-            ByteMessageType::UserMessageType => {
+            ByteMessageType::SendVerificationCodeReqMsgType => {
+                let _ = SendVerificationCodeReqMsg::decode(bytes)?;
+                log::debug!("📨 处理验证码发送请求");
+            }
+            ByteMessageType::SystemNotificationMsgType => {
+                let _ = SystemNotificationMsg::decode(bytes)?;
+                log::info!("📢 系统通知消息");
+            }
+            ByteMessageType::UserFlushMsgType => {
+                let _ = UserFlushMsg::decode(bytes)?;
+                log::debug!("🔄 用户信息刷新");
+            }
+            ByteMessageType::OnlineStatusMsgType => {
+                let _ = OnlineStatusMsg::decode(bytes)?;
+                log::debug!("🟢 用户上线");
+            }
+            ByteMessageType::OfflineStatusMsgType => {
+                let _ = OfflineStatueMsg::decode(bytes)?;
+                log::debug!("🔴 用户下线");
+            }
+            ByteMessageType::UserMsgType => {
                 let _ = UserMsg::decode(bytes)?;
                 log::debug!("📨 普通消息处理");
             }
-            ByteMessageType::GroupMessageType => {
+            ByteMessageType::GroupMsgType => {
                 let _ = GroupMsg::decode(bytes)?;
                 log::debug!("👥 群聊消息处理");
             }
-            ByteMessageType::SystemNotificationType => {
-                let _ = SystemNotificationMsg::decode(bytes)?;
-                log::debug!("🔔 系统通知处理");
+            ByteMessageType::FriendEventMsgType => {
+                let _ = FriendEventMsg::decode(bytes)?;
+                log::debug!("👥 好友事件处理");
             }
-            ByteMessageType::AckType => {
-                let _ = AckMsg::decode(bytes)?;
-                log::trace!("✅ ACK 收到");
+            ByteMessageType::GroupCreateMsgType => {
+                let _ = GroupCreateMsg::decode(bytes)?;
+                log::info!("👥 创建群组事件处理");
             }
-            ByteMessageType::HeartbeatType => {
+            ByteMessageType::GroupDismissMsgType => {
+                let _ = GroupDismissMsg::decode(bytes)?;
+                log::info!("👋 群组解散事件处理");
+            }
+            ByteMessageType::HeartbeatMsgType => {
                 let _ = HeartbeatMsg::decode(bytes)?;
                 last_heartbeat.store(now() as u64, Ordering::Relaxed);
                 log::debug!("🫀 收到客户端心跳");

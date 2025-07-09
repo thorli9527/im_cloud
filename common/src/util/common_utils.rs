@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use md5::{Digest, Md5};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use uuid::{uuid, Uuid};
 
 pub fn copy_to<A, B>(a: &A, b: &B) -> B
 where
@@ -20,10 +20,9 @@ pub fn build_uuid() -> String {
     let uuid = Uuid::new_v4().simple();
     format!("{}", uuid)
 }
-
-pub fn build_snow_id() -> i64 {
+pub fn build_snow_id() -> u64 {
     let mut generator = SafeSnowflake::new(1, 1);
-    return generator.generate() as i64;
+    return generator.generate() ;
 }
 pub fn build_md5(content: &str) -> String {
     let mut hasher = Md5::new();

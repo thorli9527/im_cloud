@@ -26,7 +26,6 @@ pub struct ClientInfo {
     pub username:Option<String>,//用户名
     pub password: Option<String>,                               //密码
     pub uid: String,                                    //客户端用户id
-    pub alias: String,                                  //客户端用户昵称
     pub enable: bool,                                   //用户启用状态                   封号
     pub lock: bool,                                     //用户锁定 不能登录
     pub agent_id: String,                               // 商户id

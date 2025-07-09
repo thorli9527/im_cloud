@@ -66,7 +66,7 @@ async fn group_member_join(dto: web::Json<GroupJoinDto>, req: HttpRequest) -> Re
         return Err(AppError::BizError("user.not.found".to_string()));
     }
     let client = option.unwrap();
-    let alias = dto.alias.clone().unwrap_or(client.alias.clone());
+    let alias = dto.alias.clone().unwrap_or(client.name.clone());
     let group_manager = GroupManager::get();
     let now = now();
 

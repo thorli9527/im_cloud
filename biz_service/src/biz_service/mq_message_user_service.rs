@@ -55,7 +55,7 @@ impl UserMessageService {
 
         // 构造 UserMessage 对象
         let message = UserMsg {
-            message_id: build_uuid(), // 或 build_snow_id().to_string()
+            message_id: Some(build_snow_id()), 
             agent_id: agent_id.to_string(),
             from: from.clone(),
             to: to.clone(),
@@ -71,9 +71,9 @@ impl UserMessageService {
         let kafka_service = KafkaService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        let msg_type: ByteMessageType = ByteMessageType::UserMessageType;
+        let msg_type: ByteMessageType = ByteMessageType::UserMsgType;
         let data_index=0 as u8;
-        kafka_service.send_proto( &msg_type,&data_index,&message,&message.message_id, &app_config.kafka.topic_single).await?;
+        kafka_service.send_proto( &msg_type,&data_index,&message,&message.message_id.unwrap().to_string(), &app_config.kafka.topic_single).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

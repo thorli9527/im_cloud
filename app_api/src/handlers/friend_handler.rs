@@ -28,7 +28,7 @@ async fn friend_add(dto: web::Json<FriendOpDto>, req: HttpRequest) -> Result<imp
     dto.validate()?;
     let auth = build_header(req);
     let agent = AgentService::get().check_request(auth).await?;
-    UserManager::get().add_friend(&agent.id, &dto.uid, &dto.friend_id, &dto.nickname, &dto.source_type, &dto.remark).await?;
+    UserManager::get().add_friend(&agent.id, &dto.uid, &dto.friend_id, dto.nickname.clone(), &dto.source_type, dto.remark.clone()).await?;
     Ok(web::Json(result()))
 }
 
