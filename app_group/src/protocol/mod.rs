@@ -1,3 +1,5 @@
+pub mod arbitration;
+
 pub mod models{
     include!("models.rs");
 }

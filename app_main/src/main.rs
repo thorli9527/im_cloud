@@ -7,7 +7,7 @@ use app_main::handlers::swagger::openapi_json;
 use app_main::result::AppState;
 use biz_service::biz_service::kafka_service::KafkaService;
 use biz_service::manager;
-use common::config::{AppConfig, ServerRes};
+use common::config::{AppConfig};
 use common::errors::AppError;
 use common::redis::redis_template::RedisTemplate;
 use config::Config;

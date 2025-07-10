@@ -4,7 +4,7 @@ use actix_web::{cookie, web, App, HttpServer};
 use app_api::handlers;
 use biz_service::biz_service::kafka_service::KafkaService;
 use biz_service::manager;
-use common::config::{AppConfig, ServerRes};
+use common::config::{AppConfig};
 use common::errors::AppError;
 use common::redis::redis_template::RedisTemplate;
 use deadpool_redis::{

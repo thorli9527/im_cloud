@@ -1,0 +1,15 @@
+[database]
+url = "mongodb://localhost:27017"
+db_name = "group"
+[shard]
+shard_address = "127.0.0.1:27017"
+server_host = "127.0.0.1:50051"
+[redis]
+url = "redis://127.0.0.1:6379/"
+[server]
+host = "127.0.0.1"
+port = 8080
+[kafka]
+brokers = "localhost:9092"
+topic_single = "im-p2p-messages"
+topic_group = "im-group-messages"

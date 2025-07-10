@@ -1,198 +1,78 @@
 syntax = "proto3";
 
 package arbitration;
-
+import "google/protobuf/empty.proto";
 // =====================
-// 枚举：分片状态定义
+// 枚举：分片节点状态定义
 // =====================
-
 enum ShardState {
-  NORMAL = 0;       // 分片正常运行中
-  MIGRATING = 1;    // 分片正在迁移（目标节点未确认接管）
-  FAILED = 2;       // 分片异常（原节点宕机或主动下线，待仲裁调度）
+  UNSPECIFIED = 0;   // 未指定状态（默认值）
+  NORMAL = 1;        // 分片正常运行中
+  MIGRATING = 2;     // 正在迁移（目标节点未确认接管）
+  FAILED = 3;        // 异常（节点宕机或下线，待仲裁）
+  PREPARING = 4;     // 接管准备阶段
+  READY = 5;         // 可切换 owner
+  OFFLINE = 6;       // 节点主动下线，该分片不再调度
+  PREPARING_OFFLINE = 7; // 节点准备下线，等待数据迁移或状态确认
 }
 
 // =====================
-// 数据结构：分片元信息
+// 通用结构体定义
 // =====================
 
-message Shard {
-  uint64 vnode_id = 1;         // 虚拟节点编号（全局唯一分片 ID）
-  uint64 version = 2;          // 当前版本号（用于 CAS 比较更新）
-  ShardState state = 3;        // 当前分片状态
-  string owner_node_addr = 4;  // 当前拥有该分片的节点地址（由服务端动态推导，不存储）
+// 基础请求，仅包含节点地址
+message BaseRequest {
+  string node_addr = 1; // 节点地址（如 192.168.1.10:9000）
 }
 
-// =====================
-// 数据结构：节点状态信息
-// =====================
-
-message NodeInfo {
-  string node_addr = 1;               // 节点网络地址（唯一标识，如 "192.168.1.10:9000"）
-  repeated uint64 vnode_ids = 2;      // 当前节点负责的所有 vnode（服务端统计生成）
+// 通用响应结构（统一 success + message）
+message CommonResponse {
+  bool success = 1;
+  string message = 2;
 }
 
-// =====================
-// 请求结构：获取分片元数据
-// =====================
-
-message GetShardRequest {
-  uint64 vnode_id = 1; // 目标分片编号
-}
-message GetShardResponse {
-  Shard shard = 1;     // 分片元信息
-}
-
-// =====================
-// 请求结构：CAS 更新 owner
-// =====================
-
-message UpdateOwnerRequest {
-  uint64 vnode_id = 1;            // 目标 vnode
-  string expected_owner_addr = 2; // 期望当前 owner 地址
-  uint64 expected_version = 3;    // 期望当前版本（用于 CAS）
-  string new_owner_addr = 4;      // 新的 owner 地址
+// ============================
+// 分片节点元信息
+// ============================
+message ShardNodeInfo {
+  string node_addr = 1;             // 所属节点地址
+  uint64 version = 2;               // 当前版本号（用于 CAS 检查）
+  ShardState state = 3;             // 当前状态
+  uint64 last_update_time = 4;      // 最后更新时间戳（毫秒）
 }
 
-message UpdateOwnerResponse {
-  bool success = 1;               // 是否更新成功
-  string message = 2;             // 状态/错误信息
-  uint64 new_version = 3;         // 操作后最新版本号
-}
 
-// =====================
+// ============================
 // 请求结构：更新分片状态
-// =====================
-
+// ============================
 message UpdateShardStateRequest {
-  uint64 vnode_id = 1;
-  ShardState new_state = 2;       // 新的状态
-  uint64 expected_version = 3;    // CAS 检查版本
-}
-message UpdateShardStateResponse {
-  bool success = 1;
-  uint64 new_version = 2;
+  string node_addr = 1;
+  ShardState new_state = 2;
 }
 
-// =====================
-// 请求结构：批量获取分片信息
-// =====================
 
-message ListShardsRequest {
-  repeated uint64 vnode_ids = 1; // 目标 vnode 列表
-}
-message ListShardsResponse {
-  repeated Shard shards = 1;     // 对应的分片元信息列表
+message ListShardNodesResponse {
+  repeated ShardNodeInfo nodes = 1;
 }
 
-// =====================
-// 请求结构：节点心跳上报
-// =====================
-
-message NodeHeartbeatRequest {
-  string node_addr = 1;           // 节点地址（与注册时一致）
-  repeated Shard shards = 2;      // 当前节点所持有的所有分片状态（含版本）
-  uint64 timestamp = 3;           // 上报时间戳（毫秒）
-}
-message NodeHeartbeatResponse {
-  bool success = 1;
+message ListAllNodesResponse {
+  repeated ShardNodeInfo nodes = 1;
 }
 
-// =====================
-// 请求结构：判断 vnode 是否属于当前节点
-// =====================
-
-message IsLocalShardRequest {
-  uint64 vnode_id = 1;
-}
-message IsLocalShardResponse {
-  bool is_local = 1;              // 是否归属当前节点
-  string owner_node_addr = 2;     // 当前 owner 的地址（由仲裁服务推导）
-}
-
-// =====================
-// 请求结构：节点注册
-// =====================
-
-message RegisterNodeRequest {
-  string node_addr = 1;           // 节点地址（ip:port），仲裁系统的唯一标识
-  repeated uint64 vnode_ids = 2;  // 可选：希望参与托管的 vnode（用于初始分配）
-}
-message RegisterNodeResponse {
-  bool success = 1;
-  string message = 2;
-}
-
-// =====================
-// 请求结构：节点移除（后台剔除）
-// =====================
-
-message RemoveNodeRequest {
-  string node_addr = 1;           // 要移除的节点地址（必须与注册时一致）
-}
-message RemoveNodeResponse {
-  bool success = 1;
-  string message = 2;
-}
-
-// =====================
-// 请求结构：列出所有节点状态
-// =====================
-
-message ListNodesRequest {}
-
-message ListNodesResponse {
-  repeated NodeInfo nodes = 1;    // 当前仲裁系统中所有已注册节点信息
-}
-
-// =====================
-// 请求结构：查询指定节点仲裁视图（自查）
-// =====================
-
-message GetNodeInfoRequest {
-  string node_addr = 1;           // 节点地址（ip:port）
-}
-
-message GetNodeInfoResponse {
-  string node_addr = 1;               // 该节点地址（回显）
-  repeated uint64 vnode_ids = 2;      // 当前节点拥有的所有 vnode
-  uint64 total_nodes = 3;             // 当前系统中注册节点总数
-  uint64 total_vnodes = 4;            // 全系统虚拟节点总数
-}
-
-// =====================
-// 请求结构：节点优雅退出
-// =====================
-
-message GracefulLeaveRequest {
-  string node_addr = 1;           // 即将退出的节点地址（需与注册一致）
-}
-message GracefulLeaveResponse {
-  bool success = 1;
-  string message = 2;
-}
-
-// =====================
+// ============================
 // 仲裁服务接口定义
-// =====================
-
+// ============================
 service ArbiterService {
   // === 分片管理 ===
-  rpc GetShard(GetShardRequest) returns (GetShardResponse);                 // 获取分片元数据
-  rpc UpdateOwner(UpdateOwnerRequest) returns (UpdateOwnerResponse);       // CAS 更新分片归属 owner
-  rpc UpdateShardState(UpdateShardStateRequest) returns (UpdateShardStateResponse); // 更新分片状态
-  rpc ListShards(ListShardsRequest) returns (ListShardsResponse);          // 批量拉取多个分片信息
-
-  // === 节点运行时信息 ===
-  rpc NodeHeartbeat(NodeHeartbeatRequest) returns (NodeHeartbeatResponse); // 节点心跳上报当前持有分片
-  rpc IsLocalShard(IsLocalShardRequest) returns (IsLocalShardResponse);    // 判断当前 vnode 是否属于本节点
+  rpc GetShardNode(BaseRequest) returns (ShardNodeInfo);                            // 获取指定节点所属分片信息
+  rpc UpdateShardState(UpdateShardStateRequest) returns (CommonResponse);          // 更新分片状态
 
   // === 节点注册与生命周期 ===
-  rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse);    // 注册一个新节点
-  rpc RemoveNode(RemoveNodeRequest) returns (RemoveNodeResponse);          // 后台剔除一个节点（强制下线）
-  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);             // 查询当前注册的所有节点
+  rpc RegisterNode(BaseRequest) returns (CommonResponse);                          // 节点注册
+  rpc ListAllNodes(google.protobuf.Empty) returns (ListAllNodesResponse);            // 查询所有节点视图
 
-  // === 节点信息查询与退出 ===
-  rpc GetNodeInfo(GetNodeInfoRequest) returns (GetNodeInfoResponse);       // 获取指定节点的仲裁视图
-  rpc GracefulLeave(GracefulLeaveRequest) returns (GracefulLeaveResponse); // 节点主动优雅退出（可触发迁移）
+  // === 节点状态与控制 ===
+  rpc GracefulLeave(BaseRequest) returns (CommonResponse);                         // 节点优雅退出
+
+  rpc heartbeat(BaseRequest) returns (CommonResponse);                            // 节点心跳检测
 }

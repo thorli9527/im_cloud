@@ -4,7 +4,7 @@ use mongodb::Database;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::sync::Arc;
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone,Default)]
 pub struct AppConfig {
     pub database: DatabaseConfig,
     pub redis: RedisConfig,
@@ -12,8 +12,13 @@ pub struct AppConfig {
     pub sys: SysConfig,
     pub cache: CacheConfig,
     pub kafka: KafkaConfig,
+    pub shard: ShardConfig,
 }
-
+#[derive(Debug, Deserialize, Clone,Default)]
+pub struct ShardConfig {
+    pub shard_address: String,
+    pub server_host: String,
+}
 impl AppConfig {
     pub fn new(file: &String) -> Self {
         let config = Config::builder()
@@ -36,21 +41,21 @@ impl AppConfig {
     //强制下线
 }
 static INSTANCE: OnceCell<Arc<AppConfig>> = OnceCell::new();
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone,Default)]
 pub struct CacheConfig {
     pub node_id: usize,
     pub node_total: usize,
 }
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone,Default)]
 pub struct DatabaseConfig {
     pub url: String,
     pub db_name: String,
 }
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone,Default)]
 pub struct RedisConfig {
     pub url: String,
 }
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone,Default)]
 pub struct SysConfig {
     //全局日志级别
     pub log_leve: String,
@@ -60,16 +65,13 @@ pub struct SysConfig {
     pub md5_key: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone,Default)]
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
 }
-#[derive(Debug, Clone)]
-pub struct ServerRes {
-    pub db: Database,
-}
-#[derive(Debug, Deserialize, Clone)]
+
+#[derive(Debug, Deserialize, Clone,Default)]
 pub struct KafkaConfig {
     pub brokers: String,
     pub topic_single: String,
