@@ -24,7 +24,6 @@ im-server/
 ├── biz_service  # 业务逻辑封装（用户、好友、群组、消息、MQ等）
 ├── common       # 公共工具库（配置、数据库、Redis、工具函数等）
 ├── macro        # Rust 宏定义，简化服务注册等
-├── web_api/     # 前端调试页面（可选）
 ├── Cargo.toml   # Rust 项目依赖定义
 └── README.md    # 项目说明文档
 ```
