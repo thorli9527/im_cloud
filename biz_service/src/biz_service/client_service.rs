@@ -1,5 +1,4 @@
 use crate::entitys::client_entity::ClientInfo;
-use crate::manager::common::UserId;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use crate::protocol::auth::DeviceType;
 use anyhow::Result;
@@ -11,6 +10,7 @@ use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use utoipa::openapi::security::Password;
 use common::config::AppConfig;
+use common::UserId;
 use common::util::common_utils::{build_md5, build_md5_with_key};
 
 #[derive(Debug)]

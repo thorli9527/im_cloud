@@ -12,6 +12,6 @@ pub mod user_manager_opt;
 
 pub fn init(pool: Pool, use_local_cache: bool) {
     local_group_manager::LocalGroupManager::init();
-    UserManager::new(pool.clone(), use_local_cache);
+    UserManager::new(pool.clone());
     GroupManager::init(pool.clone(), use_local_cache);
 }

@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package grpc;
+import "models.proto";
+// ==============================
+// 群组服务主接口定义
+// ==============================
+
+service GroupService {
+  // 用户上线，表示用户主动进入某个群组或连接建立
+  rpc online(models.OnlineReq) returns (models.CommonResp);
+
+  // 用户下线，表示用户离开某个群组或断开连接
+  rpc offline(models.OfflineReq) returns (models.CommonResp);
+
+  // 分页获取某个群组内当前在线的用户ID列表
+  rpc getOnlineMembers(models.GetOnlineMembersReq) returns (models.GetOnlineMembersResp);
+
+  // 分页获取某个群组的所有成员ID（包含在线与离线）
+  rpc getMembers(models.GetMembersReq) returns (models.GetMembersRep);
+
+  // 创建新的群组，包括基础信息和初始成员列表
+  rpc createGroup(models.CreateGroupReq) returns (models.CommonResp);
+
+  // 解散某个群组，所有成员将自动退出，群数据不可恢复
+  rpc destroyGroup(models.DestroyGroupReq) returns (models.CommonResp);
+
+  // 获取指定群组的基本信息与成员结构（用于群资料页等）
+  rpc getGroupInfo(models.GetGroupInfoReq) returns (models.GetGroupInfoRep);
+
+  // 修改群组基础信息，包括名称、头像、描述、加入规则等
+  rpc updateGroupInfo(models.UpdateGroupInfoReq) returns (models.CommonResp);
+
+  // 添加一批成员到群组（通常由管理员或邀请系统发起）
+  rpc addMember(models.AddMemberReq) returns (models.CommonResp);
+
+  // 将一批成员从群组中移除（可由管理员执行）
+  rpc removeMember(models.RemoveMemberReq) returns (models.CommonResp);
+
+  // 当前用户主动退出群组（成员自行触发）
+  rpc exitGroup(models.ExitGroupReq) returns (models.CommonResp);
+
+  // 修改指定成员在群组中的角色权限（管理员/成员）
+  rpc changeMemberRole(models.ChangeMemberRoleReq) returns (models.CommonResp);
+
+  // 设置或取消某个成员的禁言状态
+  rpc muteMember(models.MuteMemberReq) returns (models.CommonResp);
+
+  // 修改成员在群组中的显示昵称（群内别名）
+  rpc changeMemberAlias(models.ChangeMemberAliasReq) returns (models.CommonResp);
+
+  // 转让群主身份给其他成员（当前群主执行）
+  rpc transferOwnership(models.TransferGroupOwnershipReq) returns (models.CommonResp);
+
+}

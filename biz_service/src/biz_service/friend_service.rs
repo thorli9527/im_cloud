@@ -1,5 +1,4 @@
 use crate::entitys::friend::FriendInfo;
-use crate::manager::common::UserId;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use crate::protocol::friend::FriendSourceType;
 use anyhow::Result;
@@ -8,6 +7,7 @@ use mongodb::bson::Bson;
 use mongodb::{bson::doc, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use common::UserId;
 
 #[derive(Debug)]
 pub struct UserFriendService {

@@ -2,7 +2,7 @@ use dashmap::{DashMap, DashSet};
 use fxhash::FxBuildHasher;
 
 // 全局使用的ID类型，方便更改和统一类型
-pub type UserId = String;
+
 pub type GroupId = String;
 
 // 使用 FxHash 哈希构造器的并发 Map/Set 类型别名，提升哈希性能

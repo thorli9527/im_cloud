@@ -105,16 +105,6 @@ where
         Ok(())
     }
 
-    async fn save(&self, entity: &T) -> Result<()> {
-        let mut doc = bson::to_document(&entity)?;
-        let id = build_id(&doc);
-        doc.remove("id");
-        let object_id = ObjectId::parse_str(id).unwrap(); // 将字符串转为 ObjectId
-        let filter = doc! { "_id": object_id };
-        let _ = self.collection.update_one(filter, doc).await?;
-        Ok(())
-    }
-
     async fn find_one(&self, filter: Document) -> Result<Option<T>> {
         if let Some(doc) = self.collection.find_one(filter).await? {
             let deserialized = bson::from_document(transform_doc_id(doc))?;
@@ -142,13 +132,35 @@ where
         return Ok(results);
     }
 
+    async fn save(&self, entity: &T) -> Result<()> {
+        let mut doc = bson::to_document(&entity)?;
+        let id = build_id(&doc);
+        doc.remove("id");
+        let object_id = ObjectId::parse_str(id)?; // 将字符串转为 ObjectId
+        let filter = doc! { "_id": object_id };
+        let _ = self.collection.update_one(filter, doc).await?;
+        Ok(())
+    }
+
+    async fn un_set(&self, id: &str, property: &str) -> Result<()> {
+        let object_id = ObjectId::parse_str(as_ref_to_string(id))?;
+        let filter = doc! {"_id":object_id};
+        let update = doc! {
+            "$unset": {
+                as_ref_to_string(property): ""
+            }
+        };
+        self.collection.update_one(filter, update).await?;
+        return Ok(());
+    }
+
     async fn update(&self, filter: Document, update: Document) -> Result<u64> {
         let result = self.collection.update_many(filter, update).await?;
         Ok(result.modified_count)
     }
 
     async fn up_property<E: Send + Sync + Serialize>(&self, id: &str, property: &str, value: E) -> Result<()> {
-        let object_id = ObjectId::parse_str(as_ref_to_string(id)).unwrap();
+        let object_id = ObjectId::parse_str(as_ref_to_string(id))?;
         let filter = doc! {"_id":object_id};
         let update = doc! {
             "$set": {
@@ -205,18 +217,6 @@ where
             has_next: if sort_direction > 0 { has_more } else { true }, // 可以精细判断
             has_prev: if sort_direction < 0 { has_more } else { true },
         })
-    }
-
-    async fn un_set(&self, id: &str, property: &str) -> Result<()> {
-        let object_id = ObjectId::parse_str(as_ref_to_string(id)).unwrap();
-        let filter = doc! {"_id":object_id};
-        let update = doc! {
-            "$unset": {
-                as_ref_to_string(property): ""
-            }
-        };
-        self.collection.update_one(filter, update).await?;
-        return Ok(());
     }
 }
 

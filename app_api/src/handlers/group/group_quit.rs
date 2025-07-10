@@ -52,7 +52,7 @@ async fn group_quit(dto: web::Json<GroupQuitDto>, req: HttpRequest) -> Result<im
     // 检查用户是否是群主
     let info = info.unwrap();
     if info.owner_id != dto.user_id {
-        return Err(BizError("user.group.owner".to_string()));
+        return Err(BizError("user.owner".to_string()));
     }
     group_manager.remove_user_from_group(&dto.group_id, &dto.user_id).await?;
     Ok(web::Json(result()))

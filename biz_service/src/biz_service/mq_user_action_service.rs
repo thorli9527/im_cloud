@@ -1,6 +1,5 @@
 use crate::biz_service::client_service::ClientService;
 use crate::entitys::mq_user_action::{UserActionLog, UserActionType};
-use crate::manager::common::UserId;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use anyhow::Result;
 use common::errors::AppError;
@@ -9,6 +8,7 @@ use common::util::common_utils::as_ref_to_string;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use common::UserId;
 
 #[derive(Debug)]
 pub struct UserActionLogService {

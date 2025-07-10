@@ -1,12 +1,11 @@
 use crate::entitys::client_entity::ClientInfo;
 use crate::entitys::group_member::GroupRole;
-use crate::manager::common::UserId;
 use crate::manager::local_group_manager::LocalGroupManager;
 use crate::protocol::auth::DeviceType;
 use crate::protocol::friend::FriendSourceType;
 use anyhow::Result;
 use async_trait::async_trait;
-use common::ClientTokenDto;
+use common::{ClientTokenDto, UserId};
 use dashmap::DashMap;
 use deadpool_redis::Pool as RedisPool;
 use mongodb::bson::doc;
@@ -15,29 +14,6 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use tokio::sync::Notify;
 
-#[derive(Debug, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-enum UserEvent {
-    GroupLeave {
-        group_id: String,
-        user_id: UserId,
-    },
-    GroupJoin {
-        group_id: String,
-        user_id: UserId,
-        mute: Option<bool>,
-        alias: String,
-        role: GroupRole,
-    },
-    Online {
-        user_id: UserId,
-        device: DeviceType,
-    },
-    Offline {
-        user_id: UserId,
-        device: DeviceType,
-    },
-}
 
 /// 全局用户管理器
 #[derive(Debug, Clone)]
@@ -45,11 +21,6 @@ enum UserEvent {
 pub struct UserManager {
     /// Redis 连接池，用于访问用户状态、群组数据、事件队列等。
     pub pool: RedisPool,
-
-    /// 本地用户在线状态缓存，按分片存储，使用 DashMap 支持多线程并发访问。
-    /// 每个分片是一个 DashMap，key 为 user_id，value 为占位单元类型 `()`
-    /// 用于快速判断用户是否在线，减少 Redis 访问。
-    pub local_online_shards: Arc<Vec<DashMap<UserId, DashMap<DeviceType, ()>>>>,
 
     /// 本地群组缓存，用于存储每个群组的用户列表等信息，支持分片访问。
     /// 提高群组相关操作性能，降低 Redis 压力。
@@ -64,9 +35,7 @@ pub struct UserManager {
     pub init_notify: Arc<Notify>,
     /// 全局用户好友关系映射，使用 DashMap 支持多线程并发访问。
     pub friend_map: Arc<DashMap<String, DashMap<UserId, ()>>>,
-    /// 是否启用本地缓存。
-    /// 如果为 false，将直接查询 Redis，适用于测试或轻量部署模式。
-    pub use_local_cache: bool,
+  
 }
 
 /// 用户管理核心行为抽象接口
@@ -137,7 +106,7 @@ pub trait UserManagerOpt: Send + Sync {
         &self,
         agent_id: &str,
         user_id: &UserId,
-        device_type: DeviceType,
+        device_type: &DeviceType,
     ) -> Result<Option<String>>;
     /// 获取用户的访问令牌信息
     async fn get_client_token(&self, token: &str) -> Result<ClientTokenDto>;

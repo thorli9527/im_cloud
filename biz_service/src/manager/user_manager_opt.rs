@@ -3,16 +3,18 @@ use crate::biz_service::client_service::ClientService;
 use crate::biz_service::friend_service::UserFriendService;
 use crate::biz_service::kafka_service::KafkaService;
 use crate::entitys::client_entity::ClientInfo;
-use crate::manager::common::UserId;
 use crate::manager::user_manager_core::{USER_ONLINE_TTL_SECS, UserManager, UserManagerOpt};
-use crate::protocol::auth::{DeviceType, LoginRespMsg, LogoutRespMsg, OfflineStatueMsg, OnlineStatusMsg};
+use crate::protocol::auth::{
+    DeviceType, LoginRespMsg, LogoutRespMsg, OfflineStatueMsg, OnlineStatusMsg,
+};
 use crate::protocol::common::ByteMessageType;
 use crate::protocol::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
+use crate::protocol::status::AckMsg;
 use actix_web::cookie::time::macros::time;
 use actix_web::web::get;
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
-use common::ClientTokenDto;
+use common::{ClientTokenDto, UserId};
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::repository_util::Repository;
@@ -23,10 +25,10 @@ use deadpool_redis::redis::AsyncCommands;
 use futures_util::TryFutureExt;
 use mongodb::bson::doc;
 use tokio::try_join;
-use crate::protocol::status::AckMsg;
 pub const TOKEN_EXPIRE_SECS: u64 = 60 * 60 * 24 * 7;
 #[async_trait]
 impl UserManagerOpt for UserManager {
+
     async fn login(
         &self,
         message_id: &u64,
@@ -55,15 +57,22 @@ impl UserManagerOpt for UserManager {
 
         let token = self.build_token(&agent_id, &user_id, device_type).await?;
 
-
         let kafka_service = KafkaService::get();
-        let node_index: &u8= &0;
+        let node_index: &u8 = &0;
         // 发送登录响应消息
-        kafka_service.send_proto(&ByteMessageType::LoginRespMsgType, &node_index, &LoginRespMsg {
-            message_id: Some(message_id.clone()),
-            token: token.clone(),
-            expires_at: now() as u64,
-        }, &build_uuid(), &AppConfig::get().kafka.topic_group).await?;
+        kafka_service
+            .send_proto(
+                &ByteMessageType::LoginRespMsgType,
+                &node_index,
+                &LoginRespMsg {
+                    message_id: Some(message_id.clone()),
+                    token: token.clone(),
+                    expires_at: now() as u64,
+                },
+                &build_uuid(),
+                &AppConfig::get().kafka.topic_group,
+            )
+            .await?;
         Ok(token)
     }
 
@@ -71,95 +80,93 @@ impl UserManagerOpt for UserManager {
         &self,
         message_id: &u64,
         agent_id: &str,
-        user_id: &UserId,
-        device_type: &DeviceType,
-    ) -> anyhow::Result<()> {
-        self.offline(agent_id, user_id, device_type).await;
-        let node_index: &u8= &0;
-        let kafka_service = KafkaService::get();
-        // 发送登出响应消息
-        kafka_service.send_proto(&ByteMessageType::LogoutRespMsgType, &node_index, &LogoutRespMsg {
-            message_id: Some(message_id.clone()),
-        }, &build_uuid(), &AppConfig::get().kafka.topic_group).await?;
-        Ok(())
-    }
-    async fn online(
-        &self,
-        agent_id: &str,
-        user_id: &UserId,
+        uid: &UserId,
         device_type: &DeviceType,
     ) -> Result<()> {
-        let mut is_first_online = false;
-
-        // 本地缓存判断是否首次上线
-        if self.use_local_cache {
-            let shard = self.get_online_shard(user_id);
-
-            let user_map = shard.entry(user_id.clone()).or_insert_with(DashMap::new);
-
-            //判断是否首次上线
-            if user_map.is_empty() {
-                is_first_online = true;
-            }
-
-            user_map.insert(device_type.clone(), ());
-        } else {
-            // 如果未启用本地缓存，则通过 Redis 判断是否首次上线
-            is_first_online = self.is_all_device_offline(agent_id, user_id).await?;
+        self.offline(agent_id, uid, device_type).await?;
+        let node_index: &u8 = &0;
+        let kafka_service = KafkaService::get();
+        let token = self
+            .get_token_by_uid_device(agent_id, uid, device_type)
+            .await?;
+        if let Some(token) = token {
+            self.delete_token(&token).await?;
         }
-
-        // 设置 Redis 在线标记
+        // 发送登出响应消息
+        kafka_service
+            .send_proto(
+                &ByteMessageType::LogoutRespMsgType,
+                &node_index,
+                &LogoutRespMsg {
+                    message_id: Some(message_id.clone()),
+                },
+                &build_uuid(),
+                &AppConfig::get().kafka.topic_group,
+            )
+            .await?;
+        Ok(())
+    }
+    async fn online(&self, agent_id: &str, user_id: &UserId, device_type: &DeviceType) -> Result<()> {
+        let (redis_key, field_key) = self.make_online_key(agent_id, user_id);
         let mut conn = self.pool.get().await?;
-        let key = format!("online:user:agent:{}:{}:{}", agent_id, user_id, *device_type as u8);
-        let _: () = conn.set_ex(&key, "1", USER_ONLINE_TTL_SECS).await?;
 
-        // 处理首次上线逻辑
+        // 获取现有设备
+        let existing: Option<String> = conn.hget(&redis_key, &field_key).await?;
+        let mut devices = match existing {
+            Some(s) => s.split(',').map(|s| s.to_string()).collect::<std::collections::HashSet<_>>(),
+            None => std::collections::HashSet::new(),
+        };
+
+        let device_str = (*device_type as u8).to_string();
+        let is_first_online = devices.is_empty();
+        devices.insert(device_str.clone());
+
+        let new_value = devices.into_iter().collect::<Vec<_>>().join(",");
+        let _: () = conn.hset(&redis_key, &field_key, &new_value).await?;
+        let _: () = conn.expire(&redis_key, USER_ONLINE_TTL_SECS as i64).await?;
+
         if is_first_online {
-            let kafka = KafkaService::get(); // 假设你有 KafkaService::send_offline_event
-            // 发送 组MQ 在线消息
-            let offline_msg=OnlineStatusMsg {
+            let kafka = KafkaService::get();
+            let online_msg = OnlineStatusMsg {
                 message_id: Some(build_snow_id()),
                 uid: user_id.clone(),
-                device_type: device_type.clone() as i32,
+                device_type: *device_type as i32,
                 client_id: "".to_string(),
                 login_time: now(),
             };
-            let node_index: &u8= &0;
-            let message_id = &offline_msg.message_id.unwrap().to_string();
-            let topic=&AppConfig::get().kafka.topic_group;
-            kafka.send_proto(&ByteMessageType::LogoutRespMsgType, node_index, &offline_msg, message_id,&topic).await?;
-
+            kafka.send_proto(
+                &ByteMessageType::LogoutRespMsgType,
+                &0,
+                &online_msg,
+                &online_msg.message_id.clone().unwrap().to_string(),
+                &AppConfig::get().kafka.topic_group,
+            ).await?;
         }
 
         Ok(())
     }
 
+    async fn offline(&self, agent_id: &str, user_id: &UserId, device_type: &DeviceType) -> Result<()> {
+        let (redis_key, field_key) = self.make_online_key(agent_id, user_id);
+        let mut conn = self.pool.get().await?;
 
-    async fn offline(
-        &self,
-        agent_id: &str,
-        user_id: &UserId,
-        device_type: &DeviceType,
-    ) -> Result<()> {
-        if self.use_local_cache {
-            if let Some(mut user_map_ref) = self.get_online_shard(user_id).get_mut(user_id) {
-                user_map_ref.remove(device_type);
-                if user_map_ref.is_empty() {
-                    self.get_online_shard(user_id).remove(user_id);
-                }
+        let existing: Option<String> = conn.hget(&redis_key, &field_key).await?;
+        if let Some(s) = existing {
+            let mut devices: std::collections::HashSet<_> = s.split(',').map(|x| x.to_string()).collect();
+            devices.remove(&(*device_type as u8).to_string());
+
+            if devices.is_empty() {
+                let _: () = conn.hdel(&redis_key, &field_key).await?;
+            } else {
+                let new_val = devices.into_iter().collect::<Vec<_>>().join(",");
+                let _: () = conn.hset(&redis_key, &field_key, &new_val).await?;
             }
         }
 
-        let mut conn = self.pool.get().await?;
-        let key = format!("online:user:agent:{}:{}:{}", agent_id, user_id, *device_type as u8);
-        let _: () = conn.del(&key).await?;
-
-        // 👇 判断是否所有设备都离线
         let is_all_offline = self.is_all_device_offline(agent_id, user_id).await?;
-        // 👇 所有设备下线后，发送 MQ 消息
         if is_all_offline {
-            let kafka = KafkaService::get(); // 假设你有 KafkaService::send_offline_event
-            let offline_msg=OfflineStatueMsg {
+            let kafka = KafkaService::get();
+            let offline_msg = OfflineStatueMsg {
                 message_id: Some(build_snow_id()),
                 uid: user_id.clone(),
                 device_type: DeviceType::All as i32,
@@ -167,84 +174,39 @@ impl UserManagerOpt for UserManager {
                 logout_time: now(),
                 reason: "".to_string(),
             };
-            let node_index: &u8= &0;
-            let message_id = &offline_msg.message_id.unwrap().to_string();
-            let topic=&AppConfig::get().kafka.topic_group;
-            kafka.send_proto(&ByteMessageType::LogoutRespMsgType, node_index, &offline_msg, message_id,&topic).await?;
+            kafka.send_proto(
+                &ByteMessageType::LogoutRespMsgType,
+                &0,
+                &offline_msg,
+                &offline_msg.message_id.clone().unwrap().to_string(),
+                &AppConfig::get().kafka.topic_group,
+            ).await?;
         }
+
         Ok(())
     }
 
     async fn is_online(&self, agent_id: &str, user_id: &UserId) -> Result<bool> {
-        if self.use_local_cache {
-            if let Some(user_map) = self.get_online_shard(user_id).get(user_id) {
-                return Ok(!user_map.is_empty());
-            } else {
-                return Ok(false);
-            }
-        }
-
+        let (redis_key, field_key) = self.make_online_key(agent_id, user_id);
         let mut conn = self.pool.get().await?;
-        for i in 0..=5 {
-            let key = format!("online:user:agent:{}:{}:{}", agent_id, user_id, i);
-            if conn.exists(&key).await? {
-                return Ok(true);
-            }
-        }
-        Ok(false)
+        Ok(conn.hexists(&redis_key, &field_key).await?)
     }
 
-    async fn get_online_devices(
-        &self,
-        agent_id: &str,
-        user_id: &UserId,
-    ) -> Result<Vec<DeviceType>> {
-        let mut online_devices = vec![];
-
-        if self.use_local_cache {
-            let shard = self.get_online_shard(user_id);
-            if let Some(map) = shard.get(user_id) {
-                for dt in map.iter() {
-                    online_devices.push(dt.key().clone());
-                }
-                return Ok(online_devices);
-            }
-        }
-
+    async fn get_online_devices(&self, agent_id: &str, user_id: &UserId) -> Result<Vec<DeviceType>> {
+        let (redis_key, field_key) = self.make_online_key(agent_id, user_id);
         let mut conn = self.pool.get().await?;
-        for i in 0..=5 {
-            let key = format!("online:user:agent:{}:{}:{}", agent_id, user_id, i);
-            if conn.exists(&key).await? {
-                if let Some(device) = DeviceType::from_i32(i) {
-                    online_devices.push(device);
-                }
-            }
+        if let Some(s) = conn.hget::<_, _, Option<String>>(&redis_key, &field_key).await? {
+            Ok(s.split(',')
+                .filter_map(|d| d.parse::<i32>().ok())
+                .filter_map(DeviceType::from_i32)
+                .collect())
+        } else {
+            Ok(vec![])
         }
-
-        Ok(online_devices)
     }
 
     async fn is_all_device_offline(&self, agent_id: &str, user_id: &UserId) -> Result<bool> {
-        // 优先从本地缓存判断（如启用）
-        if self.use_local_cache {
-            let shard = self.get_online_shard(user_id);
-            if let Some(device_map) = shard.get(user_id) {
-                if !device_map.is_empty() {
-                    return Ok(false);
-                }
-            }
-        }
-
-        // Redis 兜底判断
-        let mut conn = self.pool.get().await?;
-        for i in 0..=5 {
-            let key = format!("online:user:agent:{}:{}:{}", agent_id, user_id, i);
-            if conn.exists(&key).await? {
-                return Ok(false);
-            }
-        }
-
-        Ok(true)
+        Ok(!self.is_online(agent_id, user_id).await?)
     }
 
     async fn sync_user(&self, _user: ClientInfo) -> anyhow::Result<()> {
@@ -257,9 +219,6 @@ impl UserManagerOpt for UserManager {
     }
 
     async fn remove_user(&self, agent_id: &str, user_id: &UserId) -> Result<()> {
-        if self.use_local_cache {
-            self.get_online_shard(user_id).remove(user_id.as_str());
-        }
         let mut conn = self.pool.get().await?;
         let redis_online_key = format!("online:user:agent:{}:{}", agent_id, user_id);
         let _: () = conn
@@ -321,7 +280,7 @@ impl UserManagerOpt for UserManager {
     ) -> Result<String> {
         let token_key = build_uuid();
         let token_data_key = format!("token:{}", token_key);
-        let token_index_key = format!("token:index:{}:{}:{}", agent_id, uid, *device_type as u8);
+        let token_index_key = format!("token:index:{}:{}:{}", agent_id, uid, *device_type as i32);
         let token_set_key = format!("token:uid:{}:{}", agent_id, uid);
 
         let dto = ClientTokenDto {
@@ -334,12 +293,18 @@ impl UserManagerOpt for UserManager {
         let mut conn = self.pool.get().await?;
 
         // 主数据 & 单设备索引
-        let _: () = conn.set_ex(&token_data_key, token_str, TOKEN_EXPIRE_SECS).await?;
-        let _: () = conn.set_ex(&token_index_key, &token_key, TOKEN_EXPIRE_SECS).await?;
+        let _: () = conn
+            .set_ex(&token_data_key, token_str, TOKEN_EXPIRE_SECS)
+            .await?;
+        let _: () = conn
+            .set_ex(&token_index_key, &token_key, TOKEN_EXPIRE_SECS)
+            .await?;
 
         // 添加到 uid 所有 token 集合（便于注销所有 token）
         let _: () = conn.sadd(&token_set_key, &token_key).await?;
-        let _: () = conn.expire(&token_set_key, TOKEN_EXPIRE_SECS as i64).await?;
+        let _: () = conn
+            .expire(&token_set_key, TOKEN_EXPIRE_SECS as i64)
+            .await?;
 
         Ok(token_key)
     }
@@ -348,14 +313,13 @@ impl UserManagerOpt for UserManager {
         &self,
         agent_id: &str,
         uid: &UserId,
-        device_type: DeviceType,
+        device_type: &DeviceType,
     ) -> Result<Option<String>> {
         let mut conn = self.pool.get().await?;
-        let index_key = format!("token:index:{}:{}:{}", agent_id, uid, device_type as u8);
+        let index_key = format!("token:index:{}:{}:{}", agent_id, uid, *device_type as i32);
         let token: Option<String> = conn.get(&index_key).await.context("获取 token 索引失败")?;
         Ok(token)
     }
-    /// 删除指定 token（包括索引 + 主数据 + 集合成员）
     /// 删除指定 token（包括索引 + 主数据 + 集合成员）
     async fn delete_token(&self, token: &str) -> Result<()> {
         let mut conn = self.pool.get().await?;
@@ -453,19 +417,6 @@ impl UserManagerOpt for UserManager {
         let _: () = conn.sadd(redis_key(user_id), friend_id).await?;
         let _: () = conn.sadd(redis_key(friend_id), user_id).await?;
 
-        // ---------- 4. 本地缓存写入（可选） ----------
-        if self.use_local_cache {
-            let cache_key = |uid: &UserId| format!("{}:{}", agent_id, uid);
-            let insert_cache = |key: String, id: &UserId| {
-                self.friend_map
-                    .entry(key)
-                    .or_insert_with(DashMap::new)
-                    .insert(id.clone(), ());
-            };
-            insert_cache(cache_key(user_id), friend_id);
-            insert_cache(cache_key(friend_id), user_id);
-        }
-
         // ---------- 5. 数据库持久化 ----------
         let friend_service = UserFriendService::get();
         friend_service
@@ -542,19 +493,7 @@ impl UserManagerOpt for UserManager {
         let _: () = conn.srem(redis_key(user_id), friend_id).await?;
         let _: () = conn.srem(redis_key(friend_id), user_id).await?;
 
-        // ---------- 2. 删除本地缓存关系 ----------
-        if self.use_local_cache {
-            let cache_key = |uid: &UserId| format!("{}:{}", agent_id, uid);
-
-            if let Some(map1) = self.friend_map.get(&cache_key(user_id)) {
-                map1.remove(friend_id);
-            }
-            if let Some(map2) = self.friend_map.get(&cache_key(friend_id)) {
-                map2.remove(user_id);
-            }
-        }
-
-        // ---------- 3. 删除数据库中的双向记录 ----------
+        // ---------- 2. 删除数据库中的双向记录 ----------
         let friend_service = UserFriendService::get();
         friend_service
             .remove_friend(agent_id, user_id, friend_id)
@@ -563,7 +502,7 @@ impl UserManagerOpt for UserManager {
             .remove_friend(agent_id, friend_id, user_id)
             .await?;
 
-        // ---------- 4. 发送 Kafka 通知（可选） ----------
+        // ---------- 3. 发送 Kafka 通知（可选） ----------
         let kafka_service = KafkaService::get();
         let app_config = AppConfig::get();
         let topic = &app_config.kafka.topic_single;
@@ -603,17 +542,8 @@ impl UserManagerOpt for UserManager {
     }
 
     async fn is_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<bool> {
-        // 1. 本地缓存
-        if self.use_local_cache {
-            let key = format!("{}:{}", agent_id, uid);
-            if let Some(map) = self.friend_map.get(&key) {
-                if map.contains_key(friend_id) {
-                    return Ok(true);
-                }
-            }
-        }
 
-        // 2. Redis 查询
+        // 1. Redis 查询
         let redis_key = format!("friend:user:{}:{}", agent_id, uid);
         let mut conn = self.pool.get().await?;
         let exists: bool = conn
@@ -625,7 +555,7 @@ impl UserManagerOpt for UserManager {
             return Ok(true);
         }
 
-        // 3. MongoDB 兜底
+        // 2. MongoDB 兜底
         let filter = doc! {
             "agent_id": agent_id,
             "uid": uid.to_string(),
@@ -645,15 +575,7 @@ impl UserManagerOpt for UserManager {
     async fn get_friends(&self, agent_id: &str, user_id: &UserId) -> Result<Vec<UserId>> {
         let cache_key = format!("{}:{}", agent_id, user_id);
 
-        // 1. 本地缓存优先
-        if self.use_local_cache {
-            if let Some(map) = self.friend_map.get(&cache_key) {
-                let friends: Vec<UserId> = map.iter().map(|kv| kv.key().clone()).collect();
-                return Ok(friends);
-            }
-        }
-
-        // 2. Redis 查询
+        // 1. Redis 查询
         let redis_key = format!("friend:user:{}:{}", agent_id, user_id);
         let mut conn = self.pool.get().await?;
         let redis_friends: Vec<String> = conn
@@ -667,7 +589,7 @@ impl UserManagerOpt for UserManager {
         }
 
         let friend_service = UserFriendService::get();
-        // 3. MongoDB 兜底查询
+        // 2. MongoDB 兜底查询
         let filter = doc! {
             "agent_id": agent_id,
             "uid": user_id.to_string(),
@@ -688,18 +610,7 @@ impl UserManagerOpt for UserManager {
                 .sadd(&redis_key, &mongo_friends)
                 .await
                 .unwrap_or_default();
-
-            if self.use_local_cache {
-                let map = self
-                    .friend_map
-                    .entry(cache_key.clone())
-                    .or_insert_with(DashMap::new);
-                for fid in &mongo_friends {
-                    map.insert(fid.clone(), ());
-                }
-            }
         }
-
         Ok(mongo_friends)
     }
 
@@ -713,16 +624,6 @@ impl UserManagerOpt for UserManager {
 
         // ---------- 1. 校验是否有好友关系 ----------
         let mut is_friend = false;
-
-        // 本地缓存
-        if self.use_local_cache {
-            let key = format!("{}:{}", agent_id, user_id);
-            if let Some(map) = self.friend_map.get(&key) {
-                if map.contains_key(friend_id) {
-                    is_friend = true;
-                }
-            }
-        }
 
         let mut conn = self.pool.get().await?;
 
@@ -822,16 +723,6 @@ impl UserManagerOpt for UserManager {
         // ---------- 1. 校验是否有好友关系 ----------
         let mut is_friend = false;
 
-        // 本地缓存
-        if self.use_local_cache {
-            let key = format!("{}:{}", agent_id, user_id);
-            if let Some(map) = self.friend_map.get(&key) {
-                if map.contains_key(friend_id) {
-                    is_friend = true;
-                }
-            }
-        }
-
         let mut conn = self.pool.get().await?;
 
         // Redis 判断
@@ -853,7 +744,7 @@ impl UserManagerOpt for UserManager {
             None
         };
 
-        // 三层都找不到关系才报错
+        // 2层都找不到关系才报错
         if !is_friend && mongo_friend.is_none() {
             return Err(anyhow!(
                 "用户 {} 与 {} 非好友关系，无法拉黑",

@@ -1,6 +1,5 @@
 use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::GroupRole;
-use crate::manager::common::UserId;
 use crate::manager::local_group_manager::LocalGroupManager;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -10,6 +9,7 @@ use deadpool_redis::{
 };
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use common::UserId;
 
 /// 群组管理器
 #[derive(Debug, Clone)]
@@ -24,7 +24,7 @@ impl GroupManager {
         let local_group_manager = LocalGroupManager::get();
         Self { pool, local_group_manager, use_local_cache }
     }
-
+    
     pub fn init(pool: Pool, use_local_cache: bool) {
         let instance = Self::new(pool, use_local_cache);
         INSTANCE.set(Arc::new(instance)).expect("AgentService already initialized");

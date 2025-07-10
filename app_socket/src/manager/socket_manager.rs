@@ -12,6 +12,7 @@ use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
 use biz_service::protocol::common::ByteMessageType;
+use common::UserId;
 
 /// 客户端连接唯一标识
 #[derive(Clone, Eq, PartialEq, Hash,Debug)]
@@ -20,8 +21,8 @@ pub struct ConnectionId(pub String);
 /// 连接元信息（用户、设备、客户端等）
 #[derive(Clone)]
 pub struct ConnectionMeta {
-    pub user_id: Option<String>,
-    pub client_id: Option<String>,
+    pub agent_id:Option<String>,
+    pub uid: Option<UserId>,
     pub device_type: Option<DeviceType>,
 }
 
@@ -33,11 +34,23 @@ pub struct ConnectionInfo {
     pub last_heartbeat: Arc<AtomicU64>,
 }
 
-/// Socket连接管理器：维护连接、分发消息、处理心跳
+/// Socket连接管理器：用于统一管理所有在线连接、用户索引及群组关系
 pub struct SocketManager {
+    /// 所有客户端连接的主索引，键为连接唯一ID（ConnectionId），值为连接信息（ConnectionInfo）
+    /// - 支持通过连接ID快速定位具体连接
+    /// - 用于消息定向发送、连接关闭、心跳检测等
     pub connections: DashMap<ConnectionId, ConnectionInfo>,
+
+    /// 用户ID到连接ID集合的映射
+    /// - 支持一个用户拥有多个设备连接（多终端支持）
+    /// - 用于向用户广播、判断用户是否在线
+    /// - 格式: user_id → {conn_id1, conn_id2, ...}
     pub user_index: DashMap<String, HashSet<ConnectionId>>,
-    pub group_members: DashMap<String, HashSet<String>>, // 群组ID -> 用户ID列表
+
+    /// 群组ID到用户ID集合的映射
+    /// - 用于进行群组广播消息派发
+    /// - 格式: group_id → {user_id1, user_id2, ...}
+    pub group_members: DashMap<String, HashSet<String>>,
 }
 
 impl SocketManager {
@@ -48,8 +61,8 @@ impl SocketManager {
     /// 新增连接
     pub fn insert(&self, id: impl Into<ConnectionId>, conn: ConnectionInfo) {
         let id = id.into();
-        if let Some(user_id) = &conn.meta.user_id {
-            self.user_index.entry(user_id.clone()).or_insert_with(HashSet::new).insert(id.clone());
+        if let Some(uid) = &conn.meta.uid {
+            self.user_index.entry(uid.clone()).or_insert_with(HashSet::new).insert(id.clone());
         }
         self.connections.insert(id, conn);
     }
@@ -57,7 +70,7 @@ impl SocketManager {
     /// 移除连接
     pub fn remove(&self, id: &ConnectionId) {
         if let Some((_, conn)) = self.connections.remove(id) {
-            if let Some(user_id) = &conn.meta.user_id {
+            if let Some(user_id) = &conn.meta.uid {
                 if let Some(mut set) = self.user_index.get_mut(user_id) {
                     set.remove(id);
                     if set.is_empty() {
@@ -71,8 +84,8 @@ impl SocketManager {
     }
 
     /// 获取连接
-    pub fn get(&self, id: &ConnectionId) -> Option<ConnectionInfo> {
-        self.connections.get(id).map(|v| v.clone())
+    pub fn get(&self, id: &ConnectionId) -> Option<Arc<ConnectionInfo>> {
+        self.connections.get(id).map(|v| Arc::new(v.clone()))
     }
 
     /// 心跳续期
@@ -86,6 +99,7 @@ impl SocketManager {
         let conn = self.connections.get(id).ok_or(SendError::ConnectionNotFound)?;
         conn.sender.send(bytes).map_err(|_| SendError::ChannelClosed)
     }
+    ///发送消息到指定连接（使用 ByteMessageType 前缀）
     pub fn send_to_connection_proto<M: Message>(
         &self,
         id: &ConnectionId,

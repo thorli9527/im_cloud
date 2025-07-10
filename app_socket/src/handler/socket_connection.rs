@@ -1,8 +1,17 @@
+use crate::handler::login_handler::handle_login;
+use crate::handler::logout_handler::handle_logout;
 use crate::manager::socket_manager::{
     ConnectionId, ConnectionInfo, ConnectionMeta, get_socket_manager,
 };
 use anyhow::{Result, anyhow};
+use biz_service::protocol::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeRepMsg, SendVerificationCodeReqMsg};
 use biz_service::protocol::common::ByteMessageType;
+use biz_service::protocol::entity::{GroupMsg, UserMsg};
+use biz_service::protocol::friend::FriendEventMsg;
+use biz_service::protocol::group::{GroupCreateMsg, GroupDismissMsg};
+use biz_service::protocol::status::HeartbeatMsg;
+use biz_service::protocol::system::SystemNotificationMsg;
+use biz_service::protocol::user::UserFlushMsg;
 use bytes::Buf;
 use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
@@ -10,21 +19,10 @@ use futures::{SinkExt, StreamExt};
 use prost::Message;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use rdkafka::types::RDKafkaApiKey::Heartbeat;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-use biz_service::protocol::auth::{DeviceType, LoginReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeRepMsg, SendVerificationCodeReqMsg};
-use biz_service::protocol::common::ByteMessageType::OfflineStatusMsgType;
-use biz_service::protocol::entity::{GroupMsg, UserMsg};
-use biz_service::protocol::friend::FriendEventMsg;
-use biz_service::protocol::group::{GroupCreateMsg, GroupDismissMsg};
-use biz_service::protocol::status::{AckMsg, HeartbeatMsg};
-use biz_service::protocol::system::SystemNotificationMsg;
-use biz_service::protocol::user::UserFlushMsg;
-use crate::handler::login_handler::handle_login;
-use crate::handler::logout_handler::handle_logout;
-use crate::heartbeat_handler::{start_heartbeat_tasks, stop_heartbeat_tasks};
+use crate::heartbeat_handler::start_global_heartbeat_checker;
 
 /// 客户端连接处理入口
 pub async fn handle_connection(stream: TcpStream) -> Result<()> {
@@ -39,8 +37,8 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
 
     let connection = ConnectionInfo {
         meta: ConnectionMeta {
-            user_id: None,
-            client_id: None,
+            agent_id: None,
+            uid: None,
             device_type: None,
         },
         sender: tx.clone(),
@@ -50,8 +48,7 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
     let manager = get_socket_manager();
     manager.insert(conn_key.clone(), connection);
 
-    // 启动心跳相关任务（客户端超时检查）
-    start_heartbeat_tasks(conn_key.clone(), last_heartbeat.clone());
+
 
     // 启动写任务
     let write_task = tokio::spawn(async move {
@@ -64,16 +61,12 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
     });
 
     // 启动读取任务
-    let result = read_loop(
-        &mut reader,
-        conn_key.clone(),
-        last_heartbeat.clone(),
-    )
-        .await;
+    let result = read_loop(&mut reader, &conn_key, last_heartbeat.clone()).await;
 
     // 清理资源
     manager.remove(&conn_key);
-    stop_heartbeat_tasks(&conn_key);
+    // 启动全局统一心跳检测任务
+    start_global_heartbeat_checker();
     write_task.abort();
     result
 }
@@ -81,7 +74,7 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
 /// 读取客户端数据 & 处理消息
 async fn read_loop(
     reader: &mut FramedRead<tokio::net::tcp::OwnedReadHalf, LengthDelimitedCodec>,
-    conn_key: ConnectionId,
+    conn_key: &ConnectionId,
     last_heartbeat: Arc<AtomicU64>,
 ) -> Result<()> {
     while let Some(frame) = reader.next().await {
@@ -97,20 +90,38 @@ async fn read_loop(
 
         match message_type {
             ByteMessageType::LoginReqMsgType => {
+                log::info!("🛂 收到w登录请求");
                 let login_req = LoginReqMsg::decode(bytes)?;
                 let i = login_req.device_type as i32;
                 let device_type = DeviceType::from_i32(i).unwrap();
                 let message_id = login_req.message_id.unwrap();
-                handle_login(&message_id, &login_req.username, &login_req.password, &login_req.app_key, &device_type).await?;
-                log::info!("🛂 收到w登录请求");
+                handle_login(
+                    &message_id,
+                    &login_req.username,
+                    &login_req.password,
+                    &login_req.app_key,
+                    &device_type,
+                )
+                .await?;
+
             }
             ByteMessageType::LogoutReqMsgType => {
-                let login_req = LoginReqMsg::decode(bytes)?;
-                let i = login_req.device_type as i32;
-                let device_type = DeviceType::from_i32(i).unwrap();
-                let message_id = login_req.message_id.unwrap();
-                // handle_logout(message_id, &login_req.agent_id, &login_req.uid, &login_req.token, &login_req.device_type).await?;
+                let logout_req = LogoutReqMsg::decode(bytes)?;
                 log::info!("🛂 收到w登录请求");
+                if let Some(conn) = get_socket_manager().get(conn_key) {
+                    if let (Some(agent_id), Some(uid), Some(device_type)) = (
+                        &conn.meta.agent_id,
+                        &conn.meta.uid,
+                        &conn.meta.device_type,
+                    ) {
+                        let message_id = logout_req.message_id.unwrap();
+                        handle_logout(&message_id, agent_id, uid,device_type).await?;
+                    } else {
+                        log::warn!("Logout 请求未携带完整连接信息: {:?}", conn_key);
+                    }
+                } else {
+                    log::warn!("找不到连接: {:?}", conn_key);
+                }
             }
             ByteMessageType::SendVerificationCodeReqMsgType => {
                 let _ = SendVerificationCodeReqMsg::decode(bytes)?;
@@ -165,3 +176,5 @@ async fn read_loop(
 
     Ok(())
 }
+
+

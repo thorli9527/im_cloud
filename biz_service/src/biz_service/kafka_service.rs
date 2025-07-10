@@ -73,9 +73,11 @@ impl KafkaService {
         let timeout = Duration::from_millis(50);
 
         match self.producer.send(record, timeout).await {
-            Ok((partition, offset)) => {
+            Ok(delivery) => {
+                log::info!("✅ Kafka message sent to partition: {}, offset: {}", delivery.partition, delivery.offset);
                 Ok(())
-            }
+            },
+
             Err((err, _)) => {
                 //todo 把错误写到 数据库 用job发送
                 log::error!("❌ Kafka Protobuf 发送失败: {:?}", err);

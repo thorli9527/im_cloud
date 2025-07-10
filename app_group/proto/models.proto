@@ -1,0 +1,239 @@
+syntax = "proto3";
+package models;
+
+// ==============================
+// 群组基本信息结构
+// ==============================
+
+message GroupInfo {
+  string agent_id = 1; // 多租户/客户端标识（必填）
+  string id = 2; // 群组唯一ID（由服务端生成或指定）
+  string name = 3; // 群组名称（用户可见）
+  string avatar = 4; // 群组头像 URL
+  string description = 5; // 群组简介，支持富文本
+  string notice = 6; // 群公告，面向群成员显示
+  string tags = 7; // 群标签，用于推荐或分类（英文逗号分隔）
+  JoinPermission join_permission = 8; // 加群权限控制
+  bool allow_search = 9; // 是否允许用户通过搜索找到该群
+  JoinQuestionType join_question_mode = 10; // 加群验证模式
+  repeated string join_questions = 11; // 加群问题（仅当为QUESTION模式时生效）
+  string join_question_answer = 12; // 正确答案（可用于匹配）
+  string join_code = 13; // 邀请码（当邀请加入时使用）
+  string join_code_answer = 14; // 邀请码校验值（可用于验证码匹配）
+}
+// ==============================
+// 群组成员信息结构
+// ==============================
+
+message GroupMemInfo {
+  string agent_id = 1;   // 多租户标识（如客户端来源）
+  string id = 2;         // 成员记录唯一ID（内部持久化用途）
+  string group_id = 3;   // 所属群组ID
+  string uid = 4;        // 用户唯一ID（全局唯一标识）
+  string alias = 5;      // 群内别名（群备注/昵称）
+  GroupRoleType role = 6; // 成员角色：OWNER / ADMIN / MEMBER
+  bool is_muted = 7;     // 是否被禁言（true 表示禁言中）
+  string avatar = 8;     // 成员头像 URL（前端展示用）
+}
+
+
+// ==============================
+// 标签信息结构
+// ==============================
+
+message TagInfo {
+  string id = 1; // 标签ID
+  string name = 2; // 标签名称
+  string description = 3; // 标签描述
+  string color = 4; // 可选颜色标识（用于前端展示）
+}
+
+// ==============================
+// 通用响应结构
+// ==============================
+
+message CommonResp {
+  bool success = 1; // 请求是否成功
+  string error_message = 2; // 错误提示
+  int32 code = 3; // 业务错误码，0 表示成功
+}
+
+// ==============================
+// 用户上下线请求结构
+// ==============================
+
+message OnlineReq {
+  string agent_id = 1;
+  string uid = 2; // 用户ID
+  string group_id = 3; // 所在群组ID
+}
+
+message OfflineReq {
+  string agent_id = 1;
+  string uid = 2;
+  string group_id = 3;
+}
+
+// ==============================
+// 群成员分页查询结构
+// ==============================
+
+message GetOnlineMembersReq {
+  string agent_id = 1;
+  string group_id = 2;
+  int32 page = 3; // 页码，从1开始
+  int32 page_size = 4; // 每页成员数量
+}
+
+message GetOnlineMembersResp {
+  repeated string uids = 1; // 在线用户ID列表
+  int32 total_count = 2; // 当前群在线总数
+  bool success = 3;
+  string error_message = 4;
+}
+
+message GetMembersReq {
+  string agent_id = 1;
+  string group_id = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message GetMembersRep {
+  repeated string uids = 1; // 全部成员ID列表
+  int32 total_count = 2;
+  bool success = 3;
+  string error_message = 4;
+}
+
+// ==============================
+// 群组操作请求结构
+// ==============================
+
+message CreateGroupReq {
+  string agent_id = 1;
+  string group_id = 2; // 可选自定义群ID（一般由服务端生成）
+  string name = 3;
+  string avatar = 4;
+  string description = 5;
+  string creator_id = 6; // 创建者用户ID
+  repeated string member_ids = 7; // 初始成员
+  string owner_id = 8; // 指定群主ID（可与创建者不同）
+  bool need_approval = 9; // 是否需要审核加入
+  bool allow_search = 10;
+}
+
+message DestroyGroupReq {
+  string agent_id = 1;
+  string group_id = 2;
+}
+
+message GetGroupInfoReq {
+  string agent_id = 1;
+  string group_id = 2;
+}
+
+message GetGroupInfoRep {
+  string agent_id = 1;
+  string group_id = 2;
+  string name = 3;
+  string avatar = 4;
+  string description = 5;
+  string creator_id = 6;
+  repeated GroupMemInfo members = 7; // 成员详细信息
+}
+
+message UpdateGroupInfoReq {
+  string agent_id = 1;
+  string group_id = 2;
+  string name = 3;
+  string avatar = 4;
+  string description = 5;
+  string notice = 6;
+  string tags = 7;
+  JoinPermission join_permission = 8;
+  bool allow_search = 9;
+  JoinQuestionType join_question_mode = 10;
+  repeated string join_questions = 11;
+  string join_question_answer = 12;
+  string join_code = 13;
+  string join_code_answer = 14;
+}
+
+// ==============================
+// 群成员操作结构
+// ==============================
+
+message AddMemberReq {
+  string agent_id = 1;
+  string group_id = 2;
+  repeated GroupMemInfo members = 3; // 支持多个用户添加
+}
+
+message RemoveMemberReq {
+  string agent_id = 1;
+  string group_id = 2;
+  repeated string uids = 3; // 多个待移除用户
+}
+
+message ExitGroupReq {
+  string agent_id = 1;
+  string group_id = 2;
+  string uid = 3; // 当前用户退出
+}
+
+message ChangeMemberRoleReq {
+  string agent_id = 1;
+  string group_id = 2;
+  string uid = 3;
+  GroupRoleType role = 4; // 新角色
+}
+
+message MuteMemberReq {
+  string agent_id = 1;
+  string group_id = 2;
+  string uid = 3;
+  bool status = 4; // true=禁言，false=取消
+}
+
+message ChangeMemberAliasReq {
+  string agent_id = 1;
+  string group_id = 2;
+  string uid = 3;
+  string alias = 4;
+}
+
+message TransferGroupOwnershipReq {
+  string agent_id = 1;
+  string group_id = 2;
+  string new_owner_uid = 3;
+}
+
+// ==============================
+// 枚举定义
+// ==============================
+
+enum GroupRoleType {
+  OWNER = 0; // 群主
+  ADMIN = 1; // 管理员
+  MEMBER = 2; // 普通成员
+}
+
+enum JoinPermission {
+  ANYONE = 0; // 任何人可加入
+  NEED_APPROVAL = 1; // 需审核
+  INVITE_ONLY = 2; // 仅限邀请
+  CLOSED = 3; // 不可加入
+}
+
+enum JoinQuestionType {
+  NONE = 0; // 无验证
+  QUESTION = 1; // 答题验证
+  CAPTCHA = 2; // 验证码验证
+  INVITE_CODE = 3; // 邀请码验证
+}
+
+enum TagType {
+  GROUP = 0; // 公共标签
+  SINGLE = 1; // 私有标签
+}

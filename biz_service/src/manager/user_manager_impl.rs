@@ -1,21 +1,23 @@
-use std::collections::HashMap;
-use std::sync::atomic::Ordering;
-use std::time::Duration;
-use deadpool_redis::redis::{cmd, AsyncCommands};
-use common::config::AppConfig;
-use common::util::common_utils::build_md5_with_key;
 use crate::biz_service::agent_service::AgentService;
 use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::GroupMemberMeta;
 use crate::manager::common::SHARD_COUNT;
 use crate::manager::local_group_manager::LocalGroupManagerOpt;
+use common::config::AppConfig;
+use common::util::common_utils::build_md5_with_key;
+use deadpool_redis::redis::{AsyncCommands, cmd};
 use once_cell::sync::OnceCell;
+use std::collections::HashMap;
+use std::sync::atomic::Ordering;
+use std::time::Duration;
+use fxhash::hash64;
 use tokio::time::sleep;
 pub const MAX_CLEAN_COUNT: usize = 100;
-pub const USER_ONLINE_TTL_SECS: u64 = 30;
+pub const USER_ONLINE_TTL_SECS: u64 = 300;
 pub const STREAM_KEY: &str = "user:events";
 pub const CONSUMER_GROUP: &str = "user_events_group";
 pub const CONSUMER_NAME: &str = "user_manager";
+const SHARD_SIZE: usize = 64;
 impl UserManager {
     /// 构造新的 UserManager 实例
     ///
@@ -26,89 +28,20 @@ impl UserManager {
     /// - `shard_count`: 本地在线缓存分片数量
     /// - `use_local_cache`: 是否启用本地缓存
     /// - `group_map`: 预初始化的分片群组缓存结构
-    pub fn new(pool: RedisPool, use_local_cache: bool) -> Self {
-        let online_shards = (0..SHARD_COUNT).map(|_| DashMap::new()).collect();
+    pub fn new(pool: RedisPool) -> Self {
         let local_group_manager = LocalGroupManager::get();
         let manager = Self {
             pool,
-            local_online_shards: Arc::new(online_shards),
             local_group_manager,
             is_initialized: Arc::new(AtomicBool::new(false)),
             init_notify: Arc::new(Notify::new()),
-            use_local_cache,
             friend_map: Arc::new(DashMap::<String, DashMap<UserId, ()>>::new()),
         };
-
-        if !use_local_cache {
-            manager.init(manager.clone());
-            return manager;
-        }
-
-        let manager_clone = manager.clone();
-        tokio::spawn(async move {
-            if manager_clone.use_local_cache {
-                if let Err(e) = manager_clone.initialize_from_redis().await {
-                    eprintln!("[RedisUserManager] 初始化失败: {:?}", e);
-                }
-            }
-            if let Err(e) = manager_clone.start_stream_event_consumer().await {
-                eprintln!("[RedisUserManager] 消费器启动失败: {:?}", e);
-            }
-            manager_clone.is_initialized.store(true, Ordering::SeqCst);
-            manager_clone.init_notify.notify_waiters();
-            println!("[RedisUserManager] ✅ 初始化完成");
-        });
-
-        let cleaner = manager.clone();
-        tokio::spawn(async move {
-            loop {
-                sleep(Duration::from_secs(300)).await;
-                if let Err(e) = cleaner.clean().await {
-                    eprintln!("[RedisUserManager] ❌ 清理空群组失败: {:?}", e);
-                }
-            }
-        });
         manager.init(manager.clone());
-        manager
+        return manager;
     }
-    /// 清理本地在线缓存（可选：按条件/全量）
-    /// - 若启用本地缓存，则遍历每个分片中的用户，检查其是否仍在 Redis 中存在在线记录。
-    /// - 若 Redis 无对应数据，则删除本地项。
-    pub async fn clean_local_online_cache(&self) -> anyhow::Result<usize> {
-        if !self.use_local_cache {
-            return Ok(0); // 未启用缓存则跳过
-        }
-
-        let mut conn = self.pool.get().await?;
-        let mut removed_count = 0;
-
-        for shard in self.local_online_shards.iter() {
-            let users: Vec<UserId> = shard.iter().map(|e| e.key().clone()).collect();
-            for user_id in users {
-                let redis_key_prefix = format!("online:user:agent:");
-                let pattern = format!("{}*:{}:*", redis_key_prefix, user_id);
-
-                // 检查 Redis 是否存在该用户在线记录（模糊匹配 agent_id + device_type）
-                let exists: Vec<String> = cmd("KEYS")
-                    .arg(&pattern)
-                    .query_async(&mut conn)
-                    .await
-                    .unwrap_or_default();
-
-                if exists.is_empty() {
-                    shard.remove(&user_id);
-                    removed_count += 1;
-                    println!("[UserManager] 🧹 清理离线用户缓存: {}", user_id);
-                }
-            }
-        }
-
-        println!(
-            "[UserManager] ✅ 在线缓存清理完成，总计 {} 个用户",
-            removed_count
-        );
-        Ok(removed_count)
-    }
+    /// 初始化用户管理器   计算分片索引
+ 
     pub async fn initialize_from_redis(&self) -> anyhow::Result<()> {
         let mut conn = self.pool.get().await?;
 
@@ -267,18 +200,24 @@ impl UserManager {
         println!("[UserManager] ✅ 本地缓存初始化完成（在线状态 + 群组信息 + 成员）");
         Ok(())
     }
-
+    // 获取 Redis 分片索引
+    pub fn get_redis_shard_index(&self,agent_id: &str, user_id: &str) -> usize {
+        let key = format!("{}:{}", agent_id, user_id);
+        (hash64(key.as_bytes()) % SHARD_SIZE as u64) as usize
+    }
+    // 生成在线状态键
+    pub fn make_online_key(&self,agent_id: &str, user_id: &UserId) -> (String, String) {
+        let shard = self.get_redis_shard_index(agent_id, user_id);
+        let redis_key = format!("online:user:shard:{}", shard);
+        let redis_field = format!("{}:{}", agent_id, user_id);
+        (redis_key, redis_field)
+    }
     pub async fn start_stream_event_consumer(&self) -> anyhow::Result<()> {
         Ok(())
     }
-   
+
     pub async fn clean(&self) -> anyhow::Result<()> {
         Ok(())
-    }
-    /// 获取用户分片
-    pub fn get_online_shard(&self, user_id: &UserId) -> &DashMap<UserId, DashMap<DeviceType, ()>> {
-        let hash = fxhash::hash32(user_id.as_bytes());
-        &self.local_online_shards[(hash as usize) % SHARD_COUNT]
     }
 
     pub fn init(&self, instance: UserManager) {

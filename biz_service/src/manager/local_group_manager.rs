@@ -1,9 +1,9 @@
 use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
-use crate::manager::common::UserId;
 use async_trait::async_trait;
 use dashmap::{DashMap, DashSet};
 use std::sync::Arc;
+use common::UserId;
 
 pub const SHARD_COUNT: usize = 16;
 // === 分片群组结构 ===
