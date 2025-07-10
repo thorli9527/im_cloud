@@ -24,8 +24,8 @@ impl ShardManager {
 
     pub async fn client_init(&mut self) -> Result<&mut ArbiterServiceClient<Channel>> {
         if self.arb_client.is_none() {
-            let cli = ArbiterServiceClient::connect("http://[::1]:50051").await?;
-            self.arb_client = Some(cli);
+            let client = ArbiterServiceClient::connect(self.shard_config.server_host.clone()).await?;
+            self.arb_client = Some(client);
         }
         Ok(self.arb_client.as_mut().unwrap())
     }
