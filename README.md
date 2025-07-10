@@ -1,86 +1,72 @@
-# im_cloud
-
-🚀 **im_cloud** 是一个用 Rust 编写的高性能、模块化即时通讯（IM）云中间件，支持多节点部署与水平扩展，旨在提供低延迟、可靠、高并发的消息分发服务。
-
-## ✨ 项目特点
-
-- 🦀 使用 Rust 实现，内存安全，性能强大
-- 📦 多模块架构：支持 API 接入、消息调度、后台任务、长连接服务等功能解耦
-- ☁️ 未来支持多协议（TCP/WebSocket/gRPC）、Redis 中间件、任务队列、集群调度等功能
-
----
-
-## 📁 模块结构
-
-```bash
-im_cloud/
-├── app_api         # 对外 REST/gRPC 接口服务
-├── app_socket      # 长连接管理模块（如 TCP/WebSocket 服务端）
-├── app_job         # 异步任务/定时任务执行器
-├── app_main        # 项目后台管理端，整合业务调度
-├── biz_service     # 业务逻辑处理封装
-├── common          # 公共工具库，如日志、配置、错误处理
-├── macro           # Rust 宏定义，用于简化服务注册等
-├── proto           # Protocol Buffers 消息定义
-├── web_api/        # 前端调试页面（可选）
-├── Cargo.toml      # Rust 项目依赖定义
-└── rustfmt.toml    # 格式化配置
-
-
-🚀 快速开始
-🛠 环境要求
-Rust ≥ 1.74（建议使用最新版）
-
-已安装 protobuf 编译器（用于生成消息结构）
-
-📦 安装依赖
-bash
-
-cargo build
-🧪 启动服务
-以 app_main 启动为例：
-
-bash
-
-cargo run -p app_main
-如需单独运行其他服务（如 API 或 socket），可分别指定：
-
-bash
-
-cargo run -p app_api
-cargo run -p app_socket
-📡 项目架构图（草案）
-text
-
-+--------+       +---------+        +---------+
-| Client | <---> | Socket  | <----> | Job     |
-+--------+       +---------+        +---------+
-     |               |                   |
-     |         +-----v-----+      +------v-----+
-     +-------> | API Layer | <--> | Biz Logic  |
-               +-----------+      +------------+
-✅ 开发计划
- 模块拆分与基础架构搭建
-
- 用户登录与认证机制
-
- 群组与消息分发管理
-
- Redis 缓存与消息存储支持
-
- 消息队列支持（如 Kafka / NATS）
-
- WebSocket 协议支持
-
- 服务注册与健康检查（如 etcd/consul）
-
-🤝 贡献指南
-欢迎提交 PR 或 issue：
-
-Fork 本项目
-
-创建功能分支：git checkout -b feat/xxx
-
-提交你的改动并推送
-
-创建 Pull Request
+项目整体结构
+你的项目名为 im-server，从目录和文件命名来看，这是一个即时通讯（IM）服务端项目，采用 Rust 语言开发，采用了多模块/多服务架构。项目包含多个子应用（app_开头）、业务服务（biz_service）、通用库（common）、宏定义（macro）等。
+1. 各子项目/模块说明
+1.1 app_api
+作用：API 网关或 HTTP 接口服务，负责对外提供 RESTful API。
+主要目录/文件：
+src/handlers/：各类业务处理器（如好友、群组、消息、用户等）。
+static/swagger-ui/：API 文档页面。
+result.rs：统一的接口返回结构。
+1.2 app_arb
+作用：仲裁服务，可能用于消息或事务的仲裁处理。
+主要目录/文件：
+proto/arb_service.proto：gRPC 协议定义。
+src/biz_service/grpc/：gRPC 服务实现。
+src/protocol/：协议相关实现。
+1.3 app_group
+作用：群组服务，负责群组相关的业务逻辑。
+主要目录/文件：
+proto/：群组相关的 proto 定义。
+src/biz_service/：群组和群成员服务。
+src/manager/：分片管理器，可能用于群组分布式管理。
+src/protocol/：协议实现。
+1.4 app_job
+作用：定时任务或异步任务服务。
+主要目录/文件：
+src/main.rs：主入口。
+1.5 app_main
+作用：主服务，可能是聚合各子服务的入口。
+主要目录/文件：
+src/handlers/：主要业务处理器。
+src/middleware/：中间件。
+result.rs：统一返回结构。
+1.6 app_socket
+作用：WebSocket 服务，处理实时消息推送、连接管理等。
+主要目录/文件：
+src/handler/：各类 socket 事件处理器。
+src/kafka/：Kafka 消息队列相关。
+src/manager/：Socket 管理相关。
+1.7 biz_service
+作用：核心业务逻辑层，提供各类业务服务。
+主要目录/文件：
+proto/：所有业务相关的 proto 定义。
+src/biz_service/：各类业务服务实现（用户、好友、群组、缓存、MQ等）。
+src/entitys/：数据库实体定义。
+src/manager/：业务管理器。
+src/protocol/：协议转换、数据结构定义。
+1.8 common
+作用：通用库，提供配置、数据库、Redis、工具方法等。
+主要目录/文件：
+src/config/：配置管理。
+src/db.rs：数据库相关。
+src/redis/：Redis 操作封装。
+src/util/：通用工具函数。
+1.9 macro
+作用：Rust 宏定义，便于代码复用和简化。
+2. 技术栈与架构特点
+语言：Rust
+通信协议：gRPC（proto 文件）、RESTful API、WebSocket
+消息队列：Kafka（用于消息推送、异步处理等）
+数据库/缓存：有 Redis 操作相关代码，数据库部分未详细列出，但有实体定义
+分布式/高可用：有分片管理、仲裁服务，适合分布式部署
+文档：Swagger UI 支持
+3. 典型业务流程（推测）
+用户通过 API 网关（app_api）发起请求，如登录、发消息、加好友、建群等。
+API 服务调用 biz_service，执行业务逻辑（如数据库操作、消息入队等）。
+消息类操作通过 Kafka 投递到 app_socket，由 socket 服务推送到在线用户。
+群组、好友等操作由 app_group、app_arb 等子服务处理，实现解耦和高可用。
+所有服务共享 common 库，实现配置、数据库、缓存等基础功能。
+4. 适用场景
+大型 IM 系统后端
+分布式、高并发场景
+需要多端接入（Web、App、PC）的实时通讯
