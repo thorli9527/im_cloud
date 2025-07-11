@@ -27,7 +27,7 @@ use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use dashmap::DashMap;
 use tonic::{Request, Response, Status};
-
+use tracing::log;
 use crate::protocol::arbitration::arbiter_service_server::ArbiterService;
 use crate::protocol::arbitration::*;
 
@@ -163,7 +163,8 @@ impl ArbiterService for ArbiterServiceImpl {
 
         // 插入
         self.shard_nodes.insert(node_addr.clone(), entry);
-
+        //打印信息
+        log::warn!("新增分片节点: {}", node_addr);
         Ok(Response::new(CommonResponse {
             success: true,
             message: format!("Node {} registered with index {}", node_addr, index),
@@ -211,7 +212,8 @@ impl ArbiterService for ArbiterServiceImpl {
             Some(mut entry) => {
                 entry.state = ShardState::PreparingOffline;
                 entry.last_update_time = now;
-
+                //删除节点
+                self.shard_nodes.remove(&node_addr);
                 Ok(Response::new(CommonResponse {
                     success: true,
                     message: format!("Node {} has gracefully left", node_addr),
@@ -225,15 +227,11 @@ impl ArbiterService for ArbiterServiceImpl {
     }
 
     async fn heartbeat(&self, request: Request<BaseRequest>) -> Result<Response<CommonResponse>, Status> {
-        match self.shard_nodes.get(&request.get_ref().node_addr) {
-            Some(entry) => {
-                let value = entry.value();
-                let shard_info = ShardNodeInfo {
-                    node_addr: value.node_addr.clone(),
-                    version: value.version,
-                    state: value.state as i32,
-                    last_update_time:current_millis() ,
-                };
+        match self.shard_nodes.get_mut(&request.get_ref().node_addr) {
+            Some(mut entry) => {
+                let value: &mut ShardNodeInfoEntry = entry.value_mut();
+                // 更新心跳时间
+                value.last_heartbeat = current_millis();
                 Ok(Response::new(CommonResponse {
                     success: true,
                     message: "".to_string(),
