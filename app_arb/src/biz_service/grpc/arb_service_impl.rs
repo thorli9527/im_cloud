@@ -162,9 +162,9 @@ impl ArbiterService for ArbiterServiceImpl {
         };
 
         // 插入
-        self.shard_nodes.insert(node_addr.clone(), entry);
+        self.shard_nodes.insert(node_addr.clone(), entry.clone());
         //打印信息
-        log::warn!("新增分片节点: {}", node_addr);
+        log::warn!("新增分片节点: {:?}", entry);
         Ok(Response::new(CommonResponse {
             success: true,
             message: format!("Node {} registered with index {}", node_addr, index),
@@ -189,7 +189,8 @@ impl ArbiterService for ArbiterServiceImpl {
                 }
             })
             .collect();
-
+        // 打印日志
+        log::info!("获取所有节点信息");
         let response = ListAllNodesResponse { nodes };
         Ok(Response::new(response))
     }
@@ -214,6 +215,8 @@ impl ArbiterService for ArbiterServiceImpl {
                 entry.last_update_time = now;
                 //删除节点
                 self.shard_nodes.remove(&node_addr);
+                //打印日志
+                log::info!("节点 {} 已离线", node_addr);
                 Ok(Response::new(CommonResponse {
                     success: true,
                     message: format!("Node {} has gracefully left", node_addr),
@@ -232,6 +235,8 @@ impl ArbiterService for ArbiterServiceImpl {
                 let value: &mut ShardNodeInfoEntry = entry.value_mut();
                 // 更新心跳时间
                 value.last_heartbeat = current_millis();
+                //打印日志
+                log::info!("心跳: {}", &request.get_ref().node_addr);
                 Ok(Response::new(CommonResponse {
                     success: true,
                     message: "".to_string(),

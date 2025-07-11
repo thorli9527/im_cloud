@@ -7,6 +7,8 @@ use tonic::transport::Channel;
 
 #[derive(Debug)]
 pub struct ShardManager {
+    pub shard_state: ShardState,
+    pub shart_index: i32,
     pub shard_config: ShardConfig,
     pub arb_client: Option<ArbiterServiceClient<Channel>>,
     pub vnode_versions: HashMap<u64, u64>,
@@ -14,17 +16,25 @@ pub struct ShardManager {
 
 
 impl ShardManager {
-    pub fn new(shard_config: ShardConfig) -> Self {
+    pub fn new(shard_config:ShardConfig) -> Self {
         Self {
-            shard_config,
+            shard_state: ShardState::Unspecified,
+            shart_index: 0,
+            shard_config:shard_config.clone(),
             arb_client: None,
             vnode_versions: HashMap::new(),
         }
     }
-
-    pub async fn client_init(&mut self) -> Result<&mut ArbiterServiceClient<Channel>> {
+    pub fn get_node_addr(&self) -> &str {
+        self.shard_config
+            .shard_address
+            .as_deref()
+            .expect("shard_address must be set")
+    }
+    async fn client_init(&mut self) -> Result<&mut ArbiterServiceClient<Channel>> {
         if self.arb_client.is_none() {
-            let client = ArbiterServiceClient::connect(self.shard_config.server_host.clone()).await?;
+            let server_host = self.shard_config.server_host.clone().unwrap();
+            let client = ArbiterServiceClient::connect(server_host).await?;
             self.arb_client = Some(client);
         }
         Ok(self.arb_client.as_mut().unwrap())
@@ -37,7 +47,7 @@ pub trait ShardManagerOpt: Send + Sync {
     async fn init(&mut self) -> Result<()> ;
 
     /// 注册当前节点到仲裁中心或注册服务，用于初始接入和负载调度识别
-    async fn register_node(&mut self, node_addr: &str) -> Result<()>;
+    async fn register_node(&mut self) -> Result<()>;
 
     /// 将群组分片状态设置为“迁移中”
     /// 通常意味着不再接受新写入，同时准备数据转移

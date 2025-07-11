@@ -6,8 +6,8 @@ edition = "2024"
 [dependencies]
 common = { path = "../common" }
 tokio.workspace = true
-tonic.version = "0.13.1"
-prost.version = "0.13.1"
+tonic.workspace = true
+prost.workspace = true
 prost-types.workspace = true
 serde.workspace = true
 tracing.workspace = true
@@ -16,7 +16,13 @@ anyhow.workspace = true
 mongodb.workspace = true
 once_cell.workspace = true
 futures-util.workspace = true
-chrono = "0.4.41"
+chrono.workspace = true
+actix-web.workspace = true
+rdkafka.workspace = true
+bytes.workspace = true
+env_logger.workspace = true
+deadpool-redis.workspace = true
+tokio-util = "0.7.15"
 [build-dependencies]
 tonic = "0.13.1"
 tonic-build = "0.13.1"

@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     AppConfig::init(&"arb-config.toml".to_string());
     // 读取配置文件
     let app_cfg = AppConfig::get();
-    let addr = SocketAddr::from_str(&app_cfg.get_shard().server_host)?;
+    let addr = SocketAddr::from_str(&app_cfg.get_shard().server_host.unwrap())?;
     let svc = ArbiterServiceImpl {
         shard_nodes: Arc::new(Default::default()),
     };

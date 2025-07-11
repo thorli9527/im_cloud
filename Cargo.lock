@@ -378,17 +378,23 @@ dependencies = [
 name = "app_group"
 version = "0.1.0"
 dependencies = [
+ "actix-web",
  "anyhow",
+ "bytes",
  "chrono",
  "common",
+ "deadpool-redis",
+ "env_logger",
  "futures-util",
  "mongodb",
  "once_cell",
  "prost 0.13.5",
  "prost-build 0.14.1",
  "prost-types 0.13.5",
+ "rdkafka",
  "serde",
  "tokio",
+ "tokio-util",
  "tonic",
  "tonic-build",
  "tracing",

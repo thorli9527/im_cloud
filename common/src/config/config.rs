@@ -16,8 +16,8 @@ pub struct AppConfig {
 }
 #[derive(Debug, Deserialize, Clone,Default)]
 pub struct ShardConfig {
-    pub shard_address: String,
-    pub server_host: String,
+    pub shard_address: Option<String>,
+    pub server_host: Option<String>,
 }
 impl AppConfig {
     pub fn new(file: &String) -> Self {
