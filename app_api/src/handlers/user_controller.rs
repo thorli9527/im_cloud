@@ -177,7 +177,7 @@ async fn user_set_password(dto: web::Json<SetPasswordDto>, req: HttpRequest) -> 
         None => return Err(BizError("用户不存在".into()).into()),
     };
 
-    let hashed_password = build_md5_with_key(&dto.password, &app_config.sys.md5_key);
+    let hashed_password = build_md5_with_key(&dto.password, &app_config.get_sys().md5_key);
     client_service
         .dao
         .update(doc! { "_id": &client.id }, doc! { "password": &hashed_password })

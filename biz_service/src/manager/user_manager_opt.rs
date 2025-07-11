@@ -47,7 +47,8 @@ impl UserManagerOpt for UserManager {
             return Err(anyhow::anyhow!("user.or.password.error"));
         }
         let app_config = AppConfig::get();
-        let string = build_md5_with_key(password, &app_config.sys.md5_key);
+
+        let string = build_md5_with_key(password, &app_config.get_sys().md5_key);
         let client = client_info.unwrap();
         if &client.password.unwrap() != &string {
             return Err(anyhow::anyhow!("user.or.password.error"));
@@ -70,7 +71,7 @@ impl UserManagerOpt for UserManager {
                     expires_at: now() as u64,
                 },
                 &build_uuid(),
-                &AppConfig::get().kafka.topic_group,
+                &AppConfig::get().get_kafka().topic_group,
             )
             .await?;
         Ok(token)
@@ -101,7 +102,7 @@ impl UserManagerOpt for UserManager {
                     message_id: Some(message_id.clone()),
                 },
                 &build_uuid(),
-                &AppConfig::get().kafka.topic_group,
+                &AppConfig::get().get_kafka().topic_group,
             )
             .await?;
         Ok(())
@@ -139,7 +140,7 @@ impl UserManagerOpt for UserManager {
                 &0,
                 &online_msg,
                 &online_msg.message_id.clone().unwrap().to_string(),
-                &AppConfig::get().kafka.topic_group,
+                &AppConfig::get().get_kafka().topic_group,
             ).await?;
         }
 
@@ -179,7 +180,7 @@ impl UserManagerOpt for UserManager {
                 &0,
                 &offline_msg,
                 &offline_msg.message_id.clone().unwrap().to_string(),
-                &AppConfig::get().kafka.topic_group,
+                &AppConfig::get().get_kafka().topic_group,
             ).await?;
         }
 
@@ -443,7 +444,7 @@ impl UserManagerOpt for UserManager {
         // ---------- 6. Kafka 消息通知 ----------
         let kafka_service = KafkaService::get();
         let app_config = AppConfig::get();
-        let topic = &app_config.kafka.topic_single;
+        let topic = &app_config.get_kafka().topic_single;
         let time = now();
 
         // 构造好友事件
@@ -505,7 +506,7 @@ impl UserManagerOpt for UserManager {
         // ---------- 3. 发送 Kafka 通知（可选） ----------
         let kafka_service = KafkaService::get();
         let app_config = AppConfig::get();
-        let topic = &app_config.kafka.topic_single;
+        let topic = &app_config.get_kafka().topic_single;
         let time = now();
 
         let make_event = |from_uid: &UserId, to_uid: &UserId| FriendEventMsg {
@@ -675,7 +676,7 @@ impl UserManagerOpt for UserManager {
         // ---------- 6. Kafka 消息通知 ----------
         let kafka_service = KafkaService::get();
         let app_config = AppConfig::get();
-        let topic = &app_config.kafka.topic_single;
+        let topic = &app_config.get_kafka().topic_single;
         let time = now();
 
         // 构造好友事件
@@ -787,7 +788,7 @@ impl UserManagerOpt for UserManager {
         // ---------- 6. Kafka 消息通知 ----------
         let kafka_service = KafkaService::get();
         let app_config = AppConfig::get();
-        let topic = &app_config.kafka.topic_single;
+        let topic = &app_config.get_kafka().topic_single;
         // 同步通知双方
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);

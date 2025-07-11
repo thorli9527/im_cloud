@@ -23,21 +23,21 @@ async fn main() -> anyhow::Result<()> {
     let config = AppConfig::get();
     //初始化日志
     init_log(&config);
-    let bind_cfg = format!("{}:{}", &config.server.host, &config.server.port);
+    let bind_cfg = format!("{}:{}", &config.get_server().host, &config.get_server().port);
     let listener = TcpListener::bind(bind_cfg).await?;
     let pool = build_redis_pool(&config);
     let db = init_mongo_db(&config).await;
-    KafkaService::init(&config.kafka).await;
+    KafkaService::init(&config.get_kafka()).await;
     biz_service::init_service(db);
     biz_service::manager::init(pool, true);
     let manager: Arc<SocketManager> = get_socket_manager();
     tokio::spawn(manager::job_manager::start_heartbeat_cleaner(manager.clone(), 30)); // 30秒无心跳视为断线
-    start_server(listener, config.kafka.clone()).await
+    start_server(listener, config.get_kafka()).await
 }
 
 pub fn build_redis_pool(config: &AppConfig) -> Pool {
     // 从应用配置中获取 Redis URL
-    let mut cfg = deadpool_redis::Config::from_url(config.redis.url.clone());
+    let mut cfg = deadpool_redis::Config::from_url(config.get_redis().url.clone());
 
     // 设置连接池的配置参数
     cfg.pool = Some(PoolConfig {
@@ -51,16 +51,16 @@ pub fn build_redis_pool(config: &AppConfig) -> Pool {
 
 pub fn init_log(config: &AppConfig) -> Result<(), AppError> {
     let mut builder = env_logger::Builder::new();
-    let log_level = &config.sys.log_leve;
+    let log_level = &config.get_sys().log_leve;
     let mut filter = builder.filter(None, LevelFilter::from_str(log_level).unwrap());
     filter.init();
     Ok(())
 }
 
 pub async fn init_mongo_db(config: &AppConfig) -> Database {
-    let client_options = ClientOptions::parse(config.database.url.clone()).await.expect("MongoDB URI ERROR");
+    let client_options = ClientOptions::parse(config.get_database().url.clone()).await.expect("MongoDB URI ERROR");
     // 创建 MongoDB 客户端
     let client = Client::with_options(client_options).expect("CLIENT MongoDB ERROR");
     // 获取数据库句柄（例如，名为 "mydb" 的数据库）
-    client.database(&config.database.db_name)
+    client.database(&config.get_database().db_name)
 }

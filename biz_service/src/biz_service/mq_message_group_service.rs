@@ -71,7 +71,7 @@ impl GroupMessageService {
         let app_config = AppConfig::get();
         let message_type= ByteMessageType::GroupMsgType;
         let node_index=0 as u8;
-        kafka_service.send_proto(&message_type, &node_index,&message,&message.message_id.unwrap().to_string(), &app_config.kafka.topic_group).await?;
+        kafka_service.send_proto(&message_type, &node_index,&message,&message.message_id.unwrap().to_string(), &app_config.get_kafka().topic_group).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

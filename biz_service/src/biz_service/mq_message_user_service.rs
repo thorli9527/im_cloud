@@ -73,7 +73,7 @@ impl UserMessageService {
         let app_config = AppConfig::get();
         let msg_type: ByteMessageType = ByteMessageType::UserMsgType;
         let data_index=0 as u8;
-        kafka_service.send_proto( &msg_type,&data_index,&message,&message.message_id.unwrap().to_string(), &app_config.kafka.topic_single).await?;
+        kafka_service.send_proto( &msg_type,&data_index,&message,&message.message_id.unwrap().to_string(), &app_config.get_kafka().topic_single).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

@@ -6,13 +6,13 @@ use serde::Deserialize;
 use std::sync::Arc;
 #[derive(Debug, Deserialize, Clone,Default)]
 pub struct AppConfig {
-    pub database: DatabaseConfig,
-    pub redis: RedisConfig,
-    pub server: ServerConfig,
-    pub sys: SysConfig,
-    pub cache: CacheConfig,
-    pub kafka: KafkaConfig,
-    pub shard: ShardConfig,
+    pub database: Option<DatabaseConfig>,
+    pub redis: Option<RedisConfig>,
+    pub server: Option<ServerConfig>,
+    pub sys: Option<SysConfig>,
+    pub cache: Option<CacheConfig>,
+    pub kafka: Option<KafkaConfig>,
+    pub shard: Option<ShardConfig>,
 }
 #[derive(Debug, Deserialize, Clone,Default)]
 pub struct ShardConfig {
@@ -33,7 +33,28 @@ impl AppConfig {
         let instance = Self::new(&file);
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
-
+    
+    pub fn get_database(&self) -> DatabaseConfig {
+        self.database.clone().unwrap_or_default()
+    }
+    pub fn get_redis(&self) -> RedisConfig {
+        self.redis.clone().unwrap_or_default()
+    }
+    pub fn get_server(&self) -> ServerConfig {
+        self.server.clone().unwrap_or_default()
+    }
+    pub fn get_sys(&self) -> SysConfig {
+        self.sys.clone().unwrap_or_default()
+    }
+    pub fn get_cache(&self) -> CacheConfig {
+        self.cache.clone().unwrap_or_default()
+    }
+    pub fn get_kafka(&self) -> KafkaConfig {
+        self.kafka.clone().unwrap_or_default()
+    }
+    pub fn get_shard(&self) -> ShardConfig {
+        self.shard.clone().unwrap_or_default()
+    }
     /// 获取单例
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()

@@ -33,7 +33,7 @@ impl ClientService {
         user.uid = user_id.to_string();
         user.agent_id_uid = format!("{}_{}", user.agent_id, user.uid);
         if password.is_some() {
-            let md5_key=&AppConfig::get().sys.md5_key;
+            let md5_key=&AppConfig::get().get_sys().md5_key;
             let password=password.unwrap();
             if !password.is_empty(){
                 user.password= Some(build_md5_with_key(&password,&md5_key));
