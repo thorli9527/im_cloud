@@ -92,15 +92,10 @@ pub struct TagInfo {
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CommonResp {
-    /// 请求是否成功
     #[prost(bool, tag = "1")]
     pub success: bool,
-    /// 错误提示
     #[prost(string, tag = "2")]
-    pub error_message: ::prost::alloc::string::String,
-    /// 业务错误码，0 表示成功
-    #[prost(int32, tag = "3")]
-    pub code: i32,
+    pub message: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[derive(Clone, PartialEq, ::prost::Message)]

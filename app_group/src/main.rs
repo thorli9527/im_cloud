@@ -1,4 +1,3 @@
-use crate::biz_service::kafka_service::KafkaService;
 use crate::manager::shard_manager::ShardManager;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer};

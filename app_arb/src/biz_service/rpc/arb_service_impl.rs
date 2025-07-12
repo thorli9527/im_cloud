@@ -28,26 +28,19 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use dashmap::DashMap;
 use tonic::{Request, Response, Status};
 use tracing::log;
+use common::util::date_util::now;
 use crate::protocol::rpc_arb_models::{BaseRequest, CommonResp, ListAllNodesResponse, ShardNodeInfo, ShardState, UpdateShardStateRequest};
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcService;
 
 /// 分片节点状态信息
 /// 表示某个 vnode 当前的版本号、状态、归属节点及上次更新时间
-#[derive(Debug, Clone)]
-pub struct ShardNodeInfoEntry {
-    pub node_addr: String,
-    pub index:i32,
-    pub version: u64,
-    pub state: ShardState,
-    pub last_update_time: u64,
-    pub last_heartbeat: u64,
-}
+
 
 
 /// ArbiterService 实现体，持有共享状态引用
 #[derive(Clone, Default)]
 pub struct ArbiterServiceImpl {
-    pub shard_nodes: Arc<DashMap<String, ShardNodeInfoEntry>>,
+    pub shard_nodes: Arc<DashMap<String, ShardNodeInfo>>,
 }
 
 
@@ -63,14 +56,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
 
         match self.shard_nodes.get(&node_addr) {
             Some(entry) => {
-                let value = entry.value();
-                let shard_info = ShardNodeInfo {
-                    node_addr: value.node_addr.clone(),
-                    version: value.version,
-                    state: value.state as i32,
-                    last_update_time: value.last_update_time,
-                };
-                Ok(Response::new(shard_info))
+                Ok(Response::new(entry.value().clone()))
             }
             None => Err(Status::not_found(format!(
                 "Node {} not found.",
@@ -93,7 +79,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             Some(mut entry) => {
                 // 更新状态和元信息
                 entry.state = match ShardState::from_i32(new_state) {
-                    Some(valid_state) => valid_state,
+                    Some(valid_state) => valid_state as i32,
                     None => {
                         return Err(Status::invalid_argument(format!(
                             "Invalid ShardState: {}",
@@ -102,7 +88,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                     }
                 };
                 entry.version += 1;
-                entry.last_update_time = current_millis();
+                entry.last_update_time = now() as u64;
 
                 Ok(Response::new(CommonResp {
                     success: true,
@@ -124,17 +110,22 @@ impl ArbServerRpcService for ArbiterServiceImpl {
     async fn register_node(
         &self,
         request: Request<BaseRequest>,
-    ) -> Result<Response<CommonResp>, Status> {
+    ) -> Result<Response<ShardNodeInfo>, Status> {
         let req = request.into_inner();
         let node_addr = req.node_addr;
 
-        // 检查是否已存在
-        if self.shard_nodes.contains_key(&node_addr) {
-            return Ok(Response::new(CommonResp {
-                success: true,
-                message: format!("Node {} already registered", node_addr),
+        // 如果已存在，返回已有信息
+        if let Some(node_info) = self.shard_nodes.get(&node_addr) {
+            return Ok(Response::new(crate::protocol::rpc_arb_models::ShardNodeInfo {
+                node_addr: node_info.node_addr.clone(),
+                index: node_info.index,
+                total: self.shard_nodes.len() as i32,
+                version: node_info.version,
+                state: node_info.state as i32,
+                last_update_time: node_info.last_update_time,
             }));
         }
+
 
         // 获取所有已使用的 index
         let used_indices: HashSet<i32> = self
@@ -150,28 +141,23 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         }
 
         // 当前时间戳（毫秒）
-        let now = current_millis();
+        let now = now() as u64;
         // 构建新 entry
-        let entry = ShardNodeInfoEntry {
+        let entry = ShardNodeInfo {
             node_addr: node_addr.clone(),
             index,
+            total: self.shard_nodes.len() as i32,
             version: 0,
-            state: ShardState::Preparing,
+            state: ShardState::Preparing as i32,
             last_update_time: now,
-            last_heartbeat: now,
         };
 
         // 插入
         self.shard_nodes.insert(node_addr.clone(), entry.clone());
         //打印信息
-        log::warn!("新增分片节点: {:?}", entry);
-        Ok(Response::new(CommonResp {
-            success: true,
-            message: format!("Node {} registered with index {}", node_addr, index),
-        }))
+        // log::warn!("新增分片节点: {:?}", &entry);
+        return Ok(Response::new(entry));
     }
-
-
     async fn list_all_nodes(
         &self,
         _request: Request<()>,
@@ -179,22 +165,14 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         let nodes: Vec<ShardNodeInfo> = self
             .shard_nodes
             .iter()
-            .map(|entry| {
-                let info: &ShardNodeInfoEntry = entry.value();
-                ShardNodeInfo {
-                    node_addr: info.node_addr.clone(),
-                    version: info.version,
-                    state: info.state as i32,
-                    last_update_time: info.last_update_time,
-                }
-            })
+            .map(|entry| entry.value().clone())
             .collect();
-        // 打印日志
+
         log::info!("获取所有节点信息");
+
         let response = ListAllNodesResponse { nodes };
         Ok(Response::new(response))
     }
-
 
     async fn graceful_leave(
         &self,
@@ -208,15 +186,14 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             .unwrap()
             .as_millis() as u64;
 
-        // 尝试获取该节点的可写引用
         match self.shard_nodes.get_mut(&node_addr) {
             Some(mut entry) => {
-                entry.state = ShardState::PreparingOffline;
+                entry.state = ShardState::PreparingOffline as i32;
                 entry.last_update_time = now;
-                //删除节点
                 self.shard_nodes.remove(&node_addr);
-                //打印日志
+
                 log::info!("节点 {} 已离线", node_addr);
+
                 Ok(Response::new(CommonResp {
                     success: true,
                     message: format!("Node {} has gracefully left", node_addr),
@@ -232,9 +209,9 @@ impl ArbServerRpcService for ArbiterServiceImpl {
     async fn heartbeat(&self, request: Request<BaseRequest>) -> Result<Response<CommonResp>, Status> {
         match self.shard_nodes.get_mut(&request.get_ref().node_addr) {
             Some(mut entry) => {
-                let value: &mut ShardNodeInfoEntry = entry.value_mut();
+                let value: &mut ShardNodeInfo = entry.value_mut();
                 // 更新心跳时间
-                value.last_heartbeat = current_millis();
+                value.last_update_time = now() as u64;
                 //打印日志
                 log::info!("心跳: {}", &request.get_ref().node_addr);
                 Ok(Response::new(CommonResp {
@@ -247,13 +224,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                 message: format!("Node {} not found", &request.get_ref().node_addr),
             })),
         }
+       
     }
-}
-
-// === 工具函数 ===
-
-fn current_millis() -> u64 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
 }
 

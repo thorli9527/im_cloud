@@ -34,7 +34,7 @@ pub mod arb_server_rpc_service_server {
             &self,
             request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::CommonResp>,
+            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
             tonic::Status,
         >;
         async fn list_all_nodes(
@@ -248,7 +248,7 @@ pub mod arb_server_rpc_service_server {
                     > tonic::server::UnaryService<
                         super::super::rpc_arb_models::BaseRequest,
                     > for RegisterNodeSvc<T> {
-                        type Response = super::super::rpc_arb_models::CommonResp;
+                        type Response = super::super::rpc_arb_models::ShardNodeInfo;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,

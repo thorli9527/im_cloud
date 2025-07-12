@@ -1,6 +1,5 @@
 use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::GroupRole;
-use crate::manager::local_group_manager::LocalGroupManager;
 use anyhow::Result;
 use async_trait::async_trait;
 use deadpool_redis::{
@@ -15,14 +14,11 @@ use common::UserId;
 #[derive(Debug, Clone)]
 pub struct GroupManager {
     pub pool: RedisPool,
-    pub local_group_manager: Arc<LocalGroupManager>,
-    pub use_local_cache: bool,
 }
 
 impl GroupManager {
     fn new(pool: RedisPool, use_local_cache: bool) -> Self {
-        let local_group_manager = LocalGroupManager::get();
-        Self { pool, local_group_manager, use_local_cache }
+        Self { pool }
     }
     
     pub fn init(pool: Pool, use_local_cache: bool) {

@@ -13,11 +13,9 @@ mongo_indexed_derive = { version = "2.0.0" }
 serde_json = { version = "1.0.140" }
 futures = { version = "0.3.31" }
 serde = { version = "1.0.219", features = ["derive"] }
-
+twox-hash={version = "2.1.1"}
 deadpool-redis = { version = "0.21.1", features = ["tokio-comp"] }
-
 tokio = { version = "1.13.1", features = ["full"] }
-fxhash = { version = "0.2.1" }
 async-trait = { version = "0.1.88" }
 quote = { version = "1.0.40" }
 syn = { version = "2.0.104" }

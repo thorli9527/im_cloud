@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 common = { path = "../common" }
+biz_service = { path = "../biz_service" }
 tokio.workspace = true
 tonic.workspace = true
 prost.workspace = true
@@ -18,11 +19,14 @@ once_cell.workspace = true
 futures-util.workspace = true
 chrono.workspace = true
 actix-web.workspace = true
+dashmap.workspace = true
 rdkafka.workspace = true
 bytes.workspace = true
 env_logger.workspace = true
 deadpool-redis.workspace = true
 tokio-util = "0.7.15"
+twox-hash.workspace = true
+log = "0.4.27"
 [build-dependencies]
 tonic = "0.13.1"
 tonic-build = "0.13.1"

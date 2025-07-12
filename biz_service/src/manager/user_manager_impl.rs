@@ -2,16 +2,17 @@ use crate::biz_service::agent_service::AgentService;
 use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::GroupMemberMeta;
 use crate::manager::common::SHARD_COUNT;
-use crate::manager::local_group_manager::LocalGroupManagerOpt;
 use common::config::AppConfig;
 use common::util::common_utils::build_md5_with_key;
 use deadpool_redis::redis::{AsyncCommands, cmd};
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
-use fxhash::hash64;
 use tokio::time::sleep;
+use twox_hash::XxHash64;
+
 pub const MAX_CLEAN_COUNT: usize = 100;
 pub const USER_ONLINE_TTL_SECS: u64 = 300;
 pub const STREAM_KEY: &str = "user:events";
@@ -29,10 +30,8 @@ impl UserManager {
     /// - `use_local_cache`: 是否启用本地缓存
     /// - `group_map`: 预初始化的分片群组缓存结构
     pub fn new(pool: RedisPool) -> Self {
-        let local_group_manager = LocalGroupManager::get();
         let manager = Self {
             pool,
-            local_group_manager,
             is_initialized: Arc::new(AtomicBool::new(false)),
             init_notify: Arc::new(Notify::new()),
             friend_map: Arc::new(DashMap::<String, DashMap<UserId, ()>>::new()),
@@ -90,7 +89,7 @@ impl UserManager {
                 let json: Option<String> = conn.get(&key).await?;
                 if let Some(json) = json {
                     let info: GroupInfo = serde_json::from_str(&json)?;
-                    self.local_group_manager.init_group(info);
+                    // self.local_group_manager.init_group(info);
                 }
             }
 
@@ -124,33 +123,33 @@ impl UserManager {
                     for uid in members {
                         if let Some(meta_json) = metas.get(&uid) {
                             if let Ok(meta) = serde_json::from_str::<GroupMemberMeta>(meta_json) {
-                                // 使用完整信息添加成员到本地缓存
-                                self.local_group_manager.add_user(
-                                    group_id,
-                                    &uid,
-                                    Some(meta.mute),
-                                    meta.alias.as_deref().unwrap_or(""),
-                                    &meta.role,
-                                );
+                                // // 使用完整信息添加成员到本地缓存
+                                // self.local_group_manager.add_user(
+                                //     group_id,
+                                //     &uid,
+                                //     Some(meta.mute),
+                                //     meta.alias.as_deref().unwrap_or(""),
+                                //     &meta.role,
+                                // );
                             } else {
                                 // fallback: 没有 meta 结构，使用默认 role/alias/mute
-                                self.local_group_manager.add_user(
-                                    group_id,
-                                    &uid,
-                                    None,
-                                    "",
-                                    &GroupRole::Member,
-                                );
+                                // self.local_group_manager.add_user(
+                                //     group_id,
+                                //     &uid,
+                                //     None,
+                                //     "",
+                                //     &GroupRole::Member,
+                                // );
                             }
                         } else {
                             // fallback: meta 不存在
-                            self.local_group_manager.add_user(
-                                group_id,
-                                &uid,
-                                None,
-                                "",
-                                &GroupRole::Member,
-                            );
+                            // self.local_group_manager.add_user(
+                            //     group_id,
+                            //     &uid,
+                            //     None,
+                            //     "",
+                            //     &GroupRole::Member,
+                            // );
                         }
                     }
                 }
@@ -201,9 +200,11 @@ impl UserManager {
         Ok(())
     }
     // 获取 Redis 分片索引
-    pub fn get_redis_shard_index(&self,agent_id: &str, user_id: &str) -> usize {
+    pub fn get_redis_shard_index(&self, agent_id: &str, user_id: &str) -> usize {
         let key = format!("{}:{}", agent_id, user_id);
-        (hash64(key.as_bytes()) % SHARD_SIZE as u64) as usize
+        let mut hasher = XxHash64::with_seed(0);  // 可选固定种子
+        key.hash(&mut hasher);
+        (hasher.finish() % SHARD_SIZE as u64) as usize
     }
     // 生成在线状态键
     pub fn make_online_key(&self,agent_id: &str, user_id: &UserId) -> (String, String) {

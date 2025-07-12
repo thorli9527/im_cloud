@@ -1,6 +1,5 @@
 use crate::entitys::client_entity::ClientInfo;
 use crate::entitys::group_member::GroupRole;
-use crate::manager::local_group_manager::LocalGroupManager;
 use crate::protocol::auth::DeviceType;
 use crate::protocol::friend::FriendSourceType;
 use anyhow::Result;
@@ -21,10 +20,6 @@ use tokio::sync::Notify;
 pub struct UserManager {
     /// Redis 连接池，用于访问用户状态、群组数据、事件队列等。
     pub pool: RedisPool,
-
-    /// 本地群组缓存，用于存储每个群组的用户列表等信息，支持分片访问。
-    /// 提高群组相关操作性能，降低 Redis 压力。
-    pub local_group_manager: Arc<LocalGroupManager>,
 
     /// 标记是否已初始化，避免重复初始化。
     /// 使用 Arc + AtomicBool 保证跨线程安全修改。

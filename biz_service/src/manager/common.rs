@@ -1,13 +1,10 @@
 use dashmap::{DashMap, DashSet};
-use fxhash::FxBuildHasher;
 
 // 全局使用的ID类型，方便更改和统一类型
 
 pub type GroupId = String;
 
 // 使用 FxHash 哈希构造器的并发 Map/Set 类型别名，提升哈希性能
-pub type FxDashMap<K, V> = DashMap<K, V, FxBuildHasher>;
-pub type FxDashSet<T> = DashSet<T, FxBuildHasher>;
 
 // 分片数量常量，用于将数据分片存储以减少锁竞争
 pub const SHARD_COUNT: usize = 16;

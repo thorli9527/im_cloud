@@ -13,7 +13,6 @@ serde.workspace = true
 tracing.workspace = true
 utoipa.workspace = true
 anyhow.workspace = true
-mongodb.workspace = true
 once_cell.workspace = true
 futures-util.workspace = true
 dashmap.workspace = true

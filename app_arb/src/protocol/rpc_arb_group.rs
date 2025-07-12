@@ -2,12 +2,23 @@
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateVersionReq {
+    /// 所属节点地址
     #[prost(string, tag = "1")]
     pub node_addr: ::prost::alloc::string::String,
-    #[prost(string, tag = "2")]
-    pub version: ::prost::alloc::string::String,
+    /// 当前版本号（用于 CAS 检查）
+    #[prost(uint64, tag = "2")]
+    pub version: u64,
+    /// 当前状态
     #[prost(enumeration = "super::rpc_arb_models::ShardState", tag = "3")]
     pub state: i32,
+    /// 最后更新时间戳（毫秒）
+    #[prost(uint64, tag = "4")]
+    pub last_update_time: u64,
+    /// 分片索引（用于分片调度）
+    #[prost(int32, tag = "5")]
+    pub index: i32,
+    #[prost(int32, tag = "6")]
+    pub total: i32,
 }
 /// Generated client implementations.
 pub mod arb_group_service_client {
@@ -100,12 +111,12 @@ pub mod arb_group_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        /// 群组准备状态变更
-        pub async fn change_preparing(
+        /// 获取指定节点所属分片信息
+        pub async fn get_shard_node(
             &mut self,
-            request: impl tonic::IntoRequest<()>,
+            request: impl tonic::IntoRequest<super::super::rpc_arb_models::BaseRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::CommonResp>,
+            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
             tonic::Status,
         > {
             self.inner
@@ -118,12 +129,12 @@ pub mod arb_group_service_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/rpc_arb_group.ArbGroupService/changePreparing",
+                "/rpc_arb_group.ArbGroupService/getShardNode",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("rpc_arb_group.ArbGroupService", "changePreparing"),
+                    GrpcMethod::new("rpc_arb_group.ArbGroupService", "getShardNode"),
                 );
             self.inner.unary(req, path, codec).await
         }

@@ -1,7 +1,6 @@
 use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 use crate::manager::group_manager_core::{GroupManager, GroupManagerOpt};
-use crate::manager::local_group_manager::LocalGroupManagerOpt;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use anyhow::Result;
 use async_trait::async_trait;
@@ -21,10 +20,6 @@ impl GroupManagerOpt for GroupManager {
             anyhow::bail!("Group already exists: {}", info.id);
         }
 
-        if self.use_local_cache {
-            self.local_group_manager.init_group(info);
-        }
-
         Ok(())
     }
 
@@ -42,23 +37,10 @@ impl GroupManagerOpt for GroupManager {
         // 3. 删除群成员元信息（例如 alias、role、mute 等）
         let meta_key = Self::key_group_member_meta(group_id);
         let _: () = conn.del(&meta_key).await?;
-
-        // 4. 同步本地缓存
-        if self.use_local_cache {
-            self.local_group_manager.remove_group(group_id);
-        }
-
-        // 5. 可选：发送群解散广播
-        // self.broadcast_group_dismissed(group_id).await?;
-
         Ok(())
     }
 
     async fn add_user_to_group(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &str, group_role: &GroupRole) -> Result<()> {
-        // 本地缓存
-        if self.use_local_cache {
-            self.local_group_manager.add_user(group_id, user_id, mute, alias, group_role);
-        }
 
         let mut conn = self.pool.get().await?;
 
@@ -89,12 +71,7 @@ impl GroupManagerOpt for GroupManager {
         // 1. 保证成员存在于群组集合
         let _: () = cmd("SADD").arg(&key).arg(&user_id).query_async(&mut conn).await?;
 
-        // 2. 本地缓存更新
-        if self.use_local_cache {
-            self.local_group_manager.refresh_user(group_id, user_id, mute.clone(), alias, role.clone());
-        }
-
-        // 3. 读取原有 meta 并更新
+        // 2. 读取原有 meta 并更新
         let raw: Option<String> = cmd("HGET").arg(&meta_key).arg(&user_id).query_async(&mut conn).await?;
 
         if let Some(json) = raw {
@@ -130,11 +107,6 @@ impl GroupManagerOpt for GroupManager {
         let meta_key = Self::key_group_member_meta(group_id);
         let _: () = cmd("HDEL").arg(&meta_key).arg(&user_id).query_async(&mut conn).await?;
 
-        // Step 3: 本地缓存移除（如启用）
-        if self.use_local_cache {
-            self.local_group_manager.remove_user(group_id, user_id);
-        }
-
         // Step 4: 广播用户退出消息（可选）
         // self.broadcast_user_left(group_id, user_id).await?;
 
@@ -142,11 +114,6 @@ impl GroupManagerOpt for GroupManager {
     }
 
     async fn get_group_info(&self, group_id: &str) -> Result<Option<GroupInfo>> {
-        if self.use_local_cache {
-            if let Some(info) = self.local_group_manager.get_group_info(group_id) {
-                return Ok(Some(info));
-            }
-        }
 
         let mut conn = self.pool.get().await?;
         let key = Self::key_group_info(group_id);
@@ -159,9 +126,6 @@ impl GroupManagerOpt for GroupManager {
     }
 
     async fn get_group_members(&self, group_id: &str) -> Result<Vec<UserId>> {
-        if self.use_local_cache {
-            return Ok(self.local_group_manager.get_users(group_id));
-        }
 
         let mut conn = self.pool.get().await?;
         let key = Self::key_group_members(group_id);
@@ -211,11 +175,6 @@ impl GroupManagerOpt for GroupManager {
         let key = format!("group:member:{}", group_id);
         let mut conn = self.pool.get().await?;
         let exists: bool = conn.sismember(&key, user_id).await.unwrap_or(false);
-        // 3. 命中 Redis 后写入本地缓存，避免下次重复查询
-        if exists {
-            let shard = self.local_group_manager.get_group_members_shard(group_id);
-            shard.entry(group_id.to_string()).or_insert_with(DashSet::new).insert(user_id.to_string());
-        }
         Ok(exists)
     }
 }

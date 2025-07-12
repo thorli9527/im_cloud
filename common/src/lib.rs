@@ -8,6 +8,7 @@ pub mod util;
 pub use repository::*;
 use serde::{Deserialize, Serialize};
 pub type UserId = String;
+pub type GroupId = String;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ClientTokenDto {
     pub agent_id: String,

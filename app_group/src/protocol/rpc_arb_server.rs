@@ -156,7 +156,7 @@ pub mod arb_server_rpc_service_client {
             &mut self,
             request: impl tonic::IntoRequest<super::super::rpc_arb_models::BaseRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::CommonResp>,
+            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
             tonic::Status,
         > {
             self.inner
