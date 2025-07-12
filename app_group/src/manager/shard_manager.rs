@@ -38,6 +38,8 @@ pub struct ShardManager {
     pub group_shard_map: Arc<DashMap<String, DashMap<GroupId, ()>>>,
     //群组成员缓存
     pub group_member_map: Arc<DashMap<String, DashMap<GroupId, DashSet<UserId>>>>,
+    //群组成员在线缓存
+    pub group_online_member_map: Arc<DashMap<String, DashMap<GroupId, DashSet<UserId>>>>,
     //分片总数
     pub total: i32,
     //分片索引
@@ -65,6 +67,7 @@ impl ShardManager {
             shard_config: shard_info,
             group_shard_map: Arc::new(DashMap::new()),
             group_member_map: Arc::new(DashMap::new()),
+            group_online_member_map: Arc::new(DashMap::new()),
             index:0,
             total: 0,
         }
@@ -134,21 +137,21 @@ impl ShardManager {
     }
 
     /// 删除群组及其缓存信息（包括 group_shard_map 和 group_member_map 中的所有记录）
-    pub fn remove_group(&self, group_id: GroupId) {
+    pub fn remove_group(&self, group_id: &GroupId) {
         // 1. 计算分片索引
         let shard_index = self.hash_group_id(&group_id) as i32;
         let shard_key = format!("shard_{}", shard_index);
 
         // 2. 从 group_shard_map 中移除
         if let Some(group_map) = self.group_shard_map.get(&shard_key) {
-            group_map.remove(&group_id);
+            group_map.remove(group_id);
             if group_map.is_empty() {
                 self.group_shard_map.remove(&shard_key);
             }
         }
         // 3. 从 group_member_map 中移除该群组的成员缓存
         if let Some(member_map) = self.group_member_map.get(&shard_key) {
-            member_map.remove(&group_id);
+            member_map.remove(group_id);
             if member_map.is_empty() {
                 self.group_member_map.remove(&shard_key);
             }
@@ -158,7 +161,7 @@ impl ShardManager {
     }
 
     /// 添加用户到指定群组（自动根据 group_id 映射分片）
-    pub fn add_user_to_group(&self, group_id: GroupId, user_id: UserId) {
+    pub fn add_user_to_group(&self, group_id: &GroupId, user_id: &UserId) {
         // 1. 根据 group_id 映射到 shard_index 和 shard_key
         let shard_index = self.hash_group_id(&group_id) as i32;
         let shard_key = format!("shard_{}", shard_index);
@@ -178,19 +181,19 @@ impl ShardManager {
         log::debug!("👤 用户 {} 添加至群 {}（分片 {}）", user_id, group_id, shard_index);
     }
     /// 从指定群组中移除某个用户（自动计算分片）
-    pub fn remove_user_from_group(&self, group_id: GroupId, user_id: UserId) {
+    pub fn remove_user_from_group(&self, group_id: &GroupId, user_id: &UserId) {
         // 1. 获取分片索引和 key
         let shard_index = self.hash_group_id(&group_id) as i32;
         let shard_key = format!("shard_{}", shard_index);
 
         // 2. 获取对应群组成员集合
         if let Some(group_map) = self.group_member_map.get(&shard_key) {
-            if let Some(user_set) = group_map.get(&group_id) {
-                user_set.remove(&user_id);
+            if let Some(user_set) = group_map.get(group_id) {
+                user_set.remove(user_id);
 
                 // 3. 若该群组成员已空，清除群组记录
                 if user_set.is_empty() {
-                    group_map.remove(&group_id);
+                    group_map.remove(group_id);
                     log::debug!("群组 {} 成员已清空，移除 group", group_id);
                 }
 
@@ -205,13 +208,13 @@ impl ShardManager {
         }
     }
     /// 获取某个群组的所有成员 ID 列表
-    pub fn get_users_for_group(&self, group_id: GroupId) -> Option<Vec<UserId>> {
+    pub fn get_users_for_group(&self, group_id: &GroupId) -> Option<Vec<UserId>> {
         let shard_index = self.hash_group_id(&group_id) as i32;
         let shard_key = format!("shard_{}", shard_index);
 
         // 尝试获取群组成员集合并 clone 出用户 ID
         if let Some(group_map) = self.group_member_map.get(&shard_key) {
-            if let Some(user_set) = group_map.get(&group_id) {
+            if let Some(user_set) = group_map.get(group_id) {
                 let users: Vec<UserId> = user_set.iter().map(|u| u.key().clone()).collect();
                 return Some(users);
             }
@@ -243,6 +246,58 @@ impl ShardManager {
         // 默认返回空
         vec![]
     }
+    pub fn get_group_member_total_count(&self, group_id: &str) -> Option<i32> {
+        self.group_member_map
+            .get(group_id)
+            .map(|set| set.len() as i32)
+    }
+    pub fn mark_user_online(&self, group_id: &GroupId, user_id: &UserId) {
+        let shard_index = self.hash_group_id(&group_id) as i32;
+        let shard_key = format!("shard_{}", shard_index);
+
+        // 1. 插入在线用户 → 群组映射
+        let group_map = self
+            .group_online_member_map
+            .entry(shard_key.clone())
+            .or_insert_with(DashMap::new);
+
+        let user_set = group_map
+            .entry(group_id.clone())
+            .or_insert_with(DashSet::new);
+        user_set.insert(user_id.clone());
+    }
+
+    pub fn get_online_users_for_group(&self, group_id: &GroupId) -> Vec<UserId> {
+        let shard_index = self.hash_group_id(&group_id) as i32;
+        let shard_key = format!("shard_{}", shard_index);
+
+        if let Some(group_map) = self.group_online_member_map.get(&shard_key) {
+            if let Some(user_set) = group_map.get(group_id) {
+                return user_set.iter().map(|u| u.key().clone()).collect();
+            }
+        }
+        vec![]
+    }
+    pub fn mark_user_offline(&self, group_id: &GroupId, user_id: &UserId) {
+        let shard_index = self.hash_group_id(&group_id) as i32;
+        let shard_key = format!("shard_{}", shard_index);
+
+        if let Some(group_map) = self.group_online_member_map.get(&shard_key) {
+            if let Some(user_set) = group_map.get(group_id) {
+                user_set.remove(user_id);
+
+                if user_set.is_empty() {
+                    group_map.remove(group_id);
+                }
+
+                if group_map.is_empty() {
+                    self.group_online_member_map.remove(&shard_key);
+                }
+            }
+        }
+    }
+    
+    
     pub fn init() {
         let app_cfg = AppConfig::get();
         let instance = Self::new(app_cfg.shard.clone().unwrap());
