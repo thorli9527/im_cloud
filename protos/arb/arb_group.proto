@@ -1,0 +1,18 @@
+syntax = "proto3";
+package rpc_arb_group;
+import "google/protobuf/empty.proto";
+import "arb_models.proto";
+
+
+message UpdateVersionReq {
+  string node_addr = 1;
+  string version = 2;
+  rpc_arb_models.ShardState state = 3;
+}
+service ArbGroupService {
+  // 群组准备状态变更
+  rpc changePreparing(google.protobuf.Empty) returns (rpc_arb_models.CommonResp);
+  //更新版本号
+  rpc updateVersion(UpdateVersionReq) returns (rpc_arb_models.CommonResp);
+}
+// change

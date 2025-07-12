@@ -1,7 +1,7 @@
 syntax = "proto3";
 
-package arbitration;
-import "google/protobuf/empty.proto";
+package rpc_arb_models;
+
 // =====================
 // 枚举：分片节点状态定义
 // =====================
@@ -26,7 +26,7 @@ message BaseRequest {
 }
 
 // 通用响应结构（统一 success + message）
-message CommonResponse {
+message CommonResp {
   bool success = 1;
   string message = 2;
 }
@@ -57,22 +57,4 @@ message ListShardNodesResponse {
 
 message ListAllNodesResponse {
   repeated ShardNodeInfo nodes = 1;
-}
-
-// ============================
-// 仲裁服务接口定义
-// ============================
-service ArbiterService {
-  // === 分片管理 ===
-  rpc GetShardNode(BaseRequest) returns (ShardNodeInfo);                            // 获取指定节点所属分片信息
-  rpc UpdateShardState(UpdateShardStateRequest) returns (CommonResponse);          // 更新分片状态
-
-  // === 节点注册与生命周期 ===
-  rpc RegisterNode(BaseRequest) returns (CommonResponse);                          // 节点注册
-  rpc ListAllNodes(google.protobuf.Empty) returns (ListAllNodesResponse);            // 查询所有节点视图
-
-  // === 节点状态与控制 ===
-  rpc GracefulLeave(BaseRequest) returns (CommonResponse);                         // 节点优雅退出
-
-  rpc heartbeat(BaseRequest) returns (CommonResponse);                            // 节点心跳检测
 }

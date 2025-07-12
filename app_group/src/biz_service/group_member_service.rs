@@ -7,7 +7,7 @@ use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use common::UserId;
-use crate::protocol::models::{GroupMemInfo, GroupRoleType};
+use crate::protocol::rpc_group_models::{GroupMemInfo, GroupRoleType};
 
 #[derive(Debug)]
 pub struct GroupMemberService {

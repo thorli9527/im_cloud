@@ -28,8 +28,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use dashmap::DashMap;
 use tonic::{Request, Response, Status};
 use tracing::log;
-use crate::protocol::arbitration::arbiter_service_server::ArbiterService;
-use crate::protocol::arbitration::*;
+use crate::protocol::rpc_arb_models::{BaseRequest, CommonResp, ListAllNodesResponse, ShardNodeInfo, ShardState, UpdateShardStateRequest};
+use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcService;
 
 /// 分片节点状态信息
 /// 表示某个 vnode 当前的版本号、状态、归属节点及上次更新时间
@@ -52,7 +52,7 @@ pub struct ArbiterServiceImpl {
 
 
 #[tonic::async_trait]
-impl ArbiterService for ArbiterServiceImpl {
+impl ArbServerRpcService for ArbiterServiceImpl {
     // === 分片管理 ===
 
     async fn get_shard_node(
@@ -82,7 +82,7 @@ impl ArbiterService for ArbiterServiceImpl {
     async fn update_shard_state(
         &self,
         request: Request<UpdateShardStateRequest>,
-    ) -> Result<Response<CommonResponse>, Status> {
+    ) -> Result<Response<CommonResp>, Status> {
         let req = request.into_inner();
         let node_addr = req.node_addr;
         let new_state = req.new_state;
@@ -104,7 +104,7 @@ impl ArbiterService for ArbiterServiceImpl {
                 entry.version += 1;
                 entry.last_update_time = current_millis();
 
-                Ok(Response::new(CommonResponse {
+                Ok(Response::new(CommonResp {
                     success: true,
                     message: format!(
                         "Updated node {} to state {:?}, version = {}",
@@ -124,13 +124,13 @@ impl ArbiterService for ArbiterServiceImpl {
     async fn register_node(
         &self,
         request: Request<BaseRequest>,
-    ) -> Result<Response<CommonResponse>, Status> {
+    ) -> Result<Response<CommonResp>, Status> {
         let req = request.into_inner();
         let node_addr = req.node_addr;
 
         // 检查是否已存在
         if self.shard_nodes.contains_key(&node_addr) {
-            return Ok(Response::new(CommonResponse {
+            return Ok(Response::new(CommonResp {
                 success: true,
                 message: format!("Node {} already registered", node_addr),
             }));
@@ -165,7 +165,7 @@ impl ArbiterService for ArbiterServiceImpl {
         self.shard_nodes.insert(node_addr.clone(), entry.clone());
         //打印信息
         log::warn!("新增分片节点: {:?}", entry);
-        Ok(Response::new(CommonResponse {
+        Ok(Response::new(CommonResp {
             success: true,
             message: format!("Node {} registered with index {}", node_addr, index),
         }))
@@ -199,7 +199,7 @@ impl ArbiterService for ArbiterServiceImpl {
     async fn graceful_leave(
         &self,
         request: Request<BaseRequest>,
-    ) -> Result<Response<CommonResponse>, Status> {
+    ) -> Result<Response<CommonResp>, Status> {
         let req = request.into_inner();
         let node_addr = req.node_addr;
 
@@ -217,19 +217,19 @@ impl ArbiterService for ArbiterServiceImpl {
                 self.shard_nodes.remove(&node_addr);
                 //打印日志
                 log::info!("节点 {} 已离线", node_addr);
-                Ok(Response::new(CommonResponse {
+                Ok(Response::new(CommonResp {
                     success: true,
                     message: format!("Node {} has gracefully left", node_addr),
                 }))
             }
-            None => Ok(Response::new(CommonResponse {
+            None => Ok(Response::new(CommonResp {
                 success: false,
                 message: format!("Node {} not found", node_addr),
             })),
         }
     }
 
-    async fn heartbeat(&self, request: Request<BaseRequest>) -> Result<Response<CommonResponse>, Status> {
+    async fn heartbeat(&self, request: Request<BaseRequest>) -> Result<Response<CommonResp>, Status> {
         match self.shard_nodes.get_mut(&request.get_ref().node_addr) {
             Some(mut entry) => {
                 let value: &mut ShardNodeInfoEntry = entry.value_mut();
@@ -237,12 +237,12 @@ impl ArbiterService for ArbiterServiceImpl {
                 value.last_heartbeat = current_millis();
                 //打印日志
                 log::info!("心跳: {}", &request.get_ref().node_addr);
-                Ok(Response::new(CommonResponse {
+                Ok(Response::new(CommonResp {
                     success: true,
                     message: "".to_string(),
                 }))
             }
-            None => Ok(Response::new(CommonResponse {
+            None => Ok(Response::new(CommonResp {
                 success: false,
                 message: format!("Node {} not found", &request.get_ref().node_addr),
             })),

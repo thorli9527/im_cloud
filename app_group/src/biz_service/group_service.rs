@@ -5,14 +5,14 @@ use mongodb::bson::doc;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use crate::protocol::models::GroupInfo;
+use crate::protocol::rpc_group_models::GroupInfo;
 
 #[derive(Debug)]
-pub struct GroupService {
+pub struct GroupInfoService {
     pub dao: BaseRepository<GroupInfo>,
 }
 
-impl GroupService {
+impl GroupInfoService {
     pub fn new(db: Database) -> Self {
         let collection = db.collection("group_info");
         Self { dao: BaseRepository::new(db, collection.clone()) }
@@ -48,4 +48,4 @@ impl GroupService {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
 }
-static INSTANCE: OnceCell<Arc<GroupService>> = OnceCell::new();
+static INSTANCE: OnceCell<Arc<GroupInfoService>> = OnceCell::new();

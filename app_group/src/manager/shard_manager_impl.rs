@@ -1,7 +1,6 @@
 
 use tonic::async_trait;
-use crate::protocol::arbitration::arbiter_service_client::ArbiterServiceClient;
-use crate::protocol::arbitration::{BaseRequest, ShardState, UpdateShardStateRequest};
+use crate::protocol::rpc_arb_models::{BaseRequest, UpdateShardStateRequest};
 
 #[async_trait]
 impl ShardManagerOpt for ShardManager {

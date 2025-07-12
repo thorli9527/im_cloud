@@ -4,10 +4,9 @@ mod protocol;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use common::config::AppConfig;
-use crate::biz_service::grpc::arb_service_impl::{ArbiterServiceImpl};
-use crate::protocol::arbitration::arbiter_service_server::ArbiterServiceServer;
+use crate::biz_service::rpc::arb_service_impl::ArbiterServiceImpl;
+use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcServiceServer;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     tonic::transport::Server::builder()
-        .add_service(ArbiterServiceServer::new(svc))
+        .add_service(ArbServerRpcServiceServer::new(svc))
         .serve(addr)
         .await?;
 

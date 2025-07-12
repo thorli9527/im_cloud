@@ -1,12 +1,13 @@
 use tonic::{Request, Response, Status};
-use crate::protocol::models::{AddMemberReq, ChangeMemberAliasReq, ChangeMemberRoleReq, CommonResp, CreateGroupReq, DestroyGroupReq, ExitGroupReq, GetGroupInfoRep, GetGroupInfoReq, GetMembersRep, GetMembersReq, GetOnlineMembersReq, GetOnlineMembersResp, MuteMemberReq, OfflineReq, OnlineReq, RemoveMemberReq, TransferGroupOwnershipReq, UpdateGroupInfoReq};
-use crate::protocol::services::group_service_server::GroupService;
-
-struct GroupServiceImpl{
+use crate::protocol::rpc_group_models::{AddMemberReq, ChangeMemberAliasReq, ChangeMemberRoleReq, CommonResp, CreateGroupReq, DestroyGroupReq, ExitGroupReq, GetGroupInfoRep, GetGroupInfoReq, GetMembersRep, GetMembersReq, GetOnlineMembersReq, GetOnlineMembersResp, MuteMemberReq, OfflineReq, OnlineReq, RemoveMemberReq, TransferGroupOwnershipReq, UpdateGroupInfoReq};
+use crate::protocol::rpc_group_server::group_rpc_service_server::GroupRpcService;
+/// 群聊服务端rpc服务
+struct GroupRpcServiceImpl {
+    // 这里可以添加一些共享状态或依赖注入
     
 }
 #[tonic::async_trait]
-impl GroupService for GroupServiceImpl{
+impl GroupRpcService for GroupRpcServiceImpl{
     async fn online(&self, request: Request<OnlineReq>) -> Result<Response<CommonResp>, Status> {
         todo!()
     }
@@ -34,6 +35,7 @@ impl GroupService for GroupServiceImpl{
     async fn get_group_info(&self, request: Request<GetGroupInfoReq>) -> Result<Response<GetGroupInfoRep>, Status> {
         todo!()
     }
+
 
     async fn update_group_info(&self, request: Request<UpdateGroupInfoReq>) -> Result<Response<CommonResp>, Status> {
         todo!()

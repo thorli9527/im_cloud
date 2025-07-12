@@ -4,13 +4,15 @@ use anyhow::Result;
 use tonic::codegen::http::status;
 use tonic::Status;
 use tonic::transport::Channel;
+use crate::protocol::rpc_arb_models::ShardState;
+use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 
 #[derive(Debug)]
 pub struct ShardManager {
     pub shard_state: ShardState,
     pub shart_index: i32,
     pub shard_config: ShardConfig,
-    pub arb_client: Option<ArbiterServiceClient<Channel>>,
+    pub arb_client: Option<ArbServerRpcServiceClient<Channel>>,
     pub vnode_versions: HashMap<u64, u64>,
 }
 
@@ -31,10 +33,10 @@ impl ShardManager {
             .as_deref()
             .expect("shard_address must be set")
     }
-    async fn client_init(&mut self) -> Result<&mut ArbiterServiceClient<Channel>> {
+    async fn client_init(&mut self) -> Result<&mut ArbServerRpcServiceClient<Channel>> {
         if self.arb_client.is_none() {
             let server_host = self.shard_config.server_host.clone().unwrap();
-            let client = ArbiterServiceClient::connect(server_host).await?;
+            let client = ArbServerRpcServiceClient::connect(server_host).await?;
             self.arb_client = Some(client);
         }
         Ok(self.arb_client.as_mut().unwrap())
