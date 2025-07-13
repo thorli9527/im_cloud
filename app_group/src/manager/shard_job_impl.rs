@@ -178,10 +178,30 @@ impl ManagerJobOpt for ManagerJob {
 
 
     async fn sync_groups(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
+        let shard_manager = ShardManager::get();
+        let current = shard_manager.current.load();
+     
+        let guard = current.shard_info.read().await;
+        let current_index = guard.index;
+        let total_shards = guard.total;
+        for shard_entry in current.group_shard_map.iter() {
+            let (shard_key, group_map) = shard_entry.pair();
 
-    async fn sync_group_members(&mut self) -> anyhow::Result<()> {
+            for group_entry in group_map.iter() {
+                let group_id = group_entry.key();
+                let expected_index = hash_index(group_id, total_shards);
+
+                if expected_index != current_index {
+                    log::warn!(
+                    "❗ 群组分片归属不一致: group_id={} 当前分片={} 应属分片={}",
+                    group_id,
+                    current_index,
+                    expected_index
+                );
+                }
+            }
+        }
+
         Ok(())
     }
 

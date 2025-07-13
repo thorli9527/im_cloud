@@ -37,9 +37,7 @@ impl ManagerJob {
         self.register_node().await.expect("register node error");
         self.change_preparing().await.expect("change preparing error");
         self.change_migrating().await.expect("change migrating error");
-   
         self.sync_groups().await.expect("sync groups error");
-        self.sync_group_members().await.expect("sync members error");
         self.change_ready().await.expect("change ready error");
         self.change_normal().await.expect("change normal error");
         self.start_heartbeat_loop();
@@ -110,9 +108,6 @@ pub trait ManagerJobOpt: Send + Sync {
     async fn change_migrating(&mut self) -> anyhow::Result<()>;
     /// 同步当前群组列表（通常从仲裁服务或中心节点拉取最新群组分配情况）
     async fn sync_groups(&mut self) -> anyhow::Result<()>;
-    /// 同步群组成员列表信息（确保迁移前/后成员视图一致）
-    async fn sync_group_members(&mut self) -> anyhow::Result<()>;
-
     /// 设置群组状态为“迁移失败”
     /// 可用于回滚操作或触发异常迁移重试逻辑
     async fn change_failed(&mut self) -> anyhow::Result<()>;
