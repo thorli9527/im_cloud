@@ -1,8 +1,9 @@
 use crate::manager::shard_job::{ManagerJob, ManagerJobOpt};
-use crate::manager::shard_manager::{MemData, ShardInfo, ShardManager};
+use crate::manager::shard_manager::{MemData, ShardInfo, ShardManager, MEMBER_SHARD_SIZE};
 use crate::protocol::rpc_arb_models::{BaseRequest, ShardState, UpdateShardStateRequest};
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
+use dashmap::{DashMap, DashSet};
 use std::sync::Arc;
 use std::thread::current;
 use tokio::sync::RwLock;
@@ -42,8 +43,6 @@ impl ManagerJobOpt for ManagerJob {
         Ok(())
     }
 
-
-
     /// 设置某群组迁移状态为“准备中”
     /// 表示目标节点已准备好接收群组（例如缓存准备、校验完成等）
     async fn change_preparing(&mut self) -> anyhow::Result<()> {
@@ -58,25 +57,14 @@ impl ManagerJobOpt for ManagerJob {
         let response = client.update_shard_state(state_request).await?;
         if response.into_inner().success {
             let current = shard_manager.current.load();
-
-            {
-                let mut shard_info = current.shard_info.write().await;
-                shard_info.state = ShardState::Preparing;
-                shard_info.last_update_time = now() as u64;
-                shard_info.last_heartbeat = shard_info.last_update_time;
-            }
-
+            let mut shard_info = current.shard_info.write().await;
+            shard_info.state = ShardState::Preparing;
+            shard_info.last_update_time = now() as u64;
+            shard_info.last_heartbeat = shard_info.last_update_time;
             // ✅ 存储快照
-            shard_manager.snapshot.store(current.clone());
-
+            shard_manager.clone_current_to_snapshot();
             // ✅ 清空 current
-            shard_manager.current.store(Arc::new(MemData {
-                group_shard_map: Default::default(),
-                group_member_map: Default::default(),
-                group_online_member_map: Default::default(),
-                shard_info: RwLock::new(ShardInfo::default()),
-            }));
-
+            shard_manager.clear_current();
             log::info!("🔄 current 分片数据已清空，准备进入迁移流程");
         }
         Ok(())
@@ -85,28 +73,111 @@ impl ManagerJobOpt for ManagerJob {
     /// 通常意味着不再接受新写入，同时准备数据转移
     async fn change_migrating(&mut self) -> anyhow::Result<()> {
         let shard_manager = ShardManager::get();
-        let shard_address=self.shard_address.clone();
-        let client = self.client_init().await?; // 👈 提前完成可变借用
+        let shard_address = self.shard_address.clone();
+        let client = self.client_init().await?;
 
+        // 1. 设置分片状态为 Migrating
         let state_request = UpdateShardStateRequest {
-            node_addr:shard_address,
+            node_addr: shard_address,
             new_state: ShardState::Migrating as i32,
         };
-
         let response = client.update_shard_state(state_request).await?;
+
         if response.into_inner().success {
-            // 更新当前分片信息
-            let guard = shard_manager.current.load();
-            let mut shard_info = guard.shard_info.write().await;
+            let current = shard_manager.current.load();
+            let mut shard_info = current.shard_info.write().await;
             shard_info.state = ShardState::Migrating;
             shard_info.last_update_time = now() as u64;
             shard_info.last_heartbeat = shard_info.last_update_time;
         }
+
+        // 2. 快照数据迁移到 current
+        let snapshot = shard_manager.snapshot.load();
+        let current = shard_manager.current.load();
+        let current_index = current.shard_info.read().await.index;
+
+        let mut migrated_group_count = 0;
+
+        for shard_entry in snapshot.group_shard_map.iter() {
+            let (_, group_map) = shard_entry.pair();
+
+            for group_entry in group_map.iter() {
+                let group_id = group_entry.key();
+                let group_index = shard_manager.hash_group_id(group_id) as i32;
+
+                // 仅迁移属于当前分片的群组
+                if group_index != current_index {
+                    continue;
+                }
+
+                let shard_key = format!("shard_{}", group_index);
+
+                // === group_shard_map ===
+                current
+                    .group_shard_map
+                    .entry(shard_key.clone())
+                    .or_insert_with(DashMap::new)
+                    .insert(group_id.clone(), ());
+
+                // === group_member_map（Vec<DashSet<UserId>>）===
+                if let Some(member_map) = snapshot.group_member_map.get(&shard_key) {
+                    if let Some(member_shards) = member_map.get(group_id) {
+                        let target_group_map = current
+                            .group_member_map
+                            .entry(shard_key.clone())
+                            .or_insert_with(DashMap::new);
+
+                        let target_shards = target_group_map
+                            .entry(group_id.clone())
+                            .or_insert_with(|| {
+                                (0..MEMBER_SHARD_SIZE)
+                                    .map(|_| DashSet::new())
+                                    .collect::<Vec<_>>()
+                            });
+
+                        for (i, shard) in member_shards.iter().enumerate() {
+                            if i == current_index as usize {
+                                for user in shard.iter().map(|u| u.key().clone()) {
+                                    target_shards[i].insert(user);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // === group_online_member_map ===
+                if let Some(online_map) = snapshot.group_online_member_map.get(&shard_key) {
+                    if let Some(online_set) = online_map.get(group_id) {
+                        let target_group_map = current
+                            .group_online_member_map
+                            .entry(shard_key.clone())
+                            .or_insert_with(DashMap::new);
+                        let target_user_set = target_group_map
+                            .entry(group_id.clone())
+                            .or_insert_with(DashSet::new);
+
+                        for user in online_set.iter().map(|u| u.key().clone()) {
+                            let index = shard_manager.hash_group_member_id(group_id, &user);
+                            if index == current_index as usize {
+                                target_user_set.insert(user);
+                            }
+                        }
+                    }
+                }
+
+                migrated_group_count += 1;
+            }
+        }
+
+        log::info!("✅ 共迁移群组 {} 个至当前分片 shard_{}", migrated_group_count, current_index);
+
         Ok(())
     }
 
+
+
+
     async fn sync_groups(&mut self) -> anyhow::Result<()> {
-        
         Ok(())
     }
 
@@ -115,7 +186,7 @@ impl ManagerJobOpt for ManagerJob {
     }
 
     async fn change_failed(&mut self) -> anyhow::Result<()> {
-        let shard_address=self.shard_address.clone();
+        let shard_address = self.shard_address.clone();
         let client = self.client_init().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
@@ -126,7 +197,7 @@ impl ManagerJobOpt for ManagerJob {
     }
 
     async fn change_ready(&mut self) -> anyhow::Result<()> {
-        let shard_address=self.shard_address.clone();
+        let shard_address = self.shard_address.clone();
         let client = self.client_init().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
@@ -137,7 +208,7 @@ impl ManagerJobOpt for ManagerJob {
     }
 
     async fn change_normal(&mut self) -> anyhow::Result<()> {
-        let shard_address=self.shard_address.clone();
+        let shard_address = self.shard_address.clone();
         let client = self.client_init().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
@@ -148,7 +219,7 @@ impl ManagerJobOpt for ManagerJob {
     }
 
     async fn change_preparing_offline(&mut self) -> anyhow::Result<()> {
-        let shard_address=self.shard_address.clone();
+        let shard_address = self.shard_address.clone();
         let client = self.client_init().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
@@ -159,7 +230,7 @@ impl ManagerJobOpt for ManagerJob {
     }
 
     async fn change_offline(&mut self) -> anyhow::Result<()> {
-        let shard_address=self.shard_address.clone();
+        let shard_address = self.shard_address.clone();
         let client = self.client_init().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
@@ -170,7 +241,7 @@ impl ManagerJobOpt for ManagerJob {
     }
 
     async fn heartbeat(&mut self) -> anyhow::Result<()> {
-        let shard_address=self.server_host.clone();
+        let shard_address = self.server_host.clone();
         let client = self.client_init().await?;
         client
             .heartbeat(BaseRequest {

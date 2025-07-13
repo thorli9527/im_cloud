@@ -104,23 +104,28 @@ impl GroupRpcService for GroupRpcServiceImpl {
 
         let shard_manager = ShardManager::get();
 
-        // 🔹 分页获取成员 UID 列表
-        let user_ids = shard_manager.get_group_members_page(&req.group_id, offset, limit);
-
-        // 🔹 获取群成员总数（如有 total 接口，否则 fallback）
+        // 获取总成员数（提前，避免超界分页）
         let total_count = shard_manager
             .get_group_member_total_count(&req.group_id)
-            .unwrap_or(user_ids.len() as i32); // fallback 逻辑
+            .unwrap_or_default();
+
+        // 如果 offset 已超出成员总数，返回空页
+        let user_ids = if offset >= total_count {
+            vec![]
+        } else {
+            shard_manager.get_group_members_page(&req.group_id, offset, limit)
+        };
 
         let response = GetMembersRep {
             uids: user_ids,
-            total_count,
+            total_count: total_count as i32,
             success: true,
             message: "".to_string(),
         };
 
         Ok(Response::new(response))
     }
+
 
     async fn create_group(
         &self,

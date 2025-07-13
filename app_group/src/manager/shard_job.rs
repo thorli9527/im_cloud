@@ -35,8 +35,9 @@ impl ManagerJob {
     /// 启动心跳和生命周期任务
     pub async fn start(&mut self) -> () {
         self.register_node().await.expect("register node error");
-        self.change_migrating().await.expect("change migrating error");
         self.change_preparing().await.expect("change preparing error");
+        self.change_migrating().await.expect("change migrating error");
+   
         self.sync_groups().await.expect("sync groups error");
         self.sync_group_members().await.expect("sync members error");
         self.change_ready().await.expect("change ready error");
