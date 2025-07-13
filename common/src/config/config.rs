@@ -1,6 +1,4 @@
 use config::Config;
-// use crate::redis::redis_template::RedisTemplate;
-use mongodb::Database;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::sync::Arc;

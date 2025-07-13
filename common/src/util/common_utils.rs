@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use md5::{Digest, Md5};
 use serde::{Deserialize, Serialize};
 use twox_hash::XxHash64;
-use uuid::{Uuid, uuid};
+use uuid::Uuid;
 
 pub fn copy_to<A, B>(a: &A, b: &B) -> B
 where

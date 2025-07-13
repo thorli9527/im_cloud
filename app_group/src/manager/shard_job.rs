@@ -1,17 +1,17 @@
 use crate::manager::shard_manager;
-use crate::manager::shard_manager::{ShardManager,};
+use crate::manager::shard_manager::ShardManager;
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use crate::service::rpc::group_rpc_service_impl::GroupRpcServiceImpl;
+use common::config::ShardConfig;
+use common::{GroupId, UserId};
+use dashmap::{DashMap, DashSet};
 use std::sync::Arc;
 use std::thread::current;
-use dashmap::{DashMap, DashSet};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tonic::async_trait;
 use tonic::transport::Channel;
-use common::config::ShardConfig;
-use common::{GroupId, UserId};
 
 pub struct ManagerJob {
     //分片仲裁服务器接口信息

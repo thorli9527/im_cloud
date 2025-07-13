@@ -1,16 +1,10 @@
-use crate::biz_service::agent_service::AgentService;
 use crate::entitys::group_member::GroupMemberMeta;
-use crate::manager::common::SHARD_COUNT;
-use common::config::AppConfig;
-use common::util::common_utils::build_md5_with_key;
-use deadpool_redis::redis::{AsyncCommands, cmd};
+use deadpool_redis::redis::{cmd, AsyncCommands};
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::sync::atomic::Ordering;
-use std::time::Duration;
-use tokio::time::sleep;
 use twox_hash::XxHash64;
+use crate::entitys::group_entity::GroupEntity;
 
 pub const MAX_CLEAN_COUNT: usize = 100;
 pub const USER_ONLINE_TTL_SECS: u64 = 300;

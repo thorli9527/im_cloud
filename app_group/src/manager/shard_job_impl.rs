@@ -1,12 +1,12 @@
+use crate::manager::shard_job::{ManagerJob, ManagerJobOpt};
+use crate::manager::shard_manager::{MemData, ShardInfo, ShardManager};
+use crate::protocol::rpc_arb_models::{BaseRequest, ShardState, UpdateShardStateRequest};
+use common::util::common_utils::hash_index;
+use common::util::date_util::now;
 use std::sync::Arc;
 use std::thread::current;
 use tokio::sync::RwLock;
 use tonic::async_trait;
-use common::util::common_utils::hash_index;
-use common::util::date_util::now;
-use crate::manager::shard_job::{ManagerJob, ManagerJobOpt};
-use crate::manager::shard_manager::{MemData, ShardInfo, ShardManager};
-use crate::protocol::rpc_arb_models::{BaseRequest, ShardState, UpdateShardStateRequest};
 
 #[async_trait]
 impl ManagerJobOpt for ManagerJob {

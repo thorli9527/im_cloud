@@ -1,17 +1,16 @@
 use crate::entitys::client_entity::ClientEntity;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
+use crate::protocol::msg::auth::DeviceType;
 use anyhow::Result;
+use common::config::AppConfig;
 use common::repository_util::{BaseRepository, Repository};
+use common::util::common_utils::build_md5_with_key;
 use common::util::date_util::now;
+use common::UserId;
 use mongodb::bson::doc;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use utoipa::openapi::security::Password;
-use common::config::AppConfig;
-use common::UserId;
-use common::util::common_utils::{build_md5, build_md5_with_key};
-use crate::protocol::msg::auth::DeviceType;
 
 #[derive(Debug)]
 pub struct ClientService {

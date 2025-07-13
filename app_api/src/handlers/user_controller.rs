@@ -1,12 +1,12 @@
 use crate::result::{result, result_data, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
-use deadpool_redis::redis::AsyncCommands;
 use biz_service::biz_const::redis_const::CLIENT_TOKEN_KEY;
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::client_service::ClientService;
 use biz_service::entitys::client_entity::ClientInfo;
 use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
+use common::config::AppConfig;
 use common::errors::AppError;
 use common::errors::AppError::BizError;
 use common::redis::redis_template::RedisTemplate;
@@ -14,12 +14,12 @@ use common::redis::redis_template::ValueOps;
 use common::repository_util::Repository;
 use common::util::common_utils::{as_ref_to_string, build_md5_with_key, build_uuid};
 use common::util::date_util::time_to_str;
+use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
 use validator::Validate;
-use common::config::AppConfig;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_create);

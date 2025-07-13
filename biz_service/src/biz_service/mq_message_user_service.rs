@@ -1,3 +1,7 @@
+use crate::biz_service::kafka_service::KafkaService;
+use crate::protocol::common::ByteMessageType;
+use crate::protocol::msg::entity::UserMsg;
+use crate::protocol::msg::message::Segment;
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
@@ -7,10 +11,6 @@ use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::biz_service::kafka_service::KafkaService;
-use crate::protocol::common::ByteMessageType;
-use crate::protocol::msg::entity::UserMsg;
-use crate::protocol::msg::message::Segment;
 
 #[derive(Debug)]
 pub struct UserMessageService {

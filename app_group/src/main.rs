@@ -1,3 +1,4 @@
+use crate::manager::shard_job::ManagerJob;
 use crate::manager::shard_manager::ShardManager;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer};
@@ -9,8 +10,7 @@ use mongodb::{Client, Database};
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::log::{LevelFilter, warn};
-use crate::manager::shard_job::ManagerJob;
+use tracing::log::{warn, LevelFilter};
 
 mod service;
 mod manager;

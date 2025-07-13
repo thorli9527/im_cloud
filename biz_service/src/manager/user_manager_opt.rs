@@ -3,26 +3,26 @@ use crate::biz_service::client_service::ClientService;
 use crate::biz_service::friend_service::UserFriendService;
 use crate::biz_service::kafka_service::KafkaService;
 use crate::entitys::client_entity::ClientEntity;
-use crate::manager::user_manager_core::{USER_ONLINE_TTL_SECS, UserManager, UserManagerOpt};
+use crate::manager::user_manager_core::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
 
 use crate::protocol::common::ByteMessageType;
+use crate::protocol::msg::auth::{DeviceType, LoginRespMsg, LogoutRespMsg, OfflineStatueMsg, OnlineStatusMsg};
+use crate::protocol::msg::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
 use actix_web::cookie::time::macros::time;
 use actix_web::web::get;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
-use common::{ClientTokenDto, UserId};
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::repository_util::Repository;
 use common::util::common_utils::{build_md5_with_key, build_snow_id, build_uuid};
 use common::util::date_util::now;
+use common::{ClientTokenDto, UserId};
 use dashmap::DashMap;
 use deadpool_redis::redis::AsyncCommands;
 use futures_util::TryFutureExt;
 use mongodb::bson::doc;
 use tokio::try_join;
-use crate::protocol::msg::auth::{DeviceType, LoginRespMsg, LogoutRespMsg, OfflineStatueMsg, OnlineStatusMsg};
-use crate::protocol::msg::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
 
 pub const TOKEN_EXPIRE_SECS: u64 = 60 * 60 * 24 * 7;
 #[async_trait]

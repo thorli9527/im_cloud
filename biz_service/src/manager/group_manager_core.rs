@@ -1,14 +1,14 @@
+use crate::entitys::group_entity::GroupEntity;
 use crate::entitys::group_member::GroupRole;
 use anyhow::Result;
 use async_trait::async_trait;
+use common::UserId;
 use deadpool_redis::{
     redis::AsyncCommands, Pool as RedisPool,
     Pool,
 };
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use common::UserId;
-use crate::entitys::group_entity::GroupEntity;
 
 /// 群组管理器
 #[derive(Debug, Clone)]

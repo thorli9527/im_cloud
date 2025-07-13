@@ -1,8 +1,9 @@
-use crate::socket_connection;
-use crate::socket_connection::handle_connection;
+use std::net::TcpListener;
 use crate::kafka::kafka_consumer;
 use crate::kafka::kafka_consumer::start_consumer;
 use crate::manager::socket_manager::get_socket_manager;
+use crate::socket_connection;
+use crate::socket_connection::handle_connection;
 use common::config::KafkaConfig;
 use std::sync::Arc;
 use tokio::net::TcpListener;

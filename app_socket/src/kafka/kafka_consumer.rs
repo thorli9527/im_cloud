@@ -1,23 +1,24 @@
+use std::cell::OnceCell;
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use dashmap::DashMap;
 use futures::TryFutureExt;
+use log::{debug, warn};
 use once_cell::sync::OnceCell;
 use prost::Message;
 use rdkafka::message::{Message as KafkaMessageTrait, OwnedMessage};
 use serde::Deserialize;
 use std::sync::Arc;
-use log::{debug, warn};
 use uuid::Uuid;
 
 use crate::kafka::friend_msg::friend_msg_to_socket;
 use crate::manager::socket_manager::SocketManager;
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
+use biz_service::protocol::common::ByteMessageType;
 use common::config::KafkaConfig;
 use common::util::date_util::now;
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
-use biz_service::protocol::common::ByteMessageType;
 
 type MessageId = u64;
 

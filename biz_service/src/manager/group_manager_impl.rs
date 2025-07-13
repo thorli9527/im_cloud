@@ -1,12 +1,11 @@
-use crate::entitys::group_entity::{GroupEntity};
+use crate::entitys::group_entity::GroupEntity;
 use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 use crate::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use anyhow::Result;
 use async_trait::async_trait;
-use dashmap::DashSet;
-use deadpool_redis::redis::{cmd, AsyncCommands};
 use common::UserId;
+use deadpool_redis::redis::{cmd, AsyncCommands};
 
 #[async_trait]
 impl GroupManagerOpt for GroupManager {

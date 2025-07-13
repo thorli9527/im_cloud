@@ -1,15 +1,15 @@
-use anyhow::{Error, Result, anyhow};
+use crate::protocol::common::ByteMessageType;
+use anyhow::{anyhow, Error, Result};
 use bytes::Bytes;
 use common::config::KafkaConfig;
 use once_cell::sync::OnceCell;
 use prost::Message;
-use rdkafka::ClientConfig;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::ClientConfig;
 use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
-use crate::protocol::common::ByteMessageType;
 
 
 #[derive(Clone)]

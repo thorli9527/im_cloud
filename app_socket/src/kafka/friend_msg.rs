@@ -1,15 +1,15 @@
 use crate::kafka::kafka_consumer::{get_pending_acks, PendingMeta};
 use crate::manager::socket_manager::SocketManager;
 use anyhow::Result;
-use bytes::Buf;
-use common::config::AppConfig;
-use prost::Message;
-use rdkafka::message::{Message as KafkaMessageTrait, OwnedMessage};
-use std::sync::Arc;
 use biz_service::biz_service::kafka_service::KafkaService;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::friend::FriendEventMsg;
+use bytes::Buf;
+use common::config::AppConfig;
 use common::util::common_utils::build_snow_id;
+use prost::Message;
+use rdkafka::message::{Message as KafkaMessageTrait, OwnedMessage};
+use std::sync::Arc;
 
 pub async fn friend_msg_to_socket(mut body: impl Buf, msg: &OwnedMessage, socket_manager: &Arc<SocketManager>) -> Result<()> {
     let mut message = FriendEventMsg::decode(&mut body)?;

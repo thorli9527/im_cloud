@@ -1,10 +1,8 @@
-use std::fs;
 use std::path::PathBuf;
 
 fn main() {
     println!("cargo:warning=🔧 build.rs 正在运行...");
 
-    use std::fs;
     use std::path::PathBuf;
 
     // 编译 proto 文件

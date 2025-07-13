@@ -1,4 +1,4 @@
-use crate::protocol::common::{JoinPermission, JoinQuestionType};
+use crate::protocol::common::JoinPermission;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

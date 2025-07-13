@@ -1,4 +1,3 @@
-use crate::manager::shard_manager;
 use crate::manager::shard_manager::ShardManager;
 use crate::protocol::common::CommonResp;
 use crate::protocol::rpc_group_models::{
@@ -8,17 +7,10 @@ use crate::protocol::rpc_group_models::{
     RemoveMemberReq, TransferGroupOwnershipReq, UpdateGroupInfoReq,
 };
 use crate::protocol::rpc_group_server::group_rpc_service_server::GroupRpcService;
-use actix_web::web::get;
-use biz_service::biz_service::group_service::GroupService;
 use biz_service::entitys::group_entity::GroupEntity;
 use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
-use common::UserId;
-use common::config::ShardConfig;
 use once_cell::sync::OnceCell;
-use rdkafka::groups::GroupInfo;
-use serde::de::Unexpected::Option;
 use std::sync::Arc;
-use std::thread::current;
 use tonic::{Request, Response, Status};
 
 /// 群聊服务端rpc服务
