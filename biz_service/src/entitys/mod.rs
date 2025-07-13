@@ -5,9 +5,7 @@ pub mod config_entity;
 pub mod friend;
 pub mod group_entity;
 pub mod group_member;
-pub mod mq_group_application;
-pub mod mq_group_operation_log;
-pub mod mq_user_action;
+pub mod group_join_request;
 pub mod read_index;
 pub mod user_entity;
 

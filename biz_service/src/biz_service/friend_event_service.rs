@@ -2,7 +2,7 @@ use common::repository_util::BaseRepository;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use crate::protocol::friend::FriendEventMsg;
+use crate::protocol::msg::friend::FriendEventMsg;
 
 /// 好友事件服务
 #[derive(Debug)]

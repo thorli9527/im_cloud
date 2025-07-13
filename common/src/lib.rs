@@ -11,7 +11,6 @@ pub type UserId = String;
 pub type GroupId = String;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ClientTokenDto {
-    pub agent_id: String,
     pub uid: String,
     pub device_type: u8,
 }

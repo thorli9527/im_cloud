@@ -2,9 +2,7 @@ use crate::result::{result, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;
-use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
 use biz_service::entitys::group_member::{GroupMember, GroupRole};
-use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
 use common::errors::AppError;
@@ -90,8 +88,5 @@ async fn group_member_join(dto: web::Json<GroupJoinDto>, req: HttpRequest) -> Re
     };
     //更新用户的群组列表
     GroupMemberService::get().dao.insert(&member).await?;
-
-    //发送消息
-    GroupOperationLogService::get().add_log(&agent.id, &dto.group_id, &dto.user_id, None, GroupOperationType::Join).await?;
     Ok(web::Json(result()))
 }

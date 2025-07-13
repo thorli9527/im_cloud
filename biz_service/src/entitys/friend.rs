@@ -1,11 +1,10 @@
-use crate::protocol::friend::FriendSourceType;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use crate::protocol::msg::friend::FriendSourceType;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
-pub struct FriendInfo {
+pub struct FriendEntity {
     pub id: String,                    // 用户 ID
-    pub agent_id: String,              // 代理 ID
     pub uid: String,                   // 用户 ID
     pub friend_id: String,             // 好友 ID
     pub nickname: Option<String>,      // 好友昵称

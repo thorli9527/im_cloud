@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["common", "biz_service", "app_api", "app_job", "app_main", "macro", "app_socket", "app_group", "app_arb", "protos"]
+members = [
+    "common",
+    "biz_service",
+#    "app_api",
+    "app_job", "app_main", "macro",
+#    "app_socket",
+    "app_group", "app_arb", "protos"]
 [workspace.dependencies]
 actix-web = { version = "4.11.0" }
 actix-service = { version = "2.0.3" }
@@ -32,6 +38,7 @@ validator = { version = "0.20.0", features = ["derive"] }
 lazy_static = { version = "1.5.0" }
 rustflake = { version = "0.1.1" }
 walkdir = { version = "2.5.0" }
+arc-swap={version = "1.7.1"}
 tempfile = { version = "3.20.0" }
 md-5 = "0.10.6"
 tokio-util={version = "0.7.14"}

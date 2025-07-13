@@ -1,6 +1,5 @@
-use crate::entitys::friend::FriendInfo;
+use crate::entitys::friend::FriendEntity;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
-use crate::protocol::friend::FriendSourceType;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use mongodb::bson::Bson;
@@ -8,10 +7,11 @@ use mongodb::{bson::doc, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use common::UserId;
+use crate::protocol::msg::friend::FriendSourceType;
 
 #[derive(Debug)]
 pub struct UserFriendService {
-    pub dao: BaseRepository<FriendInfo>,
+    pub dao: BaseRepository<FriendEntity>,
 }
 
 impl UserFriendService {
@@ -56,16 +56,15 @@ impl UserFriendService {
     }
 
     /// 添加好友（可配置昵称/来源等）
-    pub async fn add_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId, nickname: Option<&str>, source_type: &FriendSourceType, remark: Option<&str>) -> Result<String> {
+    pub async fn add_friend(&self,  uid: &UserId, friend_id: &UserId, nickname: Option<&str>, source_type: &FriendSourceType, remark: Option<&str>) -> Result<String> {
         // 校验对方存在
-        let client_opt = UserManager::get().get_user_info(agent_id, friend_id).await?;
+        let client_opt = UserManager::get().get_user_info( friend_id).await?;
         if client_opt.is_none() {
             return Err(anyhow::anyhow!("用户不存在"));
         }
 
         // 检查是否已存在好友记录
         let filter = doc! {
-            "agent_id": agent_id,
             "uid": uid,
             "friend_id": friend_id
         };
@@ -74,9 +73,8 @@ impl UserFriendService {
             return Ok(friend.id); // 已存在，忽略重复添加
         }
 
-        let friend = FriendInfo {
+        let friend = FriendEntity {
             id: "".to_string(),
-            agent_id: agent_id.to_string(),
             uid: uid.to_string(),
             friend_id: friend_id.to_string(),
             nickname: nickname.map(|s| s.to_string()),
@@ -91,9 +89,8 @@ impl UserFriendService {
     }
 
     /// 删除好友
-    pub async fn remove_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<()> {
+    pub async fn remove_friend(&self,  uid: &UserId, friend_id: &UserId) -> Result<()> {
         let filter = doc! {
-            "agent_id": agent_id,
             "uid": uid,
             "friend_id": friend_id
         };
@@ -103,13 +100,13 @@ impl UserFriendService {
     }
 
     /// 是否是好友（Mongo 或缓存判断）
-    pub async fn is_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<bool> {
+    pub async fn is_friend(&self,uid: &UserId, friend_id: &UserId) -> Result<bool> {
         let manager = UserManager::get();
-        manager.is_friend(agent_id, uid, friend_id).await
+        manager.is_friend( uid, friend_id).await
     }
 
     /// 获取好友列表
-    pub async fn get_friend_list(&self, agent_id: &str, uid: &UserId) -> Result<Vec<FriendInfo>> {
+    pub async fn get_friend_list(&self, agent_id: &str, uid: &UserId) -> Result<Vec<FriendEntity>> {
         let filter = doc! {
             "agent_id": agent_id,
             "uid": uid,
@@ -119,9 +116,8 @@ impl UserFriendService {
     }
 
     /// 查询单个好友详细信息（例如备注/昵称）
-    pub async fn get_friend_detail(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<Option<FriendInfo>> {
+    pub async fn get_friend_detail(&self, uid: &UserId, friend_id: &UserId) -> Result<Option<FriendEntity>> {
         let filter = doc! {
-            "agent_id": agent_id,
             "uid": uid,
             "friend_id": friend_id
         };
@@ -130,9 +126,8 @@ impl UserFriendService {
     }
 
     /// 批量删除某用户相关记录（如注销）
-    pub async fn delete_all_for_user(&self, agent_id: &str, uid: &UserId) -> Result<()> {
+    pub async fn delete_all_for_user(&self, uid: &UserId) -> Result<()> {
         let filter = doc! {
-            "agent_id": agent_id,   //
             "uid": uid
         };
         self.dao.delete(filter).await?;

@@ -1,4 +1,6 @@
-
+pub mod common {
+    include!("common.rs");
+}
 pub mod rpc_arb_models {
     include!("rpc_arb_models.rs");
 }

@@ -5,7 +5,7 @@ use utoipa::ToSchema;
 /// 群成员信息
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct GroupMember {
+pub struct GroupMemberEntity {
     /// 成员记录唯一 ID（建议格式：group_id_user_id）
     pub id: String,
     /// 群组 ID

@@ -1,11 +1,11 @@
-use crate::entitys::user_entity::UserInfo;
+use crate::entitys::user_entity::UserInfoEntity;
 use common::repository_util::BaseRepository;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 #[derive(Debug)]
 pub struct UserService {
-    pub dao: BaseRepository<UserInfo>,
+    pub dao: BaseRepository<UserInfoEntity>,
 }
 
 impl UserService {

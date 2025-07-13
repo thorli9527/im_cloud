@@ -29,7 +29,8 @@ use dashmap::DashMap;
 use tonic::{Request, Response, Status};
 use tracing::log;
 use common::util::date_util::now;
-use crate::protocol::rpc_arb_models::{BaseRequest, CommonResp, ListAllNodesResponse, ShardNodeInfo, ShardState, UpdateShardStateRequest};
+use crate::protocol::common::CommonResp;
+use crate::protocol::rpc_arb_models::{BaseRequest, ListAllNodesResponse, ShardNodeInfo, ShardState, UpdateShardStateRequest};
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcService;
 
 /// 分片节点状态信息
@@ -47,7 +48,6 @@ pub struct ArbiterServiceImpl {
 #[tonic::async_trait]
 impl ArbServerRpcService for ArbiterServiceImpl {
     // === 分片管理 ===
-
     async fn get_shard_node(
         &self,
         req: Request<BaseRequest>,
@@ -118,7 +118,6 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         if let Some(node_info) = self.shard_nodes.get(&node_addr) {
             return Ok(Response::new(crate::protocol::rpc_arb_models::ShardNodeInfo {
                 node_addr: node_info.node_addr.clone(),
-                index: node_info.index,
                 total: self.shard_nodes.len() as i32,
                 version: node_info.version,
                 state: node_info.state as i32,
@@ -126,26 +125,11 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             }));
         }
 
-
-        // 获取所有已使用的 index
-        let used_indices: HashSet<i32> = self
-            .shard_nodes
-            .iter()
-            .map(|entry| entry.value().index)
-            .collect();
-
-        // 分配最小未使用 index
-        let mut index = 0i32;
-        while used_indices.contains(&index) {
-            index += 1;
-        }
-
         // 当前时间戳（毫秒）
         let now = now() as u64;
         // 构建新 entry
         let entry = ShardNodeInfo {
             node_addr: node_addr.clone(),
-            index,
             total: self.shard_nodes.len() as i32,
             version: 0,
             state: ShardState::Preparing as i32,
@@ -224,7 +208,6 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                 message: format!("Node {} not found", &request.get_ref().node_addr),
             })),
         }
-       
     }
 }
 

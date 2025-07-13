@@ -1,11 +1,11 @@
-use crate::entitys::common_entity::Country;
+use crate::entitys::common_entity::CountryEntity;
 use common::repository_util::BaseRepository;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 #[derive(Debug)]
 pub struct CountryService {
-    pub dao: BaseRepository<Country>,
+    pub dao: BaseRepository<CountryEntity>,
 }
 
 impl CountryService {

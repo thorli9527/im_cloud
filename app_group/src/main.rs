@@ -12,9 +12,8 @@ use tokio::sync::Mutex;
 use tracing::log::{LevelFilter, warn};
 use crate::manager::shard_job::ManagerJob;
 
-mod biz_service;
+mod service;
 mod manager;
-mod models;
 mod protocol;
 
 #[actix_web::main]
@@ -33,8 +32,7 @@ async fn main() -> std::io::Result<()> {
     biz_service::init_service(init_mongo_db(&app_cfg).await);
     // 2. 构建 ShardManager 实例
     let config = app_cfg.clone().shard.clone().unwrap();
-    let manager = Arc::new(Mutex::new(ShardManager::new(config)));
-    let job = ManagerJob::new(manager.clone());
+    let mut job = ManagerJob::new(config.clone());
     // 启动任务
     job.start().await;
     HttpServer::new(move || {

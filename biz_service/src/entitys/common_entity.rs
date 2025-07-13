@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 /// 国家信息结构体，用于存储标准的国家相关基础数据
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
-pub struct Country {
+pub struct CountryEntity {
     /// 主键 ID
     pub id: i32,
 

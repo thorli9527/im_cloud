@@ -11,7 +11,7 @@ pub async fn handle_logout(
 ) -> Result<()> {
     let user_manager = UserManager::get();
     user_manager
-        .logout(message_id, agent_id, uid, device_type)
+        .logout(message_id,  uid, device_type)
         .await?;
     Ok(())
 }

@@ -11,7 +11,7 @@ pub async fn handle_login(
 ) -> Result<String> {
     let user_manager = UserManager::get();
     let token = user_manager
-        .login(message_id, user_name, password, app_key, device_type)
+        .login(message_id, user_name, password, device_type)
         .await?;
     Ok(token)
 }

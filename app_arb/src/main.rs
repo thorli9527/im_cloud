@@ -7,7 +7,6 @@ use std::sync::Arc;
 use common::config::AppConfig;
 use crate::biz_service::rpc::arb_service_impl::ArbiterServiceImpl;
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcServiceServer;
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     AppConfig::init(&"arb-config.toml".to_string());

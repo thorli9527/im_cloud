@@ -1,6 +1,6 @@
 use crate::protocol::common::ChatTargetType;
 
-pub struct ReadIndex {
+pub struct ReadIndexEntity {
     pub from: String,
     pub to: String, // 单聊为 user_id，群聊为 group_id
     pub target_type: ChatTargetType,

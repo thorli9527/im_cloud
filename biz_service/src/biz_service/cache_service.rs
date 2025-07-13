@@ -1,4 +1,4 @@
-use crate::entitys::agent_entity::AgentInfo;
+use crate::entitys::agent_entity::AgentEntity;
 use moka::sync::Cache;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
@@ -39,8 +39,8 @@ impl<T: Clone + Send + Sync + 'static> CacheService<T> {
     }
 }
 
-static AGENT_CACHE_INSTANCE: OnceCell<Arc<CacheService<AgentInfo>>> = OnceCell::new();
+static AGENT_CACHE_INSTANCE: OnceCell<Arc<CacheService<AgentEntity>>> = OnceCell::new();
 
-pub fn get_agent_cache() -> Arc<CacheService<AgentInfo>> {
+pub fn get_agent_cache() -> Arc<CacheService<AgentEntity>> {
     AGENT_CACHE_INSTANCE.get_or_init(|| Arc::new(CacheService::new(300, 1000))).clone()
 }

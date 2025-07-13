@@ -1,7 +1,7 @@
 use crate::result::{result, result_data, result_error, AppState};
 use actix_web::{post, web, Responder};
 use biz_service::biz_service::user_service::UserService;
-use biz_service::entitys::user_entity::UserInfo;
+use biz_service::entitys::user_entity::UserInfoEntity;
 use common::errors::AppError;
 use common::repository_util::{OrderType, Repository};
 use common::util::common_utils::build_md5_with_key;
@@ -46,7 +46,7 @@ pub struct UserAddDto {
 pub async fn user_add(state: web::Data<AppState>, dto: web::Json<UserAddDto>) -> Result<impl Responder, AppError> {
     match &dto.validate() {
         Ok(_) => {
-            let mut user = UserInfo::default();
+            let mut user = UserInfoEntity::default();
             user.user_name = dto.user_name.as_ref().unwrap().to_string();
             user.password = build_md5_with_key(&state.config.get_sys().md5_key, &dto.password.as_ref().unwrap());
             user.is_admin = dto.is_admin.clone();
@@ -67,7 +67,7 @@ pub async fn user_change(parmas: web::Path<(String, bool)>) -> Result<impl Respo
 
 #[post("/user/del/{user_id}")]
 pub async fn user_del(user_id: web::Path<String>) -> Result<impl Responder, AppError> {
-    UserService::get().dao.delete_by_id(user_id.to_string()).await?;
+    UserService::get().dao.delete_by_id(&user_id).await?;
     Ok(result())
 }
 

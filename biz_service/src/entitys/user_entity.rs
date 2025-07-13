@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 /// 用户信息结构体，用于存储系统用户账号、权限和身份信息
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
-pub struct UserInfo {
+pub struct UserInfoEntity {
     /// 用户唯一 ID（通常是 MongoDB 的 ObjectId，以字符串形式保存）
     pub id: String,
     /// 所属代理/应用 ID，用于多租户或代理隔离

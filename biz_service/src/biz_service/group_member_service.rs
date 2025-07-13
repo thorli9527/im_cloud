@@ -1,4 +1,4 @@
-use crate::entitys::group_member::{GroupMember, GroupRole};
+use crate::entitys::group_member::{GroupMemberEntity, GroupRole};
 use anyhow::Result;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
@@ -12,7 +12,7 @@ use common::UserId;
 
 #[derive(Debug)]
 pub struct GroupMemberService {
-    pub dao: BaseRepository<GroupMember>,
+    pub dao: BaseRepository<GroupMemberEntity>,
 }
 
 impl GroupMemberService {
@@ -40,7 +40,7 @@ impl GroupMemberService {
         Ok(())
     }
 
-    pub async fn find_owner(&self, group_id: impl AsRef<str>) -> Result<GroupMember, AppError> {
+    pub async fn find_owner(&self, group_id: impl AsRef<str>) -> Result<GroupMemberEntity, AppError> {
         let filter = doc! {"group_id":as_ref_to_string(group_id),"role":GroupRole::Owner.to_string()};
         let result = self.dao.find_one(filter).await?;
         match result {

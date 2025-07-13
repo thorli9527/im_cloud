@@ -4,8 +4,6 @@ use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
-use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
-use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use common::errors::AppError;
 use common::errors::AppError::BizError;
@@ -43,17 +41,7 @@ async fn group_dismiss(group_id: web::Path<String>, req: HttpRequest) -> Result<
         Ok(info) => info,
         Err(_) => return Err(BizError("group.not.found".to_string())),
     };
-
-    // 3. 删除群成员和群信息
-    let group_member_service = GroupMemberService::get();
-    group_member_service.dao.delete_by_id(&group_id).await?;
-    group_service.dao.delete_by_id(&group_id).await?;
-
-    // 4. 通知管理器更新缓存等状态
-    GroupManager::get().dismiss_group(&group_id).await?;
-
-    // 5. 写入操作日志 并发通知
-    GroupOperationLogService::get().add_log(&agent.id, &group_id, "", None, GroupOperationType::Dismiss).await?;
+    group_service.dismiss_group(&group_id, &"");
 
     // 6. 返回结果
     Ok(web::Json(result()))

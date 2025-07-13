@@ -1,5 +1,4 @@
 use crate::biz_service::agent_service::AgentService;
-use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::GroupMemberMeta;
 use crate::manager::common::SHARD_COUNT;
 use common::config::AppConfig;
@@ -88,7 +87,7 @@ impl UserManager {
             for key in keys {
                 let json: Option<String> = conn.get(&key).await?;
                 if let Some(json) = json {
-                    let info: GroupInfo = serde_json::from_str(&json)?;
+                    let info: GroupEntity = serde_json::from_str(&json)?;
                     // self.local_group_manager.init_group(info);
                 }
             }
@@ -200,17 +199,17 @@ impl UserManager {
         Ok(())
     }
     // 获取 Redis 分片索引
-    pub fn get_redis_shard_index(&self, agent_id: &str, user_id: &str) -> usize {
-        let key = format!("{}:{}", agent_id, user_id);
+    pub fn get_redis_shard_index(&self, user_id: &str) -> usize {
+        let key = format!("{}",  user_id);
         let mut hasher = XxHash64::with_seed(0);  // 可选固定种子
         key.hash(&mut hasher);
         (hasher.finish() % SHARD_SIZE as u64) as usize
     }
     // 生成在线状态键
-    pub fn make_online_key(&self,agent_id: &str, user_id: &UserId) -> (String, String) {
-        let shard = self.get_redis_shard_index(agent_id, user_id);
+    pub fn make_online_key(&self, user_id: &UserId) -> (String, String) {
+        let shard = self.get_redis_shard_index( user_id);
         let redis_key = format!("online:user:shard:{}", shard);
-        let redis_field = format!("{}:{}", agent_id, user_id);
+        let redis_field = format!("{}",  user_id);
         (redis_key, redis_field)
     }
     pub async fn start_stream_event_consumer(&self) -> anyhow::Result<()> {

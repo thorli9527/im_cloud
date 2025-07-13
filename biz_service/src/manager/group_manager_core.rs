@@ -1,4 +1,3 @@
-use crate::entitys::group_entity::GroupInfo;
 use crate::entitys::group_member::GroupRole;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -9,6 +8,7 @@ use deadpool_redis::{
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use common::UserId;
+use crate::entitys::group_entity::GroupEntity;
 
 /// 群组管理器
 #[derive(Debug, Clone)]
@@ -52,7 +52,9 @@ pub trait GroupManagerOpt: Send + Sync {
     ///
     /// # Arguments
     /// * `info` - 群组的详细信息结构体。
-    async fn create_group(&self, info: GroupInfo) -> Result<()>;
+    async fn create_group(&self, info: &GroupEntity) -> Result<()>;
+
+    async fn update_group(&self, info: &GroupEntity) -> Result<()>;
 
     /// 解散一个群组并清理相关资源。
     ///
@@ -93,8 +95,8 @@ pub trait GroupManagerOpt: Send + Sync {
     /// * `group_id` - 群组 ID。
     ///
     /// # Returns
-    /// * `Option<GroupInfo>` - 如果群存在则返回群信息，否则为 None。
-    async fn get_group_info(&self, group_id: &str) -> Result<Option<GroupInfo>>;
+    /// * `Option<GroupEntity>` - 如果群存在则返回群信息，否则为 None。
+    async fn get_group_info(&self, group_id: &str) -> Result<Option<GroupEntity>>;
 
     /// 获取指定群组中所有成员的用户 ID 列表。
     ///

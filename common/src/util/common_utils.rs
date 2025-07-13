@@ -2,11 +2,13 @@
 #![allow(dead_code)]
 
 use hex::encode;
+use std::hash::{Hash, Hasher};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use md5::{Digest, Md5};
 use serde::{Deserialize, Serialize};
-use uuid::{uuid, Uuid};
+use twox_hash::XxHash64;
+use uuid::{Uuid, uuid};
 
 pub fn copy_to<A, B>(a: &A, b: &B) -> B
 where
@@ -22,7 +24,13 @@ pub fn build_uuid() -> String {
 }
 pub fn build_snow_id() -> u64 {
     let mut generator = SafeSnowflake::new(1, 1);
-    return generator.generate() ;
+    return generator.generate();
+}
+// 计算字符串的哈希值并返回在指定范围内的索引
+pub fn hash_index(key: &str, total: i32) -> i32 {
+    let mut hasher1 = XxHash64::with_seed(0);
+    key.hash(&mut hasher1);
+    hasher1.finish() as i32 % total
 }
 pub fn build_md5(content: &str) -> String {
     let mut hasher = Md5::new();

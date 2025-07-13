@@ -1,0 +1,193 @@
+syntax = "proto3";
+package common;
+// ==============================
+// 枚举定义（群角色、权限、验证方式等）
+// ==============================
+
+/**
+ * 群成员角色类型
+ */
+enum GroupRoleType {
+  OWNER = 0;  // 群主（拥有最高权限）
+  ADMIN = 1;  // 管理员（具备部分管理权限）
+  MEMBER = 2; // 普通成员
+}
+
+/**
+ * 加群权限控制类型
+ */
+enum JoinPermission {
+  ANYONE = 0;        // 任何人都可加入
+  NEED_APPROVAL = 1; // 加群需审批
+  INVITE_ONLY = 2;   // 仅允许通过邀请加入
+  CLOSED = 3;        // 不允许加入
+}
+
+/**
+ * 加群验证类型
+ */
+enum JoinQuestionType {
+  NONE = 0;         // 无验证
+  QUESTION = 1;     // 答题验证
+  CAPTCHA = 2;      // 验证码验证
+  INVITE_CODE = 3;  // 邀请码验证
+}
+
+
+
+
+// ==============================
+// 通用响应结构
+// ==============================
+
+/**
+ * 通用响应结构
+ */
+message CommonResp {
+  bool success = 1;       // 是否成功
+  string message = 2;     // 错误或提示信息
+}
+
+// ==============================
+// 标签结构
+// ==============================
+
+/**
+ * 群标签信息
+ */
+message TagInfo {
+  string id = 1;             // 标签唯一ID
+  string name = 2;           // 标签名称
+  string description = 3;    // 标签说明
+  string color = 4;          // 可选颜色代码（如 "#FF0000"）
+}
+
+// ==============================
+// 群组信息结构
+// ==============================
+
+/**
+ * 群组基本信息（用于展示和配置）
+ */
+message GroupInfo {
+  string id = 1;                     // 群组唯一ID（由系统生成）
+  string name = 2;                   // 群组名称（用户可见）
+  string avatar = 3;                 // 群头像URL
+  string description = 4;            // 群简介（支持富文本）
+  string notice = 5;                 // 群公告（群成员可见）
+  string tags = 6;                   // 群标签（英文逗号分隔）
+  JoinPermission join_permission = 7;        // 加群权限控制
+  bool allow_search = 8;                     // 是否允许通过搜索找到
+  JoinQuestionType join_question_mode = 9;   // 验证方式类型
+  repeated string join_questions = 10;       // 加群题目（QUESTION 模式）
+  string join_question_answer = 11;          // 正确答案（内部验证）
+  string join_code = 12;                     // 邀请码
+  string join_code_answer = 13;              // 邀请码校验值
+}
+
+// ==============================
+// 群成员信息结构
+// ==============================
+
+/**
+ * 群组成员详细信息
+ */
+message GroupMemInfo {
+  string id = 1;             // 成员记录ID（内部持久化用）
+  string group_id = 2;       // 所属群组ID
+  string uid = 3;            // 用户唯一ID
+  string alias = 4;          // 群内别名 / 昵称
+  GroupRoleType role = 5;    // 成员角色
+  bool is_muted = 6;         // 是否禁言中（true=被禁言）
+  string avatar = 7;         // 成员头像URL（前端展示用）
+}
+
+
+// ======================================
+// 📋 通用协议定义文件
+// ======================================
+// 本文件定义了 IM 系统中使用的通用枚举类型和消息类型标识
+// 这些定义被其他 proto 文件引用，确保整个系统的一致性
+//
+// 主要包含：
+// 1. ContentType - 消息内容类型枚举
+// 2. ChatTargetType - 聊天目标类型枚举
+// 3. ByteMessageType - 字节消息类型枚举
+// ======================================
+
+// ======================================
+// 💬 消息类型枚举（用于标记主消息类型）
+// ======================================
+// 每条消息将根据其主内容赋予一个主类型，便于前端渲染和后端分类处理。
+// 注意：具体内容仍以 MessageContent 的 oneof 实体为准，ContentType 仅为索引分类用途。
+enum ContentType {
+  UNKNOWN = 0;          // 未知类型：默认值，用于防御性处理或解析失败情况
+  TEXT = 1;             // 文本消息：纯文本内容
+  IMAGE = 2;            // 图片消息：包含图片地址、尺寸、缩略图等信息
+  AUDIO = 3;            // 音频消息：语音聊天或语音留言
+  VIDEO = 4;            // 视频消息：播放地址、封面图、时长等
+  HTML = 5;             // HTML 富文本消息：用于结构化卡片、网页链接等
+  LOCATION = 6;         // 位置消息：经纬度、地址描述等
+  FILE = 7;             // 文件消息：支持任意文件格式，如 PDF、Word、ZIP 等
+  EMOJI = 8;            // 表情消息：标准 emoji 或自定义动态/静态表情
+  QUOTE = 9;            // 引用消息：引用历史消息的内容并附加回复
+  AV_CALL = 10;         // 音视频通话信令：如邀请、接听、挂断等
+  VOIP = 11;            // VOIP 通话记录：用于保存通话日志
+  NOTIFICATION = 12;    // 通知消息：系统推送提示、公告等
+  SYSTEM = 13;          // 系统消息：如封号、强制下线、服务器维护通知等
+  REMINDER = 14;        // 提醒消息：如代办事项、日程提醒等
+  FRIEND_EVENT = 15;    // 好友事件：加好友、被删除、拉黑等事件
+  GROUP_EVENT = 16;     // 群组事件：如被踢出群、群解散、管理员变更等
+  REVOKE = 17;          // 消息撤回：通知客户端某条消息已被撤回
+  FORWARD = 18;         // 转发消息：引用其他消息的复用/转发版本
+
+  // 可选扩展类型（根据业务需要添加）
+  CONTACT_CARD = 19;    // 名片消息：用户或群的联系人分享
+  VOTE = 20;            // 投票消息：包含投票标题、选项、结果等信息
+  RED_ENVELOPE = 21;    // 红包消息：用于节日、福利等场景
+
+  CUSTOM = 100;         // 自定义消息：开发者自定义结构，通常以 JSON 承载
+}
+
+// ======================================
+// 🎯 聊天目标类型枚举
+// ======================================
+// 用于标识消息的接收目标类型，帮助客户端和服务端进行不同的处理逻辑
+enum ChatTargetType {
+  UN_KNOWN = 0;         // 未知类型：默认值，用于防御性处理或解析失败情况
+  GROUP = 1;            // 群聊目标：消息发送到群组
+  SINGLE = 2;           // 单聊目标：消息发送到个人用户
+}
+
+// ======================================
+// 📦 字节消息类型枚举
+// ======================================
+// 用于标识通过 WebSocket 传输的二进制消息类型
+// 这些类型用于消息路由和分发，确保消息被正确处理
+// 消息类型枚举：用于标识通信协议中的消息分类
+enum ByteMessageType {
+  UNKNOWN_BYTE_MESSAGE_TYPE       = 0;    // 未知消息类型（默认）：用于解析错误或未定义处理
+  // 系统基础通信（1~9）
+  HeartbeatMsgType                = 1;    // 心跳消息：保持连接活跃
+  LoginReqMsgType                 = 2;    // 认证请求：客户端发起身份验证
+  LoginRespMsgType                = 3;    // 认证响应：服务端返回认证结果
+  LogoutReqMsgType                = 4;    // 登出请求：客户端主动断开连接
+  LogoutRespMsgType               = 5;    // 登出响应：服务端确认登出状态
+  SendVerificationCodeReqMsgType  = 6;    // 验证码请求：短信/邮件验证码发送请求
+  SendVerificationCodeRepMsgType  = 7;    // 验证码响应：验证码发送处理结果
+  SystemNotificationMsgType       = 8;    // 系统通知：平台或服务级消息
+  UserFlushMsgType                = 9;    // 用户刷新：资料/状态/配置变更通知
+
+  // 用户在线状态（10~19）
+  OnlineStatusMsgType             = 10;   // 用户上线通知
+  OfflineStatusMsgType            = 11;   // 用户下线通知
+
+  // 聊天消息（20~29）
+  UserMsgType                     = 20;   // 单聊消息
+  GroupMsgType                    = 21;   // 群聊消息
+
+  // 好友 / 群组事件（30~39）
+  FriendEventMsgType              = 30;   // 好友事件：申请、同意、删除等
+  GroupCreateMsgType              = 31;   // 群创建通知
+  GroupDismissMsgType             = 32;   // 群解散通知
+}

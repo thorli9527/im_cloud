@@ -1,6 +1,5 @@
-use crate::entitys::client_entity::ClientInfo;
+use crate::entitys::client_entity::ClientEntity;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
-use crate::protocol::auth::DeviceType;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::date_util::now;
@@ -12,10 +11,11 @@ use utoipa::openapi::security::Password;
 use common::config::AppConfig;
 use common::UserId;
 use common::util::common_utils::{build_md5, build_md5_with_key};
+use crate::protocol::msg::auth::DeviceType;
 
 #[derive(Debug)]
 pub struct ClientService {
-    pub dao: BaseRepository<ClientInfo>,
+    pub dao: BaseRepository<ClientEntity>,
 }
 
 impl ClientService {
@@ -23,15 +23,13 @@ impl ClientService {
         let collection = db.collection("client");
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
-    pub async fn new_data(&self, agent_id: String, user_id: &UserId, name: String, avatar: Option<String>,username: Option<String>,password: Option<String>) -> Result<ClientInfo> {
-        let mut user = ClientInfo::default();
+    pub async fn new_data(&self,  user_id: &UserId, name: String, avatar: Option<String>,username: Option<String>,password: Option<String>) -> Result<ClientEntity> {
+        let mut user = ClientEntity::default();
         
-        user.agent_id = agent_id;
         user.name = name;
         user.avatar = avatar;
         user.enable = true;
         user.uid = user_id.to_string();
-        user.agent_id_uid = format!("{}_{}", user.agent_id, user.uid);
         if password.is_some() {
             let md5_key=&AppConfig::get().get_sys().md5_key;
             let password=password.unwrap();
@@ -49,16 +47,16 @@ impl ClientService {
         Ok(user)
     }
     
-    pub async fn find_by_user_id(&self, agent_id: impl AsRef<str>, user_id: &UserId) -> Result<Option<ClientInfo>> {
-        let option = UserManager::get().get_user_info(agent_id.as_ref(), user_id).await?;
+    pub async fn find_by_user_id(&self,  user_id: &UserId) -> Result<Option<ClientEntity>> {
+        let option = UserManager::get().get_user_info( user_id).await?;
         Ok(option.map(|mut client| {
             client.message_status = matches!(client.message_expired_at, Some(end) if end > now());
             client
         }))
     }
 
-    pub async fn enable_message(&self, agent_id: &str, user_id: &UserId, status: bool) -> Result<()> {
-        let key = format!("{}_:{}", agent_id, user_id);
+    pub async fn enable_message(&self,user_id: &UserId, status: bool) -> Result<()> {
+        let key = format!("{}",  user_id);
         let filter = doc! {"agent_id_user_id":key};
         let update = doc! {
             "$unset": {
@@ -70,7 +68,7 @@ impl ClientService {
         };
         self.dao.collection.update_one(filter, update).await?;
         let user_manager = UserManager::get();
-        let option = user_manager.get_user_info(agent_id.as_ref(), user_id).await?;
+        let option = user_manager.get_user_info( user_id).await?;
         if let Some(mut client) = option {
             client.message_expired_at = None;
             client.message_status = status;
@@ -89,12 +87,12 @@ impl ClientService {
         //
     }
 
-    pub async fn build_token(&self, agent_id: &str, uid: &UserId, device_type: &DeviceType) -> Result<()> {
+    pub async fn build_token(&self, uid: &UserId, device_type: &DeviceType) -> Result<()> {
         let user_manager = UserManager::get();
-        user_manager.build_token(agent_id, uid, device_type).await?;
+        user_manager.build_token(uid, device_type).await?;
         Ok(())
     }
-    pub async fn find_client_by_token(&self, token: &str) -> Result<Option<ClientInfo>> {
+    pub async fn find_client_by_token(&self, token: &str) -> Result<Option<ClientEntity>> {
         let user_manager = UserManager::get();
         Ok(user_manager.find_user_by_token(token).await?)
     }

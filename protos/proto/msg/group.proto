@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package protocol.group;
+
+// ======================================
+// 👥 群组相关协议定义文件
+// ======================================
+// 本文件定义了与群组相关的消息协议，包括群组事件、成员变更等
+// 
+// 主要包含：
+// 1. GroupEventType - 群成员变更类型枚举
+// 2. GroupEventContent - 群事件通用消息
+// 3. GroupCreateMsg - 群创建事件消息
+// 4. GroupDismissMsg - 群解散通知
+// ======================================
+
+// ========================================
+// 🔁 群成员变更类型（操作类型枚举）
+// ========================================
+// 定义了群组中可能发生的各种事件类型，用于标识具体的操作行为
+enum GroupEventType {
+  // === 公共: 通用/容错 ===
+  GROUP_CHANGE_UNKNOWN = 0;     // 未知类型（容错）
+
+  // === 👥 群成员操作 ===
+  GROUP_ADD = 1;                // 添加成员：邀请新用户加入群组
+  GROUP_REMOVE = 2;             // 移除成员：将成员从群组中移除
+  GROUP_MUTE = 3;               // 禁言成员：禁止某成员发言
+  GROUP_UNMUTE = 4;             // 解除禁言：恢复某成员的发言权限
+  GROUP_PROMOTE = 5;            // 升为管理员：将普通成员提升为管理员
+  GROUP_DEMOTE = 6;             // 降为普通成员：将管理员降级为普通成员
+  GROUP_INVITE = 7;             // 邀请加入：发送群组邀请
+  GROUP_LEAVE = 8;              // 主动退出群聊：成员主动离开群组
+  GROUP_KICK = 9;               // 踢出群聊：强制移除成员（等价于 REMOVE）
+  GROUP_REJOIN = 10;            // 重新加入群聊：被踢出后重新加入
+  GROUP_TRANSFER_OWNER = 11;    // 转让群主：群主权限转移给其他成员
+
+  // === 🛠 群属性操作 ===
+  CHANGE_NAME = 100;            // 修改群名称：更新群组显示名称
+  CHANGE_AVATAR = 101;          // 修改头像：更新群组头像
+  CHANGE_NOTICE = 102;          // 修改公告：更新群组公告内容
+  CHANGE_MUTE_ALL = 103;        // 修改全体禁言状态：开启/关闭全员禁言
+  CHANGE_INVITE_ONLY = 104;     // 修改邀请权限：设置谁可以邀请新成员
+  CHANGE_HISTORY_VISIBLE = 105; // 修改历史消息可见性：新成员是否可见历史消息
+  CHANGE_MAX_MEMBER_LIMIT = 106;// 修改最大成员数：调整群组人数上限
+  CHANGE_VERIFICATION_TYPE = 107;// 修改加群验证方式：设置加群是否需要验证
+}
+
+// ========================================
+// 📦 群事件通用消息（成员、属性、转让群主）
+// ========================================
+// 用于传递群组中的各种事件，包括成员变更、属性修改等
+message GroupEventContent {
+  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  string group_id = 2;          // 群组 ID：发生事件的群组标识
+  GroupEventType event_type = 3; // 事件类型：具体的事件类型枚举值
+
+  string operator_id = 4;       // 发起者（操作者）用户 ID：执行操作的用户
+  repeated string affected_user_ids = 5; // 被操作的用户 ID（适用于成员操作/群主转让）
+
+  string old_value = 6;         // 旧值（仅属性变更或转让使用）：修改前的值
+  string new_value = 7;         // 新值（仅属性变更或转让使用）：修改后的值
+
+  uint64 timestamp = 8;         // 操作时间戳（毫秒）：事件发生的时间
+}
+
+// ========================================
+// ➕ 群创建事件消息（通常由服务端广播）
+// ========================================
+message GroupCreateMsg {
+  uint64 message_id = 1;            // 当前消息的唯一 ID，用于追踪、ACK 等
+  string group_id = 2;              // 群 ID，可为自定义 UUID 或数值型
+  string name = 3;                  // 群名称
+  string avatar = 4;                // 群头像 URL（可为空）
+  string description = 5;           // 群简介
+  string creator_id = 6;            // 创建者用户 ID
+  repeated string member_ids = 7;   // 初始成员用户 ID 列表
+  string owner_id = 8;              // 群主用户 ID（可与创建者不同）
+  bool need_approval = 9;           // 是否需要审核加入
+  bool allow_search = 10;           // 是否允许通过搜索加入
+  uint64 create_time = 11;          // 群创建时间（毫秒时间戳）
+  string ext = 99;                  // 可选扩展字段（用于灰度、业务扩展等）
+}
+
+// ========================================
+// ❌ 群解散通知
+// ========================================
+// 当群组被解散时，服务端会向所有群成员推送此消息
+message GroupDismissMsg {
+  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  string group_id = 2;          // 被解散的群组 ID：解散的群组标识
+  string operator_id = 3;       // 解散操作者 ID（如群主、系统管理员）：执行解散操作的用户
+  int64 dismissed_at = 4;       // 解散时间戳（毫秒）：群组解散的时间
+}
+

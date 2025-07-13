@@ -2,14 +2,10 @@ use crate::biz_service::agent_service::AgentService;
 use crate::biz_service::client_service::ClientService;
 use crate::biz_service::friend_service::UserFriendService;
 use crate::biz_service::kafka_service::KafkaService;
-use crate::entitys::client_entity::ClientInfo;
+use crate::entitys::client_entity::ClientEntity;
 use crate::manager::user_manager_core::{USER_ONLINE_TTL_SECS, UserManager, UserManagerOpt};
-use crate::protocol::auth::{
-    DeviceType, LoginRespMsg, LogoutRespMsg, OfflineStatueMsg, OnlineStatusMsg,
-};
+
 use crate::protocol::common::ByteMessageType;
-use crate::protocol::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
-use crate::protocol::status::AckMsg;
 use actix_web::cookie::time::macros::time;
 use actix_web::web::get;
 use anyhow::{Context, Result, anyhow};
@@ -25,6 +21,9 @@ use deadpool_redis::redis::AsyncCommands;
 use futures_util::TryFutureExt;
 use mongodb::bson::doc;
 use tokio::try_join;
+use crate::protocol::msg::auth::{DeviceType, LoginRespMsg, LogoutRespMsg, OfflineStatueMsg, OnlineStatusMsg};
+use crate::protocol::msg::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
+
 pub const TOKEN_EXPIRE_SECS: u64 = 60 * 60 * 24 * 7;
 #[async_trait]
 impl UserManagerOpt for UserManager {
@@ -32,16 +31,11 @@ impl UserManagerOpt for UserManager {
     async fn login(
         &self,
         message_id: &u64,
-        app_key: &str,
         user_name: &str,
         password: &str,
         device_type: &DeviceType,
     ) -> anyhow::Result<String> {
-        let agent_service = AgentService::get();
-
-        let agent_info = agent_service.find_by_app_key(app_key).await?;
-        let agent_id = agent_info.id.clone();
-        let client_info = self.get_user_info_by_name(&agent_id, user_name).await?;
+        let client_info = self.get_user_info_by_name( user_name).await?;
 
         if client_info.is_none() {
             return Err(anyhow::anyhow!("user.or.password.error"));
@@ -54,9 +48,9 @@ impl UserManagerOpt for UserManager {
             return Err(anyhow::anyhow!("user.or.password.error"));
         }
         let user_id = client.id.clone() as UserId;
-        self.online(&agent_id, &user_id, device_type).await?;
+        self.online( &user_id, device_type).await?;
 
-        let token = self.build_token(&agent_id, &user_id, device_type).await?;
+        let token = self.build_token( &user_id, device_type).await?;
 
         let kafka_service = KafkaService::get();
         let node_index: &u8 = &0;
@@ -80,15 +74,14 @@ impl UserManagerOpt for UserManager {
     async fn logout(
         &self,
         message_id: &u64,
-        agent_id: &str,
         uid: &UserId,
         device_type: &DeviceType,
     ) -> Result<()> {
-        self.offline(agent_id, uid, device_type).await?;
+        self.offline( uid, device_type).await?;
         let node_index: &u8 = &0;
         let kafka_service = KafkaService::get();
         let token = self
-            .get_token_by_uid_device(agent_id, uid, device_type)
+            .get_token_by_uid_device(uid, device_type)
             .await?;
         if let Some(token) = token {
             self.delete_token(&token).await?;
@@ -107,8 +100,8 @@ impl UserManagerOpt for UserManager {
             .await?;
         Ok(())
     }
-    async fn online(&self, agent_id: &str, user_id: &UserId, device_type: &DeviceType) -> Result<()> {
-        let (redis_key, field_key) = self.make_online_key(agent_id, user_id);
+    async fn online(&self,  user_id: &UserId, device_type: &DeviceType) -> Result<()> {
+        let (redis_key, field_key) = self.make_online_key( user_id);
         let mut conn = self.pool.get().await?;
 
         // 获取现有设备
@@ -147,8 +140,8 @@ impl UserManagerOpt for UserManager {
         Ok(())
     }
 
-    async fn offline(&self, agent_id: &str, user_id: &UserId, device_type: &DeviceType) -> Result<()> {
-        let (redis_key, field_key) = self.make_online_key(agent_id, user_id);
+    async fn offline(&self,  user_id: &UserId, device_type: &DeviceType) -> Result<()> {
+        let (redis_key, field_key) = self.make_online_key( user_id);
         let mut conn = self.pool.get().await?;
 
         let existing: Option<String> = conn.hget(&redis_key, &field_key).await?;
@@ -164,7 +157,7 @@ impl UserManagerOpt for UserManager {
             }
         }
 
-        let is_all_offline = self.is_all_device_offline(agent_id, user_id).await?;
+        let is_all_offline = self.is_all_device_offline(user_id).await?;
         if is_all_offline {
             let kafka = KafkaService::get();
             let offline_msg = OfflineStatueMsg {
@@ -187,14 +180,14 @@ impl UserManagerOpt for UserManager {
         Ok(())
     }
 
-    async fn is_online(&self, agent_id: &str, user_id: &UserId) -> Result<bool> {
-        let (redis_key, field_key) = self.make_online_key(agent_id, user_id);
+    async fn is_online(&self, user_id: &UserId) -> Result<bool> {
+        let (redis_key, field_key) = self.make_online_key(user_id);
         let mut conn = self.pool.get().await?;
         Ok(conn.hexists(&redis_key, &field_key).await?)
     }
 
-    async fn get_online_devices(&self, agent_id: &str, user_id: &UserId) -> Result<Vec<DeviceType>> {
-        let (redis_key, field_key) = self.make_online_key(agent_id, user_id);
+    async fn get_online_devices(&self,  user_id: &UserId) -> Result<Vec<DeviceType>> {
+        let (redis_key, field_key) = self.make_online_key( user_id);
         let mut conn = self.pool.get().await?;
         if let Some(s) = conn.hget::<_, _, Option<String>>(&redis_key, &field_key).await? {
             Ok(s.split(',')
@@ -206,36 +199,36 @@ impl UserManagerOpt for UserManager {
         }
     }
 
-    async fn is_all_device_offline(&self, agent_id: &str, user_id: &UserId) -> Result<bool> {
-        Ok(!self.is_online(agent_id, user_id).await?)
+    async fn is_all_device_offline(&self, user_id: &UserId) -> Result<bool> {
+        Ok(!self.is_online(user_id).await?)
     }
 
-    async fn sync_user(&self, _user: ClientInfo) -> anyhow::Result<()> {
+    async fn sync_user(&self, _user: ClientEntity) -> anyhow::Result<()> {
         let user_id = &_user.uid;
         let mut conn = self.pool.get().await?;
         let user_info_json = serde_json::to_string(&_user)?;
-        let string = format!("agent:{}:client:{}", &_user.agent_id, user_id);
+        let string = format!(":client:{}",  user_id);
         let _: () = conn.set(string, user_info_json).await?;
         Ok(())
     }
 
-    async fn remove_user(&self, agent_id: &str, user_id: &UserId) -> Result<()> {
+    async fn remove_user(&self,  user_id: &UserId) -> Result<()> {
         let mut conn = self.pool.get().await?;
-        let redis_online_key = format!("online:user:agent:{}:{}", agent_id, user_id);
+        let redis_online_key = format!("online:user:agent:{}",user_id);
         let _: () = conn
             .del(redis_online_key)
             .await
             .context("删除在线状态失败")?;
-        let key = format!("agent:{}:client:{}", agent_id, user_id);
+        let key = format!("client:{}", user_id);
         let _: () = conn.del(&key).await.context("删除用户缓存失败")?;
         // 发消息 册除用户
         Ok(())
     }
 
     /// 优先查 Redis，否则从 MongoDB 兜底并写入 Redis
-    async fn get_user_info(&self, agent_id: &str, user_id: &UserId) -> Result<Option<ClientInfo>> {
+    async fn get_user_info(&self, user_id: &UserId) -> Result<Option<ClientEntity>> {
         let mut conn = self.pool.get().await?;
-        let key = format!("agent:{}:client:{}", agent_id, user_id);
+        let key = format!("client:{}",  user_id);
 
         // 1. 尝试从 Redis 获取
         if let Ok(Some(cached_json)) = conn.get::<_, Option<String>>(&key).await {
@@ -247,7 +240,7 @@ impl UserManagerOpt for UserManager {
         let client_service = ClientService::get();
         let client_opt = client_service
             .dao
-            .find_one(doc! { "agentId": agent_id, "userId": user_id })
+            .find_one(doc! {  "userId": user_id })
             .await?;
 
         // 3. 如果查到，写回 Redis（可设置过期）
@@ -261,13 +254,12 @@ impl UserManagerOpt for UserManager {
 
     async fn get_user_info_by_name(
         &self,
-        agent_id: &str,
         name: &str,
-    ) -> Result<Option<ClientInfo>> {
+    ) -> Result<Option<ClientEntity>> {
         let client_service = ClientService::get();
         let client_opt = client_service
             .dao
-            .find_one(doc! { "agent_id": agent_id, "username": name })
+            .find_one(doc! {  "username": name })
             .await?;
         return Ok(client_opt);
     }
@@ -275,17 +267,15 @@ impl UserManagerOpt for UserManager {
     /// 构建 Token：写入主数据、索引、集合（反向查找用）
     async fn build_token(
         &self,
-        agent_id: &str,
         uid: &UserId,
         device_type: &DeviceType,
     ) -> Result<String> {
         let token_key = build_uuid();
         let token_data_key = format!("token:{}", token_key);
-        let token_index_key = format!("token:index:{}:{}:{}", agent_id, uid, *device_type as i32);
-        let token_set_key = format!("token:uid:{}:{}", agent_id, uid);
+        let token_index_key = format!("token:index:{}:{}", uid, *device_type as i32);
+        let token_set_key = format!("token:uid:{}",  uid);
 
         let dto = ClientTokenDto {
-            agent_id: agent_id.to_string(),
             uid: uid.clone(),
             device_type: *device_type as u8,
         };
@@ -312,12 +302,11 @@ impl UserManagerOpt for UserManager {
     /// 获取指定 uid + 设备的 token（单设备支持）
     async fn get_token_by_uid_device(
         &self,
-        agent_id: &str,
         uid: &UserId,
         device_type: &DeviceType,
     ) -> Result<Option<String>> {
         let mut conn = self.pool.get().await?;
-        let index_key = format!("token:index:{}:{}:{}", agent_id, uid, *device_type as i32);
+        let index_key = format!("token:index:{}:{}", uid, *device_type as i32);
         let token: Option<String> = conn.get(&index_key).await.context("获取 token 索引失败")?;
         Ok(token)
     }
@@ -329,10 +318,10 @@ impl UserManagerOpt for UserManager {
         if let Ok(json) = conn.get::<_, String>(&token_key).await {
             if let Ok(dto) = serde_json::from_str::<ClientTokenDto>(&json) {
                 let index_key = format!(
-                    "token:index:{}:{}:{}",
-                    dto.agent_id, dto.uid, dto.device_type
+                    "token:index:{}:{}",
+                 dto.uid, dto.device_type
                 );
-                let token_set_key = format!("token:uid:{}:{}", dto.agent_id, dto.uid);
+                let token_set_key = format!("token:uid:{}",  dto.uid);
 
                 let _: () = conn.del(index_key).await?;
                 let _: () = conn.srem(token_set_key, token).await?;
@@ -346,8 +335,8 @@ impl UserManagerOpt for UserManager {
         Ok(())
     }
     /// 清空某用户所有 token（通过集合 smembers）
-    async fn clear_tokens_by_user(&self, agent_id: &str, user_id: &UserId) -> Result<()> {
-        let token_set_key = format!("token:uid:{}:{}", agent_id, user_id);
+    async fn clear_tokens_by_user(&self, user_id: &UserId) -> Result<()> {
+        let token_set_key = format!("token:uid:{}", user_id);
         let mut conn = self.pool.get().await?;
         let tokens: Vec<String> = conn.smembers(&token_set_key).await.unwrap_or_default();
         for token in tokens {
@@ -377,10 +366,10 @@ impl UserManagerOpt for UserManager {
     }
 
     /// 通过 token 查找用户完整信息
-    async fn find_user_by_token(&self, token: &str) -> Result<Option<ClientInfo>> {
+    async fn find_user_by_token(&self, token: &str) -> Result<Option<ClientEntity>> {
         let dto = self.get_client_token(token).await?;
         let user = self
-            .get_user_info(&dto.agent_id, &dto.uid)
+            .get_user_info( &dto.uid)
             .await?
             .ok_or_else(|| AppError::BizError("用户不存在".to_string()))?;
         Ok(Some(user))
@@ -388,7 +377,6 @@ impl UserManagerOpt for UserManager {
 
     async fn add_friend(
         &self,
-        agent_id: &str,
         user_id: &UserId,
         friend_id: &UserId,
         nickname: Option<String>,
@@ -398,8 +386,8 @@ impl UserManagerOpt for UserManager {
         // ---------- 1. 验证用户和好友存在 ----------
         let user_manager = UserManager::get();
         let (client_opt, friend_opt) = try_join!(
-            user_manager.get_user_info(agent_id, user_id),
-            user_manager.get_user_info(agent_id, friend_id)
+            user_manager.get_user_info( user_id),
+            user_manager.get_user_info(friend_id)
         )?;
 
         let client_info = client_opt.ok_or_else(|| anyhow!("用户 {} 不存在", user_id))?;
@@ -413,7 +401,7 @@ impl UserManagerOpt for UserManager {
         let nickname_to_user = Some(client_info.name.as_str());
 
         // ---------- 3. Redis 写入 ----------
-        let redis_key = |uid: &UserId| format!("friend:user:{}:{}", agent_id, uid);
+        let redis_key = |uid: &UserId| format!("friend:user:{}",  uid);
         let mut conn = self.pool.get().await?;
         let _: () = conn.sadd(redis_key(user_id), friend_id).await?;
         let _: () = conn.sadd(redis_key(friend_id), user_id).await?;
@@ -422,7 +410,6 @@ impl UserManagerOpt for UserManager {
         let friend_service = UserFriendService::get();
         friend_service
             .add_friend(
-                agent_id,
                 user_id,
                 friend_id,
                 nickname_to_friend.as_deref(),
@@ -432,7 +419,6 @@ impl UserManagerOpt for UserManager {
             .await?;
         friend_service
             .add_friend(
-                agent_id,
                 friend_id,
                 user_id,
                 nickname_to_user,
@@ -483,12 +469,11 @@ impl UserManagerOpt for UserManager {
 
     async fn remove_friend(
         &self,
-        agent_id: &str,
         user_id: &UserId,
         friend_id: &UserId,
     ) -> Result<()> {
         // ---------- 1. 删除 Redis 中的双向关系 ----------
-        let redis_key = |uid: &UserId| format!("friend:user:{}:{}", agent_id, uid);
+        let redis_key = |uid: &UserId| format!("friend:user:{}", uid);
         let mut conn = self.pool.get().await?;
 
         let _: () = conn.srem(redis_key(user_id), friend_id).await?;
@@ -497,10 +482,10 @@ impl UserManagerOpt for UserManager {
         // ---------- 2. 删除数据库中的双向记录 ----------
         let friend_service = UserFriendService::get();
         friend_service
-            .remove_friend(agent_id, user_id, friend_id)
+            .remove_friend( user_id, friend_id)
             .await?;
         friend_service
-            .remove_friend(agent_id, friend_id, user_id)
+            .remove_friend(friend_id, user_id)
             .await?;
 
         // ---------- 3. 发送 Kafka 通知（可选） ----------
@@ -542,10 +527,10 @@ impl UserManagerOpt for UserManager {
         Ok(())
     }
 
-    async fn is_friend(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<bool> {
+    async fn is_friend(&self,uid: &UserId, friend_id: &UserId) -> Result<bool> {
 
         // 1. Redis 查询
-        let redis_key = format!("friend:user:{}:{}", agent_id, uid);
+        let redis_key = format!("friend:user:{}", uid);
         let mut conn = self.pool.get().await?;
         let exists: bool = conn
             .sismember(&redis_key, friend_id)
@@ -558,7 +543,6 @@ impl UserManagerOpt for UserManager {
 
         // 2. MongoDB 兜底
         let filter = doc! {
-            "agent_id": agent_id,
             "uid": uid.to_string(),
             "friend_id": friend_id.to_string(),
             "friend_status": 1 // 限定必须是 Accepted 状态
@@ -573,11 +557,11 @@ impl UserManagerOpt for UserManager {
         Ok(exists_in_db)
     }
 
-    async fn get_friends(&self, agent_id: &str, user_id: &UserId) -> Result<Vec<UserId>> {
-        let cache_key = format!("{}:{}", agent_id, user_id);
+    async fn get_friends(&self,  user_id: &UserId) -> Result<Vec<UserId>> {
+        let cache_key = format!("{}", user_id);
 
         // 1. Redis 查询
-        let redis_key = format!("friend:user:{}:{}", agent_id, user_id);
+        let redis_key = format!("friend:user:{}",  user_id);
         let mut conn = self.pool.get().await?;
         let redis_friends: Vec<String> = conn
             .smembers(&redis_key)
@@ -592,7 +576,6 @@ impl UserManagerOpt for UserManager {
         let friend_service = UserFriendService::get();
         // 2. MongoDB 兜底查询
         let filter = doc! {
-            "agent_id": agent_id,
             "uid": user_id.to_string(),
             "friend_status": 1, // 只取已接受的关系
         };
@@ -617,7 +600,6 @@ impl UserManagerOpt for UserManager {
 
     async fn friend_block(
         &self,
-        agent_id: &str,
         user_id: &UserId,
         friend_id: &UserId,
     ) -> Result<()> {
@@ -630,7 +612,7 @@ impl UserManagerOpt for UserManager {
 
         // Redis 判断
         if !is_friend {
-            let redis_key = format!("friend:user:{}:{}", agent_id, user_id);
+            let redis_key = format!("friend:user:{}",  user_id);
             let exists: bool = conn.sismember(&redis_key, friend_id).await.unwrap_or(false);
             if exists {
                 is_friend = true;
@@ -641,7 +623,7 @@ impl UserManagerOpt for UserManager {
         let mongo_friend = if !is_friend {
             // 此处也顺便获取记录用于更新
             friend_service
-                .get_friend_detail(agent_id, user_id, friend_id)
+                .get_friend_detail( user_id, friend_id)
                 .await?
         } else {
             None
@@ -659,7 +641,7 @@ impl UserManagerOpt for UserManager {
         // ---------- 2. 更新数据库标记 is_blocked ----------
         if friend_info.is_blocked {
             // ---------- 3. Redis 添加黑名单集合 ----------
-            let redis_block_key = format!("block:user:{}:{}", agent_id, user_id);
+            let redis_block_key = format!("block:user:{}",  user_id);
             let _: () = conn.sadd(&redis_block_key, friend_id).await?;
             // 已拉黑，无需重复操作
             return Ok(());
@@ -670,7 +652,7 @@ impl UserManagerOpt for UserManager {
             .up_property(&friend_info.id, "is_blocked", true)
             .await?;
         // ---------- 3. Redis 添加黑名单集合 ----------
-        let redis_block_key = format!("block:user:{}:{}", agent_id, user_id);
+        let redis_block_key = format!("block:user:{}",  user_id);
         let _: () = conn.sadd(&redis_block_key, friend_id).await?;
         // ---------- 4. 可选：发送 Kafka 拉黑事件 ----------
         // ---------- 6. Kafka 消息通知 ----------
@@ -715,7 +697,6 @@ impl UserManagerOpt for UserManager {
 
     async fn friend_unblock(
         &self,
-        agent_id: &str,
         user_id: &UserId,
         friend_id: &UserId,
     ) -> Result<()> {
@@ -728,7 +709,7 @@ impl UserManagerOpt for UserManager {
 
         // Redis 判断
         if !is_friend {
-            let redis_key = format!("friend:user:{}:{}", agent_id, user_id);
+            let redis_key = format!("friend:user:{}", user_id);
             let exists: bool = conn.sismember(&redis_key, friend_id).await.unwrap_or(false);
             if exists {
                 is_friend = true;
@@ -739,7 +720,7 @@ impl UserManagerOpt for UserManager {
         let mongo_friend = if !is_friend {
             // 此处也顺便获取记录用于更新
             friend_service
-                .get_friend_detail(agent_id, user_id, friend_id)
+                .get_friend_detail( user_id, friend_id)
                 .await?
         } else {
             None
@@ -757,7 +738,7 @@ impl UserManagerOpt for UserManager {
         // ---------- 2. 更新数据库标记 is_blocked ----------
         if !friend_info.is_blocked {
             // ---------- 3. Redis 删除黑名单集合 ----------
-            let redis_block_key = format!("block:user:{}:{}", agent_id, user_id);
+            let redis_block_key = format!("block:user:{}",  user_id);
             let _: () = conn.srem(&redis_block_key, friend_id).await?;
             // 已拉黑，无需重复操作
             return Ok(());
@@ -768,7 +749,7 @@ impl UserManagerOpt for UserManager {
             .up_property(&friend_info.id, "is_blocked", false)
             .await?;
         // ---------- 3. Redis 删除黑名单集合 ----------
-        let redis_block_key = format!("block:user:{}:{}", agent_id, user_id);
+        let redis_block_key = format!("block:user:{}", user_id);
         let _: () = conn.srem(&redis_block_key, friend_id).await?;
         // ---------- 4. 可选：发送 Kafka 取消拉黑事件 ----------
         let time = now();

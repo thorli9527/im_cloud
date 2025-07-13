@@ -2,8 +2,6 @@ use crate::result::{result, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_member_service::GroupMemberService;
-use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
-use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use common::errors::AppError;
 use common::repository_util::Repository;
 use common::util::date_util::now;
@@ -57,8 +55,5 @@ async fn group_member_remove(dto: web::Json<WhiteListUserDto>, req: HttpRequest)
         )
         .await?;
 
-    GroupOperationLogService::get()
-        .add_log(&agent.id, &*dto.group_id, &*dto.user_id, None, GroupOperationType::Quit)
-        .await?;
     Ok(web::Json(result()))
 }

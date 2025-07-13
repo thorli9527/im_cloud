@@ -36,7 +36,7 @@ pub trait Repository<T> {
     async fn update(&self, filter: Document, update: Document) -> Result<u64>;
     async fn up_property<E: Send + Sync + Serialize>(&self, id: &str, property: &str, value: E) -> Result<()>;
     async fn delete(&self, filter: Document) -> Result<u64>;
-    async fn delete_by_id(&self, id: impl AsRef<str> + std::marker::Send) -> Result<u64>;
+    async fn delete_by_id(&self, id: &str) -> Result<u64>;
     async fn query_by_page(&self, filter: Document, page_size: i64, order_type: Option<OrderType>, sort_field: &str) -> Result<PageResult<T>>;
 }
 
@@ -177,7 +177,7 @@ where
         Ok(result.deleted_count)
     }
 
-    async fn delete_by_id(&self, id: impl AsRef<str> + std::marker::Send) -> Result<u64> {
+    async fn delete_by_id(&self, id: &str) -> Result<u64> {
         let object_id = ObjectId::parse_str(id).unwrap();
         let result = self.collection.delete_many(doc! {"_id":object_id}).await?;
         Ok(result.deleted_count)

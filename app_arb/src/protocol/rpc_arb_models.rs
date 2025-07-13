@@ -10,15 +10,6 @@ pub struct BaseRequest {
     #[prost(string, tag = "1")]
     pub node_addr: ::prost::alloc::string::String,
 }
-/// 通用响应结构（统一 success + message）
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct CommonResp {
-    #[prost(bool, tag = "1")]
-    pub success: bool,
-    #[prost(string, tag = "2")]
-    pub message: ::prost::alloc::string::String,
-}
 /// ============================
 /// 分片节点元信息
 /// ============================
@@ -37,12 +28,19 @@ pub struct ShardNodeInfo {
     /// 最后更新时间戳（毫秒）
     #[prost(uint64, tag = "4")]
     pub last_update_time: u64,
-    /// 分片索引（用于分片调度）
-    #[prost(int32, tag = "5")]
-    pub index: i32,
     /// 分片总数
     #[prost(int32, tag = "6")]
     pub total: i32,
+}
+/// 同步数据请求
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SyncDataReq {
+    #[prost(enumeration = "SyncDataType", tag = "1")]
+    pub r#type: i32,
+    /// 同步数据项
+    #[prost(string, repeated, tag = "2")]
+    pub items: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// ============================
 /// 请求结构：更新分片状态
@@ -123,6 +121,46 @@ impl ShardState {
             "READY" => Some(Self::Ready),
             "OFFLINE" => Some(Self::Offline),
             "PREPARING_OFFLINE" => Some(Self::PreparingOffline),
+            _ => None,
+        }
+    }
+}
+/// 同步数据请求类型
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum SyncDataType {
+    GroupAdd = 0,
+    GroupDel = 1,
+    GroupUpdate = 2,
+    GroupMemberAdd = 3,
+    GroupMemberDel = 4,
+    GroupMemberUpdate = 5,
+}
+impl SyncDataType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::GroupAdd => "GROUP_ADD",
+            Self::GroupDel => "GROUP_DEL",
+            Self::GroupUpdate => "GROUP_UPDATE",
+            Self::GroupMemberAdd => "GROUP_MEMBER_ADD",
+            Self::GroupMemberDel => "GROUP_MEMBER_DEL",
+            Self::GroupMemberUpdate => "GROUP_MEMBER_UPDATE",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "GROUP_ADD" => Some(Self::GroupAdd),
+            "GROUP_DEL" => Some(Self::GroupDel),
+            "GROUP_UPDATE" => Some(Self::GroupUpdate),
+            "GROUP_MEMBER_ADD" => Some(Self::GroupMemberAdd),
+            "GROUP_MEMBER_DEL" => Some(Self::GroupMemberDel),
+            "GROUP_MEMBER_UPDATE" => Some(Self::GroupMemberUpdate),
             _ => None,
         }
     }

@@ -22,7 +22,6 @@ struct CreateGroupDto {
     /// 群主用户 ID
     #[schema(example = "user_123")]
     pub user_id: String,
-
     /// 群名称
     #[schema(example = "Rust爱好者交流群")]
     pub group_name: String,
@@ -30,6 +29,8 @@ struct CreateGroupDto {
     /// 初始成员 ID 列表（不含群主）
     #[serde(default)]
     pub members: Vec<String>,
+    
+    pub ref_id:Option<String> ,
 }
 #[utoipa::path(
     post,
@@ -48,20 +49,21 @@ struct CreateGroupDto {
     )
 )]
 #[post("/group/create")]
-async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
+async fn group_create(mut dto: web::Json<CreateGroupDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let agent = AgentService::get().check_request(auth_header).await?;
-
+    
     // ✅ 2. 服务初始化
     let group_service = GroupService::get();
-    let member_service = GroupMemberService::get();
     let now = now();
     let group_id = build_uuid();
+    if dto.ref_id.is_none(){
+        dto.ref_id=Some(group_id.clone());
+    }
     // ✅ 3. 创建群组
     let group = GroupInfo {
         id: group_id.clone(),
+        ref_id:dto.ref_id.clone().unwrap(),
         group_id: group_id.clone(),
-        agent_id: agent.id.clone(),
         name: dto.group_name.clone(),
         avatar: None,
         description: None,
@@ -69,24 +71,14 @@ async fn group_create(dto: web::Json<CreateGroupDto>, req: HttpRequest) -> Resul
         owner_id: dto.user_id.to_string(),
         group_type: 0,
         max_members: 500,
+        join_permission: Default::default(),
+        allow_search: false,
         status: 1,
         create_time: now,
         update_time: now,
     };
-    group_service.dao.insert(&group).await?;
+    group_service.create_group(&group,&dto.members).await?;
 
-    // ✅ 4. 添加群主
-    let owner = GroupMember { id: "".to_string(), group_id: group_id.clone(), uid: dto.user_id.clone(), role: GroupRole::Owner, alias: None, mute: false, create_time: now, update_time: now };
-    member_service.dao.insert(&owner).await?;
-
-    // ✅ 5. 添加其他初始成员
-    for user_id in &dto.members {
-        if user_id == &dto.user_id {
-            continue; // 跳过群主
-        }
-        let member = GroupMember { id: "".to_string(), group_id: group_id.clone(), uid: user_id.clone(), role: GroupRole::Member, alias: None, mute: false, create_time: now, update_time: now };
-        member_service.dao.insert(&member).await?;
-    }
 
     Ok(web::Json(result()))
 }

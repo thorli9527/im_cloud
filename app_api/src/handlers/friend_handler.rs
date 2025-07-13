@@ -2,11 +2,11 @@ use crate::result::{result, result_data, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
-use biz_service::protocol::friend::FriendSourceType;
 use common::errors::AppError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
+use biz_service::protocol::msg::friend::FriendSourceType;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(friend_add);
@@ -27,8 +27,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 async fn friend_add(dto: web::Json<FriendOpDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     dto.validate()?;
     let auth = build_header(req);
-    let agent = AgentService::get().check_request(auth).await?;
-    UserManager::get().add_friend(&agent.id, &dto.uid, &dto.friend_id, dto.nickname.clone(), &dto.source_type, dto.remark.clone()).await?;
+    UserManager::get().add_friend( &dto.uid, &dto.friend_id, dto.nickname.clone(), &dto.source_type, dto.remark.clone()).await?;
     Ok(web::Json(result()))
 }
 
@@ -44,7 +43,7 @@ async fn friend_add(dto: web::Json<FriendOpDto>, req: HttpRequest) -> Result<imp
 async fn friend_remove(dto: web::Json<FriendOpDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth = build_header(req);
     let agent = AgentService::get().check_request(auth).await?;
-    UserManager::get().remove_friend(&agent.id, &dto.uid, &dto.friend_id).await?;
+    UserManager::get().remove_friend( &dto.uid, &dto.friend_id).await?;
     Ok(web::Json(result()))
 }
 
@@ -59,8 +58,7 @@ async fn friend_remove(dto: web::Json<FriendOpDto>, req: HttpRequest) -> Result<
 #[post("/user/friend/check")]
 async fn friend_check(dto: web::Json<FriendCheckDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth = build_header(req);
-    let agent = AgentService::get().check_request(auth).await?;
-    let result = UserManager::get().is_friend(&agent.id, &dto.uid, &dto.friend_id).await?;
+    let result = UserManager::get().is_friend( &dto.uid, &dto.friend_id).await?;
     Ok(web::Json(result_data(result)))
 }
 
@@ -75,8 +73,7 @@ async fn friend_check(dto: web::Json<FriendCheckDto>, req: HttpRequest) -> Resul
 #[post("/user/friend/list")]
 async fn friend_list(dto: web::Json<FriendListDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth = build_header(req);
-    let agent = AgentService::get().check_request(auth).await?;
-    let list = UserManager::get().get_friends(&agent.id, &dto.uid).await?;
+    let list = UserManager::get().get_friends( &dto.uid).await?;
     Ok(web::Json(result_data(list)))
 }
 

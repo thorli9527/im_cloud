@@ -1,4 +1,4 @@
-use crate::entitys::group_entity::GroupInfo;
+use crate::entitys::group_entity::{GroupEntity};
 use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 use crate::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
@@ -10,7 +10,7 @@ use common::UserId;
 
 #[async_trait]
 impl GroupManagerOpt for GroupManager {
-    async fn create_group(&self, info: GroupInfo) -> Result<()> {
+    async fn create_group(&self, info: &GroupEntity) -> Result<()> {
         let mut conn = self.pool.get().await?;
         let key = Self::key_group_info(&info.id);
         let json = serde_json::to_string(&info)?;
@@ -113,7 +113,7 @@ impl GroupManagerOpt for GroupManager {
         Ok(())
     }
 
-    async fn get_group_info(&self, group_id: &str) -> Result<Option<GroupInfo>> {
+    async fn get_group_info(&self, group_id: &str) -> Result<Option<GroupEntity>> {
 
         let mut conn = self.pool.get().await?;
         let key = Self::key_group_info(group_id);
@@ -134,14 +134,12 @@ impl GroupManagerOpt for GroupManager {
     }
 
     async fn get_online_group_members(&self, group_id: &str) -> Result<Vec<UserId>> {
-        let agent_id = self.get_group_info(group_id).await?.ok_or_else(|| anyhow::anyhow!("Group not found: {}", group_id))?.agent_id;
-
         let members = self.get_group_members(group_id).await?;
         let user_mgr = UserManager::get();
 
         let mut result = Vec::with_capacity(members.len());
         for uid in &members {
-            if user_mgr.is_online(&agent_id, uid).await? {
+            if user_mgr.is_online( uid).await? {
                 result.push(uid.clone());
             }
         }
@@ -149,14 +147,13 @@ impl GroupManagerOpt for GroupManager {
     }
 
     async fn get_offline_group_members(&self, group_id: &str) -> Result<Vec<UserId>> {
-        let agent_id = self.get_group_info(group_id).await?.ok_or_else(|| anyhow::anyhow!("Group not found: {}", group_id))?.agent_id;
 
         let members = self.get_group_members(group_id).await?;
         let user_mgr = UserManager::get();
 
         let mut result = Vec::with_capacity(members.len());
         for uid in &members {
-            if !user_mgr.is_online(&agent_id, uid).await? {
+            if !user_mgr.is_online( uid).await? {
                 result.push(uid.clone());
             }
         }
@@ -176,5 +173,9 @@ impl GroupManagerOpt for GroupManager {
         let mut conn = self.pool.get().await?;
         let exists: bool = conn.sismember(&key, user_id).await.unwrap_or(false);
         Ok(exists)
+    }
+
+    async fn update_group(&self, info: &GroupEntity) -> Result<()> {
+        todo!()
     }
 }

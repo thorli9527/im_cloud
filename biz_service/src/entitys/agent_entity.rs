@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 /// 代理信息结构体，表示一个接入系统或下级代理的配置信息
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
-pub struct AgentInfo {
+pub struct AgentEntity {
     /// 代理 ID，唯一标识
     pub id: String,
 

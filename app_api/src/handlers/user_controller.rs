@@ -4,7 +4,6 @@ use deadpool_redis::redis::AsyncCommands;
 use biz_service::biz_const::redis_const::CLIENT_TOKEN_KEY;
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::client_service::ClientService;
-use biz_service::biz_service::mq_user_action_service::UserActionLogService;
 use biz_service::entitys::client_entity::ClientInfo;
 use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};

@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 /// 配置信息结构体，表示系统中的可配置项
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
-pub struct ConfigInfo {
+pub struct ConfigEntity {
     /// 配置 ID，唯一标识
     pub id: String,
 

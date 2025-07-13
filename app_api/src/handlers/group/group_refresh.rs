@@ -2,8 +2,6 @@ use crate::result::{result, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_service::GroupService;
-use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
-use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use common::errors::AppError;
 use common::errors::AppError::BizError;
 use common::repository_util::Repository;
@@ -60,6 +58,5 @@ async fn group_refresh(dto: web::Json<GroupRefreshDto>, req: HttpRequest) -> Res
     }
     group_service.dao.up_property(&info.ok().unwrap().id, "name", &dto.group_name).await?;
 
-    GroupOperationLogService::get().add_log(&agent.id, &*dto.group_id, "", None, GroupOperationType::Change).await?;
     Ok(web::Json(result()))
 }

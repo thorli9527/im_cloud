@@ -4,11 +4,11 @@ use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::mq_message_group_service::GroupMessageService;
 use biz_service::biz_service::mq_message_user_service::UserMessageService;
 use biz_service::protocol::common::ChatTargetType;
-use biz_service::protocol::message::Segment;
 use common::errors::AppError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
+use biz_service::protocol::msg::message::Segment;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {}
 

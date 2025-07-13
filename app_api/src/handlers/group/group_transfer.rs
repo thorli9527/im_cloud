@@ -3,8 +3,6 @@ use crate::result::{result, ApiResponse};
 use actix_web::{post, web, HttpRequest, Responder};
 use biz_service::biz_service::agent_service::{build_header, AgentService};
 use biz_service::biz_service::group_service::GroupService;
-use biz_service::biz_service::mq_group_operation_log_service::GroupOperationLogService;
-use biz_service::entitys::mq_group_operation_log::GroupOperationType;
 use common::errors::AppError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -40,10 +38,6 @@ struct TransferGroupDto {
 #[post("/group/transfer")]
 async fn group_transfer(dto: web::Json<TransferGroupDto>, req: HttpRequest) -> Result<impl Responder, AppError> {
     let auth_header = build_header(req);
-    let agent = AgentService::get().check_request(auth_header).await?;
     GroupService::get().transfer_ownership(&dto.group_id, &dto.new_owner_id).await?;
-    GroupOperationLogService::get()
-        .add_log(&agent.id, &*dto.group_id, &*dto.new_owner_id, None, GroupOperationType::Transfer)
-        .await?;
     Ok(web::Json(result()))
 }

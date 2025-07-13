@@ -1,6 +1,5 @@
 use crate::biz_service::cache_service::get_agent_cache;
-use crate::entitys::agent_entity::AgentInfo;
-use crate::protocol::auth::DeviceType;
+use crate::entitys::agent_entity::AgentEntity;
 use actix_web::HttpRequest;
 use anyhow::Result;
 use common::errors::AppError;
@@ -12,10 +11,11 @@ use serde::Serialize;
 use sha1::{Digest, Sha1};
 use std::sync::Arc;
 use utoipa::ToSchema;
+use crate::protocol::msg::auth::DeviceType;
 
 #[derive(Debug)]
 pub struct AgentService {
-    pub dao: BaseRepository<AgentInfo>,
+    pub dao: BaseRepository<AgentEntity>,
 }
 
 impl AgentService {
@@ -25,7 +25,7 @@ impl AgentService {
         service
     }
 
-    pub async fn find_by_app_key(&self, app_key: impl AsRef<str> + Clone) -> Result<AgentInfo> {
+    pub async fn find_by_app_key(&self, app_key: impl AsRef<str> + Clone) -> Result<AgentEntity> {
         let cache = get_agent_cache();
         if let Some(agent) = cache.get(app_key.as_ref()) {
             return Ok(agent);
@@ -44,7 +44,7 @@ impl AgentService {
         format!("{:x}", hasher.finalize())
     }
 
-    pub async fn check_request(&self, auth_header: Option<AuthHeader>) -> anyhow::Result<AgentInfo> {
+    pub async fn check_request(&self, auth_header: Option<AuthHeader>) -> anyhow::Result<AgentEntity> {
         if 1 == 1 {
             let option = self.dao.find_by_id("685bba60a23f55a165d6af13").await?;
             return Ok(option.unwrap());

@@ -20,7 +20,7 @@ pub enum FriendPolicy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
-pub struct ClientInfo {
+pub struct ClientEntity {
     pub id: String,                                     // 用户id
     pub name: String,
     pub username:Option<String>,//用户名
@@ -28,8 +28,6 @@ pub struct ClientInfo {
     pub uid: String,                                    //客户端用户id
     pub enable: bool,                                   //用户启用状态                   封号
     pub lock: bool,                                     //用户锁定 不能登录
-    pub agent_id: String,                               // 商户id
-    pub agent_id_uid: String,                           // 商户ID+uid 组合唯一标识
     pub avatar: Option<String>,                         // 头像 URL
     pub allow_add_friend: FriendPolicy,                 // 加好友策略
     pub profile_fields: HashMap<String, String>,        // 用户基本信息

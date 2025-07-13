@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
-    build_biz_service();
+    // build_biz_service();
     build_arb_service();
     build_arb_group_service() ;
     build_group_service();
@@ -18,10 +18,11 @@ fn build_group_service() {
         .out_dir("../app_group/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
-                "group/group_models.proto",
-                "group/group_service.proto",
+                "proto/common/common.proto",
+                "proto/group/group_models.proto",
+                "proto/group/group_service.proto",
             ],
-            &["group"], // proto 根目录
+            &["proto"], // proto 根目录
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
 
@@ -40,10 +41,11 @@ fn build_arb_group_service() {
         .out_dir("../app_arb/src/protocol/")
         .compile_protos(
             &[
-                "arb/arb_models.proto",
-                "arb/arb_group.proto"
+                "proto/common/common.proto",
+                "proto/arb/arb_models.proto",
+                "proto/arb/arb_group.proto"
             ],
-            &["arb"] // ✅ 设置 proto 根为 "protos"，对应 import "arb/xxx.proto"
+            &["proto"] // ✅ 设置 proto 根为 "protos"，对应 import "arb/xxx.proto"
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
 
@@ -58,9 +60,10 @@ fn build_arb_group_service() {
         .out_dir("../app_group/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
-                "arb/arb_models.proto",
-                "arb/arb_group.proto"],
-            &["arb"], // proto 根目录
+                "proto/common/common.proto",
+                "proto/arb/arb_models.proto",
+                "proto/arb/arb_group.proto"],
+            &["proto"], // proto 根目录
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
 
@@ -78,10 +81,11 @@ fn build_arb_service() {
         .out_dir("../app_arb/src/protocol/")
         .compile_protos(
             &[
-                "arb/arb_models.proto",
-                "arb/arb_server.proto"
+                "proto/common/common.proto",
+                "proto/arb/arb_models.proto",
+                "proto/arb/arb_server.proto"
             ],
-            &["arb"] // ✅ 设置 proto 根为 "protos"，对应 import "arb/xxx.proto"
+            &["proto"] // ✅ 设置 proto 根为 "protos"，对应 import "arb/xxx.proto"
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
 
@@ -96,9 +100,10 @@ fn build_arb_service() {
         .out_dir("../app_group/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
-                "arb/arb_models.proto",
-                "arb/arb_server.proto"],
-            &["arb"], // proto 根目录
+                "proto/common/common.proto",
+                "proto/arb/arb_models.proto",
+                "proto/arb/arb_server.proto"],
+            &["proto"], // proto 根目录
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
 
@@ -115,17 +120,17 @@ fn build_biz_service() {
         .out_dir("../biz_service/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
-                "msg/auth.proto",
-                "msg/common.proto",
-                "msg/friend.proto",
-                "msg/group.proto",
-                "msg/message.proto",
-                "msg/status.proto",
-                "msg/system.proto",
-                "msg/user.proto",
-                "msg/entity.proto",
+                "proto/common/common.proto",
+                "proto/msg/auth.proto",
+                "proto/msg/friend.proto",
+                "proto/msg/group.proto",
+                "proto/msg/message.proto",
+                "proto/msg/status.proto",
+                "proto/msg/system.proto",
+                "proto/msg/user.proto",
+                "proto/msg/entity.proto",
             ],
-            &["msg"], // proto 根目录
+            &["proto"], // proto 根目录
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
     let out_dir = PathBuf::from("../biz_service/src/protocol/");
@@ -142,7 +147,7 @@ fn build_biz_service() {
 
             // 匹配 protocol.xxx.rs 文件
             if file_name.starts_with("protocol.") && file_name.ends_with(".rs") {
-                let new_name = file_name.replace("protocol.", "protocol_");
+                let new_name = file_name.replace("protocol.", "");
                 let new_path = out_dir.join(new_name);
 
                 println!(

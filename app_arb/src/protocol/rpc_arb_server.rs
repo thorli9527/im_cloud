@@ -26,7 +26,7 @@ pub mod arb_server_rpc_service_server {
                 super::super::rpc_arb_models::UpdateShardStateRequest,
             >,
         ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::CommonResp>,
+            tonic::Response<super::super::common::CommonResp>,
             tonic::Status,
         >;
         /// === 节点注册与生命周期 ===
@@ -49,14 +49,14 @@ pub mod arb_server_rpc_service_server {
             &self,
             request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::CommonResp>,
+            tonic::Response<super::super::common::CommonResp>,
             tonic::Status,
         >;
         async fn heartbeat(
             &self,
             request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::CommonResp>,
+            tonic::Response<super::super::common::CommonResp>,
             tonic::Status,
         >;
     }
@@ -196,7 +196,7 @@ pub mod arb_server_rpc_service_server {
                     > tonic::server::UnaryService<
                         super::super::rpc_arb_models::UpdateShardStateRequest,
                     > for UpdateShardStateSvc<T> {
-                        type Response = super::super::rpc_arb_models::CommonResp;
+                        type Response = super::super::common::CommonResp;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -338,7 +338,7 @@ pub mod arb_server_rpc_service_server {
                     > tonic::server::UnaryService<
                         super::super::rpc_arb_models::BaseRequest,
                     > for GracefulLeaveSvc<T> {
-                        type Response = super::super::rpc_arb_models::CommonResp;
+                        type Response = super::super::common::CommonResp;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -387,7 +387,7 @@ pub mod arb_server_rpc_service_server {
                     > tonic::server::UnaryService<
                         super::super::rpc_arb_models::BaseRequest,
                     > for heartbeatSvc<T> {
-                        type Response = super::super::rpc_arb_models::CommonResp;
+                        type Response = super::super::common::CommonResp;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,

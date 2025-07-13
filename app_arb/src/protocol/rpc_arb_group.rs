@@ -14,9 +14,6 @@ pub struct UpdateVersionReq {
     /// 最后更新时间戳（毫秒）
     #[prost(uint64, tag = "4")]
     pub last_update_time: u64,
-    /// 分片索引（用于分片调度）
-    #[prost(int32, tag = "5")]
-    pub index: i32,
     #[prost(int32, tag = "6")]
     pub total: i32,
 }
@@ -143,7 +140,7 @@ pub mod arb_group_service_client {
             &mut self,
             request: impl tonic::IntoRequest<super::UpdateVersionReq>,
         ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::CommonResp>,
+            tonic::Response<super::super::common::CommonResp>,
             tonic::Status,
         > {
             self.inner
@@ -163,6 +160,31 @@ pub mod arb_group_service_client {
                 .insert(
                     GrpcMethod::new("rpc_arb_group.ArbGroupService", "updateVersion"),
                 );
+            self.inner.unary(req, path, codec).await
+        }
+        /// 用于 两两备份 同步数据 （群组、成员等）
+        pub async fn sync_data(
+            &mut self,
+            request: impl tonic::IntoRequest<super::super::rpc_arb_models::SyncDataReq>,
+        ) -> std::result::Result<
+            tonic::Response<super::super::common::CommonResp>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rpc_arb_group.ArbGroupService/syncData",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("rpc_arb_group.ArbGroupService", "syncData"));
             self.inner.unary(req, path, codec).await
         }
     }

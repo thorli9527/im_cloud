@@ -1,4 +1,3 @@
-use crate::protocol::message::Segment;
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
@@ -11,7 +10,8 @@ use std::sync::Arc;
 use serde::de::Unexpected::Option;
 use crate::biz_service::kafka_service::KafkaService;
 use crate::protocol::common::ByteMessageType;
-use crate::protocol::entity::GroupMsg;
+use crate::protocol::msg::entity::GroupMsg;
+use crate::protocol::msg::message::Segment;
 
 #[derive(Debug)]
 pub struct GroupMessageService {
