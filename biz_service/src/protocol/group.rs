@@ -4,11 +4,12 @@
 /// ========================================
 /// 用于传递群组中的各种事件，包括成员变更、属性修改等
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GroupEventContent {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 群组 ID：发生事件的群组标识
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
@@ -35,6 +36,7 @@ pub struct GroupEventContent {
 /// ➕ 群创建事件消息（通常由服务端广播）
 /// ========================================
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GroupCreateMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
@@ -79,11 +81,12 @@ pub struct GroupCreateMsg {
 /// ========================================
 /// 当群组被解散时，服务端会向所有群成员推送此消息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GroupDismissMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 被解散的群组 ID：解散的群组标识
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
@@ -99,6 +102,7 @@ pub struct GroupDismissMsg {
 /// ========================================
 /// 定义了群组中可能发生的各种事件类型，用于标识具体的操作行为
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum GroupEventType {

@@ -1,16 +1,16 @@
-use crate::entitys::client_entity::ClientEntity;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use crate::protocol::msg::auth::DeviceType;
 use anyhow::Result;
+use common::UserId;
 use common::config::AppConfig;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::build_md5_with_key;
 use common::util::date_util::now;
-use common::UserId;
-use mongodb::bson::doc;
 use mongodb::Database;
+use mongodb::bson::doc;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use crate::protocol::common::ClientEntity;
 
 #[derive(Debug)]
 pub struct ClientService {
@@ -20,63 +20,40 @@ pub struct ClientService {
 impl ClientService {
     pub fn new(db: Database) -> Self {
         let collection = db.collection("client");
-        Self { dao: BaseRepository::new(db, collection.clone()) }
+        Self {
+            dao: BaseRepository::new(db, collection.clone()),
+        }
     }
-    pub async fn new_data(&self,  user_id: &UserId, name: String, avatar: Option<String>,username: Option<String>,password: Option<String>) -> Result<ClientEntity> {
+    pub async fn new_data(
+        &self,
+        user_id: &UserId,
+        name: String,
+        avatar: String,
+        username: String,
+        password: String,
+    ) -> Result<ClientEntity> {
         let mut user = ClientEntity::default();
-        
+
         user.name = name;
         user.avatar = avatar;
         user.enable = true;
         user.uid = user_id.to_string();
-        if password.is_some() {
-            let md5_key=&AppConfig::get().get_sys().md5_key;
-            let password=password.unwrap();
-            if !password.is_empty(){
-                user.password= Some(build_md5_with_key(&password,&md5_key));
-            }
+        let md5_key = &AppConfig::get().get_sys().md5_key;
+        if !password.is_empty() {
+            user.password = build_md5_with_key(&password, &md5_key);
         }
-        if username.is_some() {
-            let username=username.unwrap();
-            if !username.is_empty(){
-                user.username= Some(username);
-            }
+        if !username.is_empty() {
+            user.username = username;
         }
         self.dao.insert(&user).await?;
         Ok(user)
     }
+
+    pub async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<ClientEntity>> {
+        let option = UserManager::get().get_user_info(user_id).await?;
+        Ok(option)
+    }
     
-    pub async fn find_by_user_id(&self,  user_id: &UserId) -> Result<Option<ClientEntity>> {
-        let option = UserManager::get().get_user_info( user_id).await?;
-        Ok(option.map(|mut client| {
-            client.message_status = matches!(client.message_expired_at, Some(end) if end > now());
-            client
-        }))
-    }
-
-    pub async fn enable_message(&self,user_id: &UserId, status: bool) -> Result<()> {
-        let key = format!("{}",  user_id);
-        let filter = doc! {"agent_id_user_id":key};
-        let update = doc! {
-            "$unset": {
-                "message_expired_at": ""
-            },
-             "$set": {
-                "message_status": status
-            }
-        };
-        self.dao.collection.update_one(filter, update).await?;
-        let user_manager = UserManager::get();
-        let option = user_manager.get_user_info( user_id).await?;
-        if let Some(mut client) = option {
-            client.message_expired_at = None;
-            client.message_status = status;
-            user_manager.sync_user(client).await?
-        }
-        Ok(())
-    }
-
-  
 
     pub async fn verify_token(&self, token: &str) -> Result<bool> {
         Ok(UserManager::get().verify_token(token).await?)
@@ -97,7 +74,9 @@ impl ClientService {
     }
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
+        INSTANCE
+            .set(Arc::new(instance))
+            .expect("INSTANCE already initialized");
     }
 
     /// 获取单例

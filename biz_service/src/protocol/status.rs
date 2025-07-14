@@ -4,11 +4,12 @@
 /// =======================================
 /// 表示某条消息已被哪些用户阅读，适用于单聊或群聊消息同步场景。
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReadReceiptMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 已读该消息的用户 ID 列表（单聊为1，群聊可多）
     #[prost(string, repeated, tag = "2")]
     pub reader_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
@@ -21,6 +22,7 @@ pub struct ReadReceiptMsg {
 /// =======================================
 /// 表示某个用户正在对另一个用户/会话进行输入操作，适用于 UI "对方正在输入..." 提示。
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TypingNoticeMsg {
     /// 正在输入的用户 ID（发送方）
@@ -43,6 +45,7 @@ pub struct TypingNoticeMsg {
 ///
 /// 心跳包通常不需要额外字段，仅用于保持连接活跃
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct HeartbeatMsg {}
 /// =======================================
@@ -50,11 +53,12 @@ pub struct HeartbeatMsg {}
 /// =======================================
 /// 用于确认收到某一封消息（包括聊天、系统等），支持链路追踪和可靠性保证。
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct AckMsg {
     /// 被确认接收的消息 ID
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 确认类型
     #[prost(enumeration = "super::super::common::ByteMessageType", tag = "2")]
     pub ack_type: i32,

@@ -1,10 +1,6 @@
-pub mod agent_entity;
-pub mod client_entity;
 pub mod common_entity;
 pub mod config_entity;
 pub mod friend;
-pub mod group_entity;
-pub mod group_member;
 pub mod group_join_request;
 pub mod read_index;
 pub mod user_entity;

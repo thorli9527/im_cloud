@@ -4,11 +4,12 @@
 /// ================================
 /// 用于客户端/服务端之间同步好友事件记录，包含完整的事件信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FriendEventMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 发起操作的用户 ID（如请求、删除、拉黑）：操作发起方
     #[prost(string, tag = "2")]
     pub from_uid: ::prost::alloc::string::String,
@@ -39,6 +40,7 @@ pub struct FriendEventMsg {
 /// ================================
 /// 表示好友关系变更的操作类型，通常用于请求加好友、拉黑、解除等社交关系变动。
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum FriendEventType {
@@ -100,6 +102,7 @@ impl FriendEventType {
 /// ================================
 /// 表示用户是通过何种方式添加好友的，用于统计分析和风控判断
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum FriendSourceType {
@@ -149,6 +152,7 @@ impl FriendSourceType {
 /// ================================
 /// 每个好友事件都具有生命周期状态，用于判断是否被处理
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum EventStatus {

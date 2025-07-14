@@ -2,6 +2,7 @@
 /// *
 /// 创建群组请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateGroupReq {
     /// 可选自定义群ID
@@ -35,6 +36,7 @@ pub struct CreateGroupReq {
 /// *
 /// 解散群组请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DestroyGroupReq {
     /// 群组ID
@@ -44,6 +46,7 @@ pub struct DestroyGroupReq {
 /// *
 /// 更新群组信息请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateGroupInfoReq {
     /// 群组ID
@@ -89,6 +92,7 @@ pub struct UpdateGroupInfoReq {
 /// *
 /// 获取群组信息请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetGroupInfoReq {
     /// 群组ID
@@ -98,6 +102,7 @@ pub struct GetGroupInfoReq {
 /// *
 /// 获取群组信息响应
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetGroupInfoRep {
     /// 群ID
@@ -117,11 +122,12 @@ pub struct GetGroupInfoRep {
     pub creator_id: ::prost::alloc::string::String,
     /// 群成员信息列表
     #[prost(message, repeated, tag = "6")]
-    pub members: ::prost::alloc::vec::Vec<super::common::GroupMemInfo>,
+    pub members: ::prost::alloc::vec::Vec<super::common::GroupMemberEntity>,
 }
 /// *
 /// 添加成员请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AddMemberReq {
     /// 群ID
@@ -129,11 +135,12 @@ pub struct AddMemberReq {
     pub group_id: ::prost::alloc::string::String,
     /// 成员信息
     #[prost(message, repeated, tag = "2")]
-    pub members: ::prost::alloc::vec::Vec<super::common::GroupMemInfo>,
+    pub members: ::prost::alloc::vec::Vec<super::common::GroupMemberEntity>,
 }
 /// *
 /// 移除成员请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RemoveMemberReq {
     /// 群ID
@@ -146,6 +153,7 @@ pub struct RemoveMemberReq {
 /// *
 /// 用户主动退出群组请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExitGroupReq {
     /// 群ID
@@ -158,6 +166,7 @@ pub struct ExitGroupReq {
 /// *
 /// 更改群成员角色请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ChangeMemberRoleReq {
     #[prost(string, tag = "1")]
@@ -171,6 +180,7 @@ pub struct ChangeMemberRoleReq {
 /// *
 /// 禁言/取消禁言成员
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MuteMemberReq {
     #[prost(string, tag = "1")]
@@ -184,6 +194,7 @@ pub struct MuteMemberReq {
 /// *
 /// 修改成员别名请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ChangeMemberAliasReq {
     #[prost(string, tag = "1")]
@@ -196,6 +207,7 @@ pub struct ChangeMemberAliasReq {
 /// *
 /// 转让群主请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransferGroupOwnershipReq {
     #[prost(string, tag = "1")]
@@ -206,6 +218,7 @@ pub struct TransferGroupOwnershipReq {
 /// *
 /// 用户上线请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OnlineReq {
     /// 用户ID
@@ -218,6 +231,7 @@ pub struct OnlineReq {
 /// *
 /// 用户离线请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OfflineReq {
     #[prost(string, tag = "1")]
@@ -228,6 +242,7 @@ pub struct OfflineReq {
 /// *
 /// 获取在线成员请求（分页）
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetOnlineMembersReq {
     /// 群ID
@@ -243,6 +258,7 @@ pub struct GetOnlineMembersReq {
 /// *
 /// 获取在线成员响应
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetOnlineMembersResp {
     /// 在线UID列表
@@ -261,6 +277,7 @@ pub struct GetOnlineMembersResp {
 /// *
 /// 获取所有成员请求（分页）
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetMembersReq {
     #[prost(string, tag = "1")]
@@ -273,6 +290,7 @@ pub struct GetMembersReq {
 /// *
 /// 获取所有成员响应
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetMembersRep {
     /// 成员UID列表

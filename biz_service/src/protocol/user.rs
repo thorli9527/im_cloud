@@ -6,6 +6,7 @@
 /// 常见触发：用户主动修改资料、后台修改资料、服务端同步触发。
 /// 客户端收到后应刷新本地缓存信息。
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UserFlushMsg {
     /// 被更新的用户 ID（资料发生变更的对象）

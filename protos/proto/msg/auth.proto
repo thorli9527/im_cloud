@@ -32,7 +32,7 @@ enum DeviceType {
 // ================================
 // 登录请求
 message LoginReqMsg {
-  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string username = 2;    // 用户名或手机号
   string password = 3;    // 密码（明文或加密）
   DeviceType device_type = 4; // 登录设备类型（枚举，如 iOS/Android/Web）
@@ -43,7 +43,7 @@ message LoginReqMsg {
 // ================================
 // 登录返回
 message LoginRespMsg {
-  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string token = 2; // 刷新凭证
   uint64 expires_at = 3;  // 过期时间
 }
@@ -51,12 +51,12 @@ message LoginRespMsg {
 // ========================================
 //  退出请求
 message LogoutReqMsg {
-  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
 }
 
 // 退出返回
 message LogoutRespMsg {
-  optional uint64 message_id = 1;
+  uint64 message_id = 1;
 }
 
 // ========================================
@@ -64,7 +64,7 @@ message LogoutRespMsg {
 // ========================================
 // 客户端请求发送验证码（短信、邮件等）用于登录或注册
 message SendVerificationCodeReqMsg {
-  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string receiver = 2;          // 接收目标（手机号或邮箱）：验证码发送的目标
   string channel = 3;           // 渠道类型（如 sms / email / voice）：验证码发送渠道
   string scene = 4;             // 场景标识（如 login / register / reset_pwd）：验证码使用场景
@@ -76,7 +76,7 @@ message SendVerificationCodeReqMsg {
 // ========================================
 // 服务端对验证码发送请求的响应
 message SendVerificationCodeRepMsg {
-  optional uint64 message_id = 1;        // 与请求一致的 ID：对应请求的消息ID
+  uint64 message_id = 1;        // 与请求一致的 ID：对应请求的消息ID
   bool success = 2;             // 是否发送成功：true表示验证码已发送，false表示发送失败
   string message = 3;           // 附加消息，如错误提示：详细的响应信息
   int64 expired_in = 4;         // 有效期（秒）：验证码的有效期，单位秒
@@ -87,7 +87,7 @@ message SendVerificationCodeRepMsg {
 // =======================================
 // 表示某个用户刚刚上线，服务端可用于广播通知。
 message OnlineStatusMsg {
-  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string uid = 2;               // 上线用户 ID：上线用户的唯一标识
   DeviceType device_type = 3;   // 上线设备类型（如 mobile/web/pc）：用户使用的设备类型
   string client_id = 4;         // 客户端实例 ID（可用于多端区分）：客户端唯一标识
@@ -99,7 +99,7 @@ message OnlineStatusMsg {
 // =======================================
 // 表示某个用户从某设备下线，服务端可用于状态同步或通知。
 message OfflineStatueMsg {
-  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string uid = 2;               // 下线用户 ID：下线用户的唯一标识
   DeviceType device_type = 3;   // 下线设备类型（如 mobile/web/pc）：用户使用的设备类型
   string client_id = 4;         // 客户端实例 ID（可用于多端区分）：客户端唯一标识

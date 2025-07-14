@@ -4,6 +4,7 @@
 /// =======================================
 /// 用于客户端接收系统级别的通知，如登录提醒、账号变动、强制下线等
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SystemNotificationMsg {
     /// 通知类型标识，例如 login/logout/mute/kick/update 等
@@ -33,6 +34,7 @@ pub struct SystemNotificationMsg {
 /// =======================================
 /// 用于传递后端业务逻辑事件，例如用户被封禁、服务重启、设备冲突等
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SystemEventMsg {
     /// 事件类型标识（如 user_banned、server_shutdown、session_conflict）

@@ -66,7 +66,7 @@ message GetGroupInfoRep {
   string avatar = 3;                // 头像URL
   string description = 4;           // 简介
   string creator_id = 5;            // 创建者UID
-  repeated common.GroupMemInfo members = 6; // 群成员信息列表
+  repeated common.GroupMemberEntity members = 6; // 群成员信息列表
 }
 
 // ==============================
@@ -78,7 +78,7 @@ message GetGroupInfoRep {
  */
 message AddMemberReq {
   string group_id = 1;                  // 群ID
-  repeated common.GroupMemInfo members = 2;    // 成员信息
+  repeated common.GroupMemberEntity members = 2;    // 成员信息
 }
 
 /**

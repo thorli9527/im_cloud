@@ -1,11 +1,9 @@
-use crate::biz_service::agent_service::AgentService;
 use crate::biz_service::client_service::ClientService;
 use crate::biz_service::friend_service::UserFriendService;
 use crate::biz_service::kafka_service::KafkaService;
-use crate::entitys::client_entity::ClientEntity;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
 
-use crate::protocol::common::ByteMessageType;
+use crate::protocol::common::{ByteMessageType, ClientEntity};
 use crate::protocol::msg::auth::{DeviceType, LoginRespMsg, LogoutRespMsg, OfflineStatueMsg, OnlineStatusMsg};
 use crate::protocol::msg::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
 use actix_web::cookie::time::macros::time;
@@ -44,7 +42,7 @@ impl UserManagerOpt for UserManager {
 
         let string = build_md5_with_key(password, &app_config.get_sys().md5_key);
         let client = client_info.unwrap();
-        if &client.password.unwrap() != &string {
+        if &client.password != &string {
             return Err(anyhow::anyhow!("user.or.password.error"));
         }
         let user_id = client.id.clone() as UserId;
@@ -55,16 +53,17 @@ impl UserManagerOpt for UserManager {
         let kafka_service = KafkaService::get();
         let node_index: &u8 = &0;
         // 发送登录响应消息
+        let login_msg = &LoginRespMsg {
+            message_id: message_id.clone(),
+            token: token.clone(),
+            expires_at: now() as u64,
+        };
         kafka_service
             .send_proto(
                 &ByteMessageType::LoginRespMsgType,
                 &node_index,
-                &LoginRespMsg {
-                    message_id: Some(message_id.clone()),
-                    token: token.clone(),
-                    expires_at: now() as u64,
-                },
-                &build_uuid(),
+                login_msg,
+                &login_msg.message_id,
                 &AppConfig::get().get_kafka().topic_group,
             )
             .await?;
@@ -87,14 +86,15 @@ impl UserManagerOpt for UserManager {
             self.delete_token(&token).await?;
         }
         // 发送登出响应消息
+        let log_out_msg = LogoutRespMsg {
+            message_id: message_id.clone(),
+        };
         kafka_service
             .send_proto(
                 &ByteMessageType::LogoutRespMsgType,
                 &node_index,
-                &LogoutRespMsg {
-                    message_id: Some(message_id.clone()),
-                },
-                &build_uuid(),
+                &log_out_msg,
+                &log_out_msg.message_id,
                 &AppConfig::get().get_kafka().topic_group,
             )
             .await?;
@@ -122,7 +122,7 @@ impl UserManagerOpt for UserManager {
         if is_first_online {
             let kafka = KafkaService::get();
             let online_msg = OnlineStatusMsg {
-                message_id: Some(build_snow_id()),
+                message_id: build_snow_id(),
                 uid: user_id.clone(),
                 device_type: *device_type as i32,
                 client_id: "".to_string(),
@@ -132,7 +132,7 @@ impl UserManagerOpt for UserManager {
                 &ByteMessageType::LogoutRespMsgType,
                 &0,
                 &online_msg,
-                &online_msg.message_id.clone().unwrap().to_string(),
+                &online_msg.message_id,
                 &AppConfig::get().get_kafka().topic_group,
             ).await?;
         }
@@ -161,7 +161,7 @@ impl UserManagerOpt for UserManager {
         if is_all_offline {
             let kafka = KafkaService::get();
             let offline_msg = OfflineStatueMsg {
-                message_id: Some(build_snow_id()),
+                message_id: build_snow_id(),
                 uid: user_id.clone(),
                 device_type: DeviceType::All as i32,
                 client_id: "".to_string(),
@@ -172,7 +172,7 @@ impl UserManagerOpt for UserManager {
                 &ByteMessageType::LogoutRespMsgType,
                 &0,
                 &offline_msg,
-                &offline_msg.message_id.clone().unwrap().to_string(),
+                &offline_msg.message_id,
                 &AppConfig::get().get_kafka().topic_group,
             ).await?;
         }
@@ -435,7 +435,7 @@ impl UserManagerOpt for UserManager {
 
         // 构造好友事件
         let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
-            message_id: Some(build_snow_id()),
+            message_id: build_snow_id(),
             from_uid: from_uid.to_string(),
             to_uid: to_uid.to_string(),
             event_type: FriendEventType::FriendAddForce as i32,
@@ -450,7 +450,7 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(&user_id, &friend_id), (&friend_id, &user_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index = 0 as u8;
-            let message_id = &event.message_id.clone().unwrap().to_string();
+            let message_id = &event.message_id.clone();
             if let Err(e) = kafka_service
                 .send_proto(
                     &ByteMessageType::FriendEventMsgType,
@@ -495,7 +495,7 @@ impl UserManagerOpt for UserManager {
         let time = now();
 
         let make_event = |from_uid: &UserId, to_uid: &UserId| FriendEventMsg {
-            message_id: Some(build_snow_id()), // 为删除事件生成唯一 ID
+            message_id: build_snow_id(), // 为删除事件生成唯一 ID
             from_uid: from_uid.to_string(),
             to_uid: to_uid.to_string(),
             event_type: FriendEventType::FriendRemove as i32,
@@ -509,7 +509,7 @@ impl UserManagerOpt for UserManager {
         for (from, to) in [(user_id, friend_id), (friend_id, user_id)] {
             let event = make_event(from, to);
             let node_index = 0 as u8;
-            let message_id = &event.message_id.clone().unwrap().to_string();
+            let message_id = &event.message_id.clone();
             if let Err(e) = kafka_service
                 .send_proto(
                     &ByteMessageType::FriendEventMsgType,
@@ -663,7 +663,7 @@ impl UserManagerOpt for UserManager {
 
         // 构造好友事件
         let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
-            message_id: Some(build_snow_id()),
+            message_id: build_snow_id(),
             from_uid: from_uid.to_string(),
             to_uid: to_uid.to_string(),
             event_type: FriendEventType::FriendBlock as i32,
@@ -678,7 +678,7 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);
             let node_index = 0 as u8;
-            let message_id = &event.message_id.clone().unwrap().to_string();
+            let message_id = &event.message_id.clone();
             if let Err(e) = kafka_service
                 .send_proto(
                     &ByteMessageType::FriendEventMsgType,
@@ -756,7 +756,7 @@ impl UserManagerOpt for UserManager {
         let message_id = build_snow_id();
         // 构造好友事件
         let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
-            message_id: Some(message_id.clone()),
+            message_id: message_id.clone(),
             from_uid: from_uid.to_string(),
             to_uid: to_uid.to_string(),
             event_type: FriendEventType::FriendUnblock as i32,
@@ -779,7 +779,7 @@ impl UserManagerOpt for UserManager {
                     &ByteMessageType::FriendEventMsgType,
                     &node_index,
                     &event,
-                    &message_id.to_string(),
+                    &message_id,
                     topic,
                 )
                 .await

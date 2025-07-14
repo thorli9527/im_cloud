@@ -2,6 +2,7 @@
 /// *
 /// 通用响应结构
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CommonResp {
     /// 是否成功
@@ -14,6 +15,7 @@ pub struct CommonResp {
 /// *
 /// 群标签信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TagInfo {
     /// 标签唯一ID
@@ -32,8 +34,9 @@ pub struct TagInfo {
 /// *
 /// 群组基本信息（用于展示和配置）
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GroupInfo {
+pub struct GroupEntity {
     /// 群组唯一ID（由系统生成）
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -74,8 +77,9 @@ pub struct GroupInfo {
 /// *
 /// 群组成员详细信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GroupMemInfo {
+pub struct GroupMemberEntity {
     /// 成员记录ID（内部持久化用）
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
@@ -97,10 +101,70 @@ pub struct GroupMemInfo {
     /// 成员头像URL（前端展示用）
     #[prost(string, tag = "7")]
     pub avatar: ::prost::alloc::string::String,
+    /// 加入时间
+    #[prost(uint64, tag = "8")]
+    pub create_time: u64,
+    /// 更新时间
+    #[prost(uint64, tag = "9")]
+    pub update_time: u64,
+}
+/// ==========================
+/// 👤 客户端用户实体定义
+/// ==========================
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ClientEntity {
+    /// 用户 ID
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    /// 姓名
+    #[prost(string, tag = "2")]
+    pub name: ::prost::alloc::string::String,
+    /// 用户名
+    #[prost(string, tag = "3")]
+    pub username: ::prost::alloc::string::String,
+    /// 密码
+    #[prost(string, tag = "4")]
+    pub password: ::prost::alloc::string::String,
+    /// 客户端用户 ID
+    #[prost(string, tag = "5")]
+    pub uid: ::prost::alloc::string::String,
+    /// 是否启用（封号）
+    #[prost(bool, tag = "6")]
+    pub enable: bool,
+    /// 是否锁定（禁止登录）
+    #[prost(bool, tag = "7")]
+    pub lock: bool,
+    /// 头像 URL（可选，空字符串表示无）
+    #[prost(string, tag = "8")]
+    pub avatar: ::prost::alloc::string::String,
+    /// 加好友策略
+    #[prost(enumeration = "FriendPolicy", tag = "9")]
+    pub allow_add_friend: i32,
+    /// 用户基本信息字段（KV）
+    #[prost(map = "string, string", tag = "10")]
+    pub profile_fields: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
+    /// 扩展字段（KV，可为空）
+    #[prost(map = "string, string", tag = "11")]
+    pub extend_fields: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
+    /// 创建时间（Unix 秒）
+    #[prost(uint64, tag = "99")]
+    pub create_time: u64,
+    /// 最后更新时间（Unix 秒）
+    #[prost(uint64, tag = "100")]
+    pub update_time: u64,
 }
 /// *
 /// 群成员角色类型
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum GroupRoleType {
@@ -136,6 +200,7 @@ impl GroupRoleType {
 /// *
 /// 加群权限控制类型
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum JoinPermission {
@@ -175,6 +240,7 @@ impl JoinPermission {
 /// *
 /// 加群验证类型
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum JoinQuestionType {
@@ -217,6 +283,7 @@ impl JoinQuestionType {
 /// 每条消息将根据其主内容赋予一个主类型，便于前端渲染和后端分类处理。
 /// 注意：具体内容仍以 MessageContent 的 oneof 实体为准，ContentType 仅为索引分类用途。
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ContentType {
@@ -336,6 +403,7 @@ impl ContentType {
 /// ======================================
 /// 用于标识消息的接收目标类型，帮助客户端和服务端进行不同的处理逻辑
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ChatTargetType {
@@ -375,6 +443,7 @@ impl ChatTargetType {
 /// 这些类型用于消息路由和分发，确保消息被正确处理
 /// 消息类型枚举：用于标识通信协议中的消息分类
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ByteMessageType {
@@ -471,6 +540,77 @@ impl ByteMessageType {
             "FriendEventMsgType" => Some(Self::FriendEventMsgType),
             "GroupCreateMsgType" => Some(Self::GroupCreateMsgType),
             "GroupDismissMsgType" => Some(Self::GroupDismissMsgType),
+            _ => None,
+        }
+    }
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum Gender {
+    /// 未知
+    Unknown = 0,
+    /// 男性
+    Male = 1,
+    /// 女性
+    Female = 2,
+}
+impl Gender {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unknown => "Unknown",
+            Self::Male => "Male",
+            Self::Female => "Female",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "Unknown" => Some(Self::Unknown),
+            "Male" => Some(Self::Male),
+            "Female" => Some(Self::Female),
+            _ => None,
+        }
+    }
+}
+/// ==========================
+/// 🚦 加好友策略（枚举定义）
+/// ==========================
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum FriendPolicy {
+    /// 允许任何人添加好友
+    AllowAny = 0,
+    /// 需要验证
+    NeedConfirm = 1,
+    /// 拒绝任何人添加
+    DenyAny = 2,
+}
+impl FriendPolicy {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::AllowAny => "ALLOW_ANY",
+            Self::NeedConfirm => "NEED_CONFIRM",
+            Self::DenyAny => "DENY_ANY",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "ALLOW_ANY" => Some(Self::AllowAny),
+            "NEED_CONFIRM" => Some(Self::NeedConfirm),
+            "DENY_ANY" => Some(Self::DenyAny),
             _ => None,
         }
     }

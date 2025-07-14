@@ -59,7 +59,7 @@ enum EventStatus {
 // ================================
 // 用于客户端/服务端之间同步好友事件记录，包含完整的事件信息
 message FriendEventMsg {
-  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string from_uid = 2;          // 发起操作的用户 ID（如请求、删除、拉黑）：操作发起方
   string to_uid = 3;            // 接收操作的目标用户 ID（如被请求、被拉黑）：操作接收方
 

@@ -1,11 +1,11 @@
-use crate::entitys::group_entity::GroupEntity;
-use crate::entitys::group_member::{GroupMemberMeta, GroupRole};
 use crate::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use anyhow::Result;
 use async_trait::async_trait;
 use common::UserId;
 use deadpool_redis::redis::{cmd, AsyncCommands};
+use common::util::date_util::now;
+use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
 
 #[async_trait]
 impl GroupManagerOpt for GroupManager {
@@ -20,6 +20,10 @@ impl GroupManagerOpt for GroupManager {
         }
 
         Ok(())
+    }
+
+    async fn update_group(&self, info: &GroupEntity) -> Result<()> {
+        todo!()
     }
 
     async fn dismiss_group(&self, group_id: &str) -> Result<()> {
@@ -38,59 +42,29 @@ impl GroupManagerOpt for GroupManager {
         let _: () = conn.del(&meta_key).await?;
         Ok(())
     }
-
-    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &str, group_role: &GroupRole) -> Result<()> {
+    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &str, group_role: &GroupRoleType) -> Result<()> {
 
         let mut conn = self.pool.get().await?;
 
         // 1. 添加成员 ID 到成员集合
         let member_set_key = Self::key_group_members(group_id);
         let _: () = cmd("SADD").arg(&member_set_key).arg(user_id).query_async(&mut conn).await?;
-
+        let now=now();
         // 2. 写入元信息 JSON 到成员元信息 Hash
-        let meta = GroupMemberMeta {
+        let meta = GroupMemberEntity {
             id: format!("{}_{}", group_id, user_id),
             group_id: group_id.to_string(),
             uid: user_id.to_string(),
-            role: group_role.clone(),
-            alias: Some(alias.to_string()),
-            mute: mute.unwrap_or(false),
+            role: group_role.clone() as i32,
+            is_muted: false,
+            avatar: "".to_string(),
+            create_time: 0,
+            alias: alias.to_string(),
+            update_time: 0,
         };
         let json = serde_json::to_string(&meta)?;
         let meta_hash_key = Self::key_group_member_meta(group_id);
         let _: () = cmd("HSET").arg(&meta_hash_key).arg(user_id).arg(json).query_async(&mut conn).await?;
-
-        Ok(())
-    }
-    async fn group_member_refresh(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &Option<String>, role: &Option<GroupRole>) -> Result<()> {
-        let mut conn = self.pool.get().await?;
-        let key = Self::key_group_members(group_id);
-        let meta_key = Self::key_group_member_meta(group_id);
-
-        // 1. 保证成员存在于群组集合
-        let _: () = cmd("SADD").arg(&key).arg(&user_id).query_async(&mut conn).await?;
-
-        // 2. 读取原有 meta 并更新
-        let raw: Option<String> = cmd("HGET").arg(&meta_key).arg(&user_id).query_async(&mut conn).await?;
-
-        if let Some(json) = raw {
-            let mut meta: GroupMemberMeta = serde_json::from_str(&json)?;
-
-            if let Some(new_alias) = alias {
-                meta.alias = Some(new_alias.clone());
-            }
-
-            if let Some(new_role) = role {
-                meta.role = new_role.clone();
-            }
-
-            if let Some(mute_flag) = mute {
-                meta.mute = mute_flag;
-            }
-
-            let updated = serde_json::to_string(&meta)?;
-            let _: () = cmd("HSET").arg(&meta_key).arg(&user_id).arg(&updated).query_async(&mut conn).await?;
-        }
 
         Ok(())
     }
@@ -108,6 +82,36 @@ impl GroupManagerOpt for GroupManager {
 
         // Step 4: 广播用户退出消息（可选）
         // self.broadcast_user_left(group_id, user_id).await?;
+
+        Ok(())
+    }
+
+    async fn group_member_refresh(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &str, role: &Option<GroupRoleType>) -> Result<()> {
+        let mut conn = self.pool.get().await?;
+        let key = Self::key_group_members(group_id);
+        let meta_key = Self::key_group_member_meta(group_id);
+
+        // 1. 保证成员存在于群组集合
+        let _: () = cmd("SADD").arg(&key).arg(&user_id).query_async(&mut conn).await?;
+
+        // 2. 读取原有 meta 并更新
+        let raw: Option<String> = cmd("HGET").arg(&meta_key).arg(&user_id).query_async(&mut conn).await?;
+
+        if let Some(json) = raw {
+            let mut meta: GroupMemberEntity = serde_json::from_str(&json)?;
+
+
+            if let Some(new_role) = role {
+                meta.role = new_role.clone() as i32;
+            }
+
+            if let Some(mute_flag) = mute {
+                meta.is_muted = mute_flag;
+            }
+            meta.alias = alias.to_string();
+            let updated = serde_json::to_string(&meta)?;
+            let _: () = cmd("HSET").arg(&meta_key).arg(&user_id).arg(&updated).query_async(&mut conn).await?;
+        }
 
         Ok(())
     }
@@ -132,6 +136,13 @@ impl GroupManagerOpt for GroupManager {
         Ok(members)
     }
 
+    async fn is_user_in_group(&self, group_id: &str, user_id: &UserId) -> Result<bool> {
+        // 2. Redis 兜底判断
+        let key = format!("group:member:{}", group_id);
+        let mut conn = self.pool.get().await?;
+        let exists: bool = conn.sismember(&key, user_id).await.unwrap_or(false);
+        Ok(exists)
+    }
     async fn get_online_group_members(&self, group_id: &str) -> Result<Vec<UserId>> {
         let members = self.get_group_members(group_id).await?;
         let user_mgr = UserManager::get();
@@ -159,22 +170,11 @@ impl GroupManagerOpt for GroupManager {
 
         Ok(result)
     }
+
     async fn get_group_members_by_page(&self, group_id: &str, page: usize, page_size: usize) -> Result<Vec<UserId>> {
         let members = self.get_group_members(group_id).await?;
         let start = page * page_size;
         let end = start + page_size;
         Ok(members.into_iter().skip(start).take(page_size).collect())
-    }
-
-    async fn is_user_in_group(&self, group_id: &str, user_id: &UserId) -> Result<bool> {
-        // 2. Redis 兜底判断
-        let key = format!("group:member:{}", group_id);
-        let mut conn = self.pool.get().await?;
-        let exists: bool = conn.sismember(&key, user_id).await.unwrap_or(false);
-        Ok(exists)
-    }
-
-    async fn update_group(&self, info: &GroupEntity) -> Result<()> {
-        todo!()
     }
 }

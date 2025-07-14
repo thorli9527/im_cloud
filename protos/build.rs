@@ -11,14 +11,12 @@ fn build_group_service() {
     tonic_build::configure()
         .build_server(true) // 如无需生成 gRPC Server 代码
         .build_client(false) // 如无需生成 gRPC Client 代码
-        .type_attribute(
-            ".",
-            "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
-        )
+        .type_attribute(".","#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]", )
+        .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../app_group/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
-                "proto/common/common.proto",
+                // "proto/common/common.proto",
                 "proto/group/group_models.proto",
                 "proto/group/group_service.proto",
             ],
@@ -34,10 +32,8 @@ fn build_arb_group_service() {
     tonic_build::configure()
         .build_server(false)
         .build_client(true)
-        .type_attribute(
-            ".",
-            "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
-        )
+        .type_attribute(".","#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]", )
+        .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../app_arb/src/protocol/")
         .compile_protos(
             &[
@@ -53,10 +49,8 @@ fn build_arb_group_service() {
     tonic_build::configure()
         .build_server(true) // 如无需生成 gRPC Server 代码
         .build_client(false) // 如无需生成 gRPC Client 代码
-        .type_attribute(
-            ".",
-            "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
-        )
+        .type_attribute(".","#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]", )
+        .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../app_group/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
@@ -74,10 +68,8 @@ fn build_arb_service() {
     tonic_build::configure()
         .build_server(true)
         .build_client(false)
-        .type_attribute(
-            ".",
-            "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
-        )
+        .type_attribute(".","#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]", )
+        .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../app_arb/src/protocol/")
         .compile_protos(
             &[
@@ -93,10 +85,8 @@ fn build_arb_service() {
     tonic_build::configure()
         .build_server(false) // 如无需生成 gRPC Server 代码
         .build_client(true) // 如无需生成 gRPC Client 代码
-        .type_attribute(
-            ".",
-            "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
-        )
+        .type_attribute(".","#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]", )
+        .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../app_group/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
@@ -113,10 +103,8 @@ fn build_biz_service() {
     tonic_build::configure()
         .build_server(false) // 如无需生成 gRPC Server 代码
         .build_client(false) // 如无需生成 gRPC Client 代码
-        .type_attribute(
-            ".",
-            "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
-        )
+        .type_attribute(".","#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]", )
+        .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../biz_service/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[

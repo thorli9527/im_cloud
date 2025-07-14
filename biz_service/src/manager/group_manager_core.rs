@@ -1,5 +1,3 @@
-use crate::entitys::group_entity::GroupEntity;
-use crate::entitys::group_member::GroupRole;
 use anyhow::Result;
 use async_trait::async_trait;
 use common::UserId;
@@ -9,6 +7,8 @@ use deadpool_redis::{
 };
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use rdkafka::groups::GroupInfo;
+use crate::protocol::common::{GroupEntity, GroupRoleType};
 
 /// 群组管理器
 #[derive(Debug, Clone)]
@@ -70,7 +70,7 @@ pub trait GroupManagerOpt: Send + Sync {
     /// * `mute` - 是否禁言该用户（可选）。
     /// * `alian` - 用户在群内的备注名（昵称）。
     /// * `group_role` - 用户在群中的角色（成员、管理员等）。
-    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alian: &str, group_role: &GroupRole) -> Result<()>;
+    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alian: &str, group_role: &GroupRoleType) -> Result<()>;
 
     /// 将一个用户从群组中移除。
     ///
@@ -87,7 +87,7 @@ pub trait GroupManagerOpt: Send + Sync {
     /// * `mute` - 是否禁言（可选）。
     /// * `alias` - 用户新的群昵称（可选）。
     /// * `role` - 用户新的群角色（可选）。
-    async fn group_member_refresh(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &Option<String>, role: &Option<GroupRole>) -> Result<()>;
+    async fn group_member_refresh(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alias: &str, role: &Option<GroupRoleType>) -> Result<()>;
 
     /// 获取指定群组的详细信息。
     ///

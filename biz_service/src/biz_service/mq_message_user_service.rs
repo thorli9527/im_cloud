@@ -1,6 +1,5 @@
 use crate::biz_service::kafka_service::KafkaService;
 use crate::protocol::common::ByteMessageType;
-use crate::protocol::msg::entity::UserMsg;
 use crate::protocol::msg::message::Segment;
 use common::config::AppConfig;
 use common::errors::AppError;
@@ -11,10 +10,11 @@ use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::protocol::msg::entity::UserMsgEntity;
 
 #[derive(Debug)]
 pub struct UserMessageService {
-    pub dao: BaseRepository<UserMsg>,
+    pub dao: BaseRepository<UserMsgEntity>,
 }
 
 impl UserMessageService {
@@ -32,7 +32,7 @@ impl UserMessageService {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
     /// 构造并保存一条用户消息，返回完整 UserMessage
-    pub async fn send_user_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<Segment>) -> Result<UserMsg, AppError> {
+    pub async fn send_user_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<Segment>) -> Result<UserMsgEntity, AppError> {
         let now_time = now() ;
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
@@ -54,9 +54,8 @@ impl UserMessageService {
             .collect();
 
         // 构造 UserMessage 对象
-        let message = UserMsg {
-            message_id: Some(build_snow_id()), 
-            agent_id: agent_id.to_string(),
+        let message = UserMsgEntity {
+            message_id: build_snow_id(),
             from: from.clone(),
             to: to.clone(),
             content: segments,
@@ -73,7 +72,7 @@ impl UserMessageService {
         let app_config = AppConfig::get();
         let msg_type: ByteMessageType = ByteMessageType::UserMsgType;
         let data_index=0 as u8;
-        kafka_service.send_proto( &msg_type,&data_index,&message,&message.message_id.unwrap().to_string(), &app_config.get_kafka().topic_single).await?;
+        kafka_service.send_proto( &msg_type,&data_index,&message,&message.message_id, &app_config.get_kafka().topic_single).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

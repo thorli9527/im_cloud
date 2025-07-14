@@ -4,11 +4,12 @@
 /// ================================
 /// 登录请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LoginReqMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 用户名或手机号
     #[prost(string, tag = "2")]
     pub username: ::prost::alloc::string::String,
@@ -27,11 +28,12 @@ pub struct LoginReqMsg {
 /// ================================
 /// 登录返回
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LoginRespMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 刷新凭证
     #[prost(string, tag = "2")]
     pub token: ::prost::alloc::string::String,
@@ -42,29 +44,32 @@ pub struct LoginRespMsg {
 /// ========================================
 ///   退出请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct LogoutReqMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
 }
 /// 退出返回
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct LogoutRespMsg {
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
 }
 /// ========================================
 /// 📩 发送验证码请求
 /// ========================================
 /// 客户端请求发送验证码（短信、邮件等）用于登录或注册
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SendVerificationCodeReqMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 接收目标（手机号或邮箱）：验证码发送的目标
     #[prost(string, tag = "2")]
     pub receiver: ::prost::alloc::string::String,
@@ -83,11 +88,12 @@ pub struct SendVerificationCodeReqMsg {
 /// ========================================
 /// 服务端对验证码发送请求的响应
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SendVerificationCodeRepMsg {
     /// 与请求一致的 ID：对应请求的消息ID
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 是否发送成功：true表示验证码已发送，false表示发送失败
     #[prost(bool, tag = "2")]
     pub success: bool,
@@ -103,11 +109,12 @@ pub struct SendVerificationCodeRepMsg {
 /// =======================================
 /// 表示某个用户刚刚上线，服务端可用于广播通知。
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OnlineStatusMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 上线用户 ID：上线用户的唯一标识
     #[prost(string, tag = "2")]
     pub uid: ::prost::alloc::string::String,
@@ -126,11 +133,12 @@ pub struct OnlineStatusMsg {
 /// =======================================
 /// 表示某个用户从某设备下线，服务端可用于状态同步或通知。
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OfflineStatueMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 下线用户 ID：下线用户的唯一标识
     #[prost(string, tag = "2")]
     pub uid: ::prost::alloc::string::String,
@@ -152,6 +160,7 @@ pub struct OfflineStatueMsg {
 /// ================================
 /// 用于标识客户端的来源类型，有助于服务端区分平台特性、限流策略等
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum DeviceType {

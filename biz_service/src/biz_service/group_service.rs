@@ -1,7 +1,5 @@
 use crate::biz_service::group_member_service::GroupMemberService;
 use crate::biz_service::user_service::UserService;
-use crate::entitys::group_entity::GroupEntity;
-use crate::entitys::group_member::{GroupMemberEntity, GroupRole};
 use crate::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use anyhow::{anyhow, Result};
 use chrono::Utc;
@@ -12,6 +10,10 @@ use mongodb::bson::doc;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use rdkafka::groups::GroupInfo;
+use common::util::date_util::now;
+use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
+use crate::protocol::common::GroupRoleType::Owner;
 
 #[derive(Debug)]
 pub struct GroupService {
@@ -48,21 +50,22 @@ impl GroupService {
         if user_info.is_none() {
             return Err(anyhow!("user.not.found").into());
         }
-
+        let user=user_info.unwrap();
         self.dao.insert(group).await?;
         let group_member_service = GroupMemberService::get();
-        let now = Utc::now().timestamp();
+        let now = now() as u64;
         // ✅ 4. 添加群主
         let owner_id = group.owner_id.clone();
         let owner = GroupMemberEntity {
             id: "".to_string(),
             group_id: group.id.to_string(),
             uid: owner_id,
-            role: GroupRole::Owner,
-            alias: None,
-            mute: false,
+            role: GroupRoleType::Owner as i32,
+            is_muted: false,
+            alias: user.user_name.clone(),
             create_time: now,
             update_time: now,
+            avatar: "".to_string(),
         };
         group_member_service.dao.insert(&owner).await?;
 
@@ -75,9 +78,10 @@ impl GroupService {
                 id: "".to_string(),
                 group_id: group.id.to_string(),
                 uid: user_id.clone(),
-                role: GroupRole::Member,
-                alias: None,
-                mute: false,
+                role: GroupRoleType::Member as i32,
+                alias: user.user_name.clone(),
+                is_muted: false,
+                avatar: "".to_string(),
                 create_time: now,
                 update_time: now,
             };

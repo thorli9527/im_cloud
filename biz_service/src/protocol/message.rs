@@ -4,6 +4,7 @@
 /// ======================================
 /// 使用 oneof 定义不同类型的消息内容，确保消息类型的互斥性
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MessageContent {
     #[prost(
@@ -15,6 +16,7 @@ pub struct MessageContent {
 /// Nested message and enum types in `MessageContent`.
 pub mod message_content {
     #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+    #[serde(rename_all = "camelCase")]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Content {
         /// 文本消息：纯文本内容
@@ -87,6 +89,7 @@ pub mod message_content {
 /// ===============================
 /// 支持纯文本和富文本格式，包含内联实体（链接、@用户、话题等）
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TextContent {
     /// 文本主体内容：消息的文本内容
@@ -98,6 +101,7 @@ pub struct TextContent {
 }
 /// 内联实体：用于在文本中标记特殊元素
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InlineEntity {
     /// 起始位置（UTF-8 字符索引）：实体在文本中的开始位置
@@ -118,6 +122,7 @@ pub struct InlineEntity {
 /// ===============================
 /// 包含图片的完整信息，支持原图和缩略图
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ImageContent {
     /// 原图 URL：图片的完整地址
@@ -144,6 +149,7 @@ pub struct ImageContent {
 /// ===============================
 /// 支持语音聊天和音乐播放，包含时长和格式信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AudioContent {
     /// 音频文件 URL：音频文件的地址
@@ -167,6 +173,7 @@ pub struct AudioContent {
 /// ===============================
 /// 包含视频文件和封面图，支持播放控制
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VideoContent {
     /// 视频文件 URL：视频文件的地址
@@ -196,6 +203,7 @@ pub struct VideoContent {
 /// ===============================
 /// 包含地理位置信息，支持地址描述和地图显示
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LocationContent {
     /// 纬度：地理位置的纬度坐标
@@ -219,6 +227,7 @@ pub struct LocationContent {
 /// ===============================
 /// 支持任意文件类型，包含文件信息和图标
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FileContent {
     /// 文件 URL：文件的下载地址
@@ -242,6 +251,7 @@ pub struct FileContent {
 /// ===============================
 /// 用于音视频通话的控制信令，包含通话状态和参与者信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AvCallContent {
     /// 通话 ID：通话的唯一标识
@@ -269,6 +279,7 @@ pub struct AvCallContent {
 /// Nested message and enum types in `AVCallContent`.
 pub mod av_call_content {
     #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+    #[serde(rename_all = "camelCase")]
     #[derive(
         Clone,
         Copy,
@@ -328,6 +339,7 @@ pub mod av_call_content {
         }
     }
     #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+    #[serde(rename_all = "camelCase")]
     #[derive(
         Clone,
         Copy,
@@ -372,6 +384,7 @@ pub mod av_call_content {
 /// ===============================
 /// 支持开发者自定义的消息结构，通常以 JSON 格式承载
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CustomContent {
     /// 自定义类型：消息的自定义类型标识
@@ -386,6 +399,7 @@ pub struct CustomContent {
 /// ===============================
 /// 支持标准 emoji 和自定义表情
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EmojiContent {
     /// 表情类型：标准 emoji 类型
@@ -400,6 +414,7 @@ pub struct EmojiContent {
 /// ===============================
 /// 用于通知消息撤回，包含撤回的目标消息信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RevokeContent {
     /// 目标消息 ID：被撤回的消息ID
@@ -417,6 +432,7 @@ pub struct RevokeContent {
 /// ===============================
 /// 用于消息转发，包含原消息的基本信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ForwardContent {
     /// 原消息 ID：被转发消息的ID
@@ -437,6 +453,7 @@ pub struct ForwardContent {
 /// ===============================
 /// 用于回复特定消息，包含被引用消息的信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QuoteContent {
     /// 被引用消息 ID：被回复消息的ID
@@ -454,6 +471,7 @@ pub struct QuoteContent {
 /// ===============================
 /// 用于富文本内容，支持网页链接和预览
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HtmlContent {
     /// 标题：卡片的标题
@@ -471,6 +489,7 @@ pub struct HtmlContent {
 /// ===============================
 /// 用于记录通话历史，包含通话的基本信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VoipContent {
     /// 主叫 ID：发起通话的用户
@@ -491,6 +510,7 @@ pub struct VoipContent {
 /// ===============================
 /// 用于系统通知，包含标题、内容和元数据
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct NotificationContent {
     /// 标题：通知的标题
@@ -511,6 +531,7 @@ pub struct NotificationContent {
 /// ===============================
 /// 用于系统级消息，包含系统代码和内容
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SystemContent {
     /// 内容：系统消息的内容
@@ -525,6 +546,7 @@ pub struct SystemContent {
 /// ===============================
 /// 用于提醒功能，包含提醒文本和时间
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReminderContent {
     /// 文本：提醒的内容
@@ -539,6 +561,7 @@ pub struct ReminderContent {
 /// ===============================
 /// 用于群组相关事件，包含群组信息和操作者
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GroupEventContent {
     /// 群组 ID：事件相关的群组
@@ -556,6 +579,7 @@ pub struct GroupEventContent {
 /// ===============================
 /// 用于分享联系人信息，包含用户的基本信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ContactCardContent {
     /// 目标 ID：被分享用户的ID
@@ -576,6 +600,7 @@ pub struct ContactCardContent {
 /// ===============================
 /// 用于群组投票功能，包含投票选项和结果
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VoteContent {
     /// 主题：投票的主题
@@ -596,6 +621,7 @@ pub struct VoteContent {
 /// ===============================
 /// 用于红包功能，包含红包金额和状态
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RedEnvelopeContent {
     /// 发送者 ID：红包发送者
@@ -616,6 +642,7 @@ pub struct RedEnvelopeContent {
 /// ======================================
 /// 表示一条消息中的一个独立段（如文本段、图片段等），支持排序、编辑、标记等
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Segment {
     /// 消息段内容（如文本、图片等，使用 oneof 封装）：段的具体内容
@@ -645,6 +672,7 @@ pub struct Segment {
 /// ======================================
 /// 定义了消息的基本框架，包含发送者、接收者、时间等元数据
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Content {
     /// 唯一消息 ID（客户端生成或服务端补全）：消息的唯一标识
@@ -674,6 +702,7 @@ pub struct Content {
 /// ======================================
 /// 用于标识消息所属的会话类型，帮助客户端进行不同的渲染和处理
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ChatScene {
@@ -711,6 +740,7 @@ impl ChatScene {
 /// ======================================
 /// 定义了系统中支持的 emoji 类型，包括标准 emoji 和自定义表情
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum EmojiType {

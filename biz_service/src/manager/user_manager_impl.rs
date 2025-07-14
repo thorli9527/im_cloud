@@ -1,10 +1,9 @@
-use crate::entitys::group_member::GroupMemberMeta;
 use deadpool_redis::redis::{cmd, AsyncCommands};
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use twox_hash::XxHash64;
-use crate::entitys::group_entity::GroupEntity;
+use crate::protocol::common::{GroupEntity, GroupMemberEntity};
 
 pub const MAX_CLEAN_COUNT: usize = 100;
 pub const USER_ONLINE_TTL_SECS: u64 = 300;
@@ -115,7 +114,7 @@ impl UserManager {
 
                     for uid in members {
                         if let Some(meta_json) = metas.get(&uid) {
-                            if let Ok(meta) = serde_json::from_str::<GroupMemberMeta>(meta_json) {
+                            if let Ok(meta) = serde_json::from_str::<GroupMemberEntity>(meta_json) {
                                 // // 使用完整信息添加成员到本地缓存
                                 // self.local_group_manager.add_user(
                                 //     group_id,

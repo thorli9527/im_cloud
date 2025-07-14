@@ -1,4 +1,3 @@
-use crate::entitys::group_member::{GroupMemberEntity, GroupRole};
 use anyhow::Result;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
@@ -9,6 +8,7 @@ use mongodb::bson::doc;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use crate::protocol::common::{GroupMemberEntity, GroupRoleType};
 
 #[derive(Debug)]
 pub struct GroupMemberService {
@@ -41,7 +41,7 @@ impl GroupMemberService {
     }
 
     pub async fn find_owner(&self, group_id: impl AsRef<str>) -> Result<GroupMemberEntity, AppError> {
-        let filter = doc! {"group_id":as_ref_to_string(group_id),"role":GroupRole::Owner.to_string()};
+        let filter = doc! {"group_id":as_ref_to_string(group_id),"role":GroupRoleType::Owner as i32};
         let result = self.dao.find_one(filter).await?;
         match result {
             Some(member) => Ok(member),
@@ -61,7 +61,7 @@ impl GroupMemberService {
 
         match member {
             Some(m) => {
-                if m.role == GroupRole::Owner {
+                if m.role == GroupRoleType::Owner as i32 {
                     // 已是 Owner，直接返回 OK
                     return Ok(());
                 }
@@ -77,7 +77,7 @@ impl GroupMemberService {
         };
         let update = doc! {
             "$set": {
-                "role": GroupRole::Admin.to_string(),
+                "role": GroupRoleType::Admin as i32,
                 "update_time": now(),
             }
         };
@@ -98,16 +98,18 @@ impl GroupMemberService {
 
         match member {
             Some(m) => {
-                match m.role {
-                    GroupRole::Owner => {
+                let role_type=GroupRoleType::from_i32(m.role)
+                    .ok_or_else(|| AppError::BizError("group.member.role.invalid".to_string()))?;
+                match role_type {
+                    GroupRoleType::Owner => {
                         // 群主不能降级
                         return Err(AppError::BizError("group.owner.cannot.downgrade".to_string()));
                     }
-                    GroupRole::Member => {
+                    GroupRoleType::Member => {
                         // 已经是普通成员，直接 OK
                         return Ok(());
                     }
-                    GroupRole::Admin => {
+                    GroupRoleType::Admin => {
                         // 是管理员，继续往下更新
                     }
                 }
@@ -125,7 +127,7 @@ impl GroupMemberService {
         };
         let update = doc! {
             "$set": {
-                "role": GroupRole::Member.to_string(),
+                "role": GroupRoleType::Member as i32,
                 "update_time": now(),
             }
         };

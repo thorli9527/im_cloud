@@ -1,6 +1,6 @@
 use crate::biz_service::kafka_service::KafkaService;
 use crate::protocol::common::ByteMessageType;
-use crate::protocol::msg::entity::GroupMsg;
+use crate::protocol::msg::entity::{ GroupMsgEntity};
 use crate::protocol::msg::message::Segment;
 use common::config::AppConfig;
 use common::errors::AppError;
@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct GroupMessageService {
-    pub dao: BaseRepository<GroupMsg>,
+    pub dao: BaseRepository<GroupMsgEntity>,
 }
 
 impl GroupMessageService {
@@ -31,7 +31,7 @@ impl GroupMessageService {
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
-    pub async fn send_group_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<Segment>) -> Result<GroupMsg, AppError> {
+    pub async fn send_group_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<Segment>) -> Result<GroupMsgEntity, AppError> {
         let now_time = now();
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
@@ -52,9 +52,8 @@ impl GroupMessageService {
             })
             .collect();
         // 构造 UserMessage 对象
-        let message = GroupMsg {
-            message_id: Some(build_snow_id()),
-            agent_id: agent_id.to_string(),
+        let message = GroupMsgEntity {
+            message_id: build_snow_id(),
             from: from.to_string(),
             sync_mq_status: true,
             to: to.to_string(),
@@ -70,7 +69,7 @@ impl GroupMessageService {
         let app_config = AppConfig::get();
         let message_type= ByteMessageType::GroupMsgType;
         let node_index=0 as u8;
-        kafka_service.send_proto(&message_type, &node_index,&message,&message.message_id.unwrap().to_string(), &app_config.get_kafka().topic_group).await?;
+        kafka_service.send_proto(&message_type, &node_index,&message,&message.message_id, &app_config.get_kafka().topic_group).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

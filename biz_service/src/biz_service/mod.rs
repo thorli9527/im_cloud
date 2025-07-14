@@ -1,5 +1,3 @@
-pub mod agent_service;
-pub mod cache_service;
 pub mod client_service;
 pub mod country_service;
 mod friend_event_service;
@@ -15,7 +13,6 @@ use crate::biz_service::friend_event_service::FriendEventService;
 use mongodb::Database;
 
 pub fn init_service(db: Database) {
-    agent_service::AgentService::init(db.clone());
     client_service::ClientService::init(db.clone());
     country_service::CountryService::init(db.clone());
     group_member_service::GroupMemberService::init(db.clone());

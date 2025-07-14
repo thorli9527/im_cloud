@@ -1,5 +1,4 @@
 use crate::manager::shard_manager::ShardManager;
-use crate::protocol::common::CommonResp;
 use crate::protocol::rpc_group_models::{
     AddMemberReq, ChangeMemberAliasReq, ChangeMemberRoleReq, CreateGroupReq, DestroyGroupReq,
     ExitGroupReq, GetGroupInfoRep, GetGroupInfoReq, GetMembersRep, GetMembersReq,
@@ -7,11 +6,12 @@ use crate::protocol::rpc_group_models::{
     RemoveMemberReq, TransferGroupOwnershipReq, UpdateGroupInfoReq,
 };
 use crate::protocol::rpc_group_server::group_rpc_service_server::GroupRpcService;
-use biz_service::entitys::group_entity::GroupEntity;
 use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
+use biz_service::common::GroupEntity;
+use crate::protocol::common::CommonResp;
 
 /// 群聊服务端rpc服务
 pub struct GroupRpcServiceImpl {
@@ -137,9 +137,9 @@ impl GroupRpcService for GroupRpcServiceImpl {
         let group_info = GroupEntity {
             id: "".to_string(),
             name: "".to_string(),
-            avatar: None,
-            description: None,
-            notice: None,
+            avatar: "".to_string(),
+            description: "".to_string(),
+            notice: "".to_string(),
             owner_id: "".to_string(),
             group_type: 0,
             join_permission: Default::default(),

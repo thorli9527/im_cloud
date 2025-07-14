@@ -51,7 +51,7 @@ enum GroupEventType {
 // ========================================
 // 用于传递群组中的各种事件，包括成员变更、属性修改等
 message GroupEventContent {
-  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;          // 群组 ID：发生事件的群组标识
   GroupEventType event_type = 3; // 事件类型：具体的事件类型枚举值
 
@@ -87,7 +87,7 @@ message GroupCreateMsg {
 // ========================================
 // 当群组被解散时，服务端会向所有群成员推送此消息
 message GroupDismissMsg {
-  optional uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;          // 被解散的群组 ID：解散的群组标识
   string operator_id = 3;       // 解散操作者 ID（如群主、系统管理员）：执行解散操作的用户
   int64 dismissed_at = 4;       // 解散时间戳（毫秒）：群组解散的时间

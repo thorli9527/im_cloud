@@ -4,6 +4,7 @@
 /// =====================
 /// 基础请求，仅包含节点地址
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BaseRequest {
     /// 节点地址（如 192.168.1.10:9000）
@@ -14,6 +15,7 @@ pub struct BaseRequest {
 /// 分片节点元信息
 /// ============================
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ShardNodeInfo {
     /// 所属节点地址
@@ -34,6 +36,7 @@ pub struct ShardNodeInfo {
 }
 /// 同步数据请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SyncDataReq {
     #[prost(enumeration = "SyncDataType", tag = "1")]
@@ -46,6 +49,7 @@ pub struct SyncDataReq {
 /// 请求结构：更新分片状态
 /// ============================
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateShardStateRequest {
     #[prost(string, tag = "1")]
@@ -54,12 +58,14 @@ pub struct UpdateShardStateRequest {
     pub new_state: i32,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListShardNodesResponse {
     #[prost(message, repeated, tag = "1")]
     pub nodes: ::prost::alloc::vec::Vec<ShardNodeInfo>,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListAllNodesResponse {
     #[prost(message, repeated, tag = "1")]
@@ -69,6 +75,7 @@ pub struct ListAllNodesResponse {
 /// 枚举：分片节点状态定义
 /// =====================
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ShardState {
@@ -127,6 +134,7 @@ impl ShardState {
 }
 /// 同步数据请求类型
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum SyncDataType {

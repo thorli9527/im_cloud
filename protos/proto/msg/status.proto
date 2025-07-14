@@ -18,7 +18,7 @@ import "common/common.proto";
 // =======================================
 // 表示某条消息已被哪些用户阅读，适用于单聊或群聊消息同步场景。
 message ReadReceiptMsg {
-  optional uint64 message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
+  uint64 message_id = 1;     // 当前消息的唯一 ID，用于追踪、ACK 等
   repeated string reader_ids = 2;     // 已读该消息的用户 ID 列表（单聊为1，群聊可多）
   int64 read_time = 3;                // 首次被读的时间戳（毫秒）
 }
@@ -47,6 +47,6 @@ message HeartbeatMsg {
 // =======================================
 // 用于确认收到某一封消息（包括聊天、系统等），支持链路追踪和可靠性保证。
 message AckMsg {
-  optional uint64 message_id = 1;       // 被确认接收的消息 ID
+  uint64 message_id = 1;       // 被确认接收的消息 ID
   common.ByteMessageType ack_type = 2;  // 确认类型
 }

@@ -2,127 +2,79 @@
 /// ======================================
 /// 👤 用户消息结构（单聊消息）
 /// ======================================
-/// 用于表示用户之间的单聊消息，包含完整的消息内容和状态信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct UserMsg {
-    /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
-    /// 所属商户
-    ///
-    /// 商户ID：消息所属的业务实体标识
+pub struct UserMsgEntity {
+    /// 当前消息唯一 ID
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
+    /// 发送者用户ID
     #[prost(string, tag = "2")]
-    pub agent_id: ::prost::alloc::string::String,
-    /// 所属用户 ID
-    ///
-    /// 发送者用户ID：消息的发送方
-    #[prost(string, tag = "3")]
     pub from: ::prost::alloc::string::String,
-    /// 目标 ID
-    ///
-    /// 接收者用户ID：消息的接收方
-    #[prost(string, tag = "4")]
+    /// 接收者用户ID
+    #[prost(string, tag = "3")]
     pub to: ::prost::alloc::string::String,
-    /// 消息复合内容（支持结构化消息段）
-    ///
-    /// 消息内容：支持多段复合内容（文本+图片等）
-    #[prost(message, repeated, tag = "5")]
+    /// 消息内容
+    #[prost(message, repeated, tag = "4")]
     pub content: ::prost::alloc::vec::Vec<super::message::Segment>,
-    /// 创建时间（Unix 秒时间戳）
-    ///
-    /// 消息创建时间：消息首次创建的时间戳
-    #[prost(int64, tag = "6")]
-    pub created_time: i64,
-    /// 最后更新时间（Unix 秒时间戳）
-    ///
-    /// 消息更新时间：消息最后修改的时间戳
-    #[prost(int64, tag = "7")]
-    pub updated_time: i64,
-    /// 是否被撤回
-    ///
-    /// 撤回状态：true表示消息已被撤回
-    #[prost(bool, tag = "8")]
-    pub revoked: bool,
-    /// 是否为系统消息
-    ///
-    /// 系统消息标识：true表示系统自动生成的消息
-    #[prost(bool, tag = "9")]
-    pub is_system: bool,
-    /// 是否已发送到 MQ
-    ///
-    /// MQ同步状态：true表示已同步到消息队列
-    #[prost(bool, tag = "10")]
-    pub sync_mq_status: bool,
-    /// 是否已送达客户端
-    ///
-    /// 送达状态：true表示消息已送达接收方客户端
-    #[prost(bool, tag = "11")]
-    pub delivered: bool,
-    /// 阅读时间戳（可选）
-    ///
-    /// 阅读时间：接收方阅读消息的时间戳
-    #[prost(int64, tag = "12")]
+    /// 阅读时间
+    #[prost(int64, tag = "5")]
     pub read_time: i64,
+    /// 是否撤回
+    #[prost(bool, tag = "6")]
+    pub revoked: bool,
+    /// 是否系统消息
+    #[prost(bool, tag = "7")]
+    pub is_system: bool,
+    /// 是否同步到 MQ
+    #[prost(bool, tag = "8")]
+    pub sync_mq_status: bool,
+    /// 是否送达
+    #[prost(bool, tag = "9")]
+    pub delivered: bool,
+    /// 创建时间
+    #[prost(int64, tag = "99")]
+    pub created_time: i64,
+    /// 最后更新时间
+    #[prost(int64, tag = "100")]
+    pub updated_time: i64,
 }
 /// ======================================
 /// 👥 群组消息结构（群聊消息）
 /// ======================================
-/// 用于表示群组中的群聊消息，包含完整的消息内容和群组特有信息
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GroupMsg {
-    /// 当前消息的唯一 ID，用于追踪、ACK 等
-    #[prost(uint64, optional, tag = "1")]
-    pub message_id: ::core::option::Option<u64>,
-    /// 所属商户
-    ///
-    /// 商户ID：消息所属的业务实体标识
+pub struct GroupMsgEntity {
+    /// 消息唯一 ID
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
+    /// 发送者用户ID
     #[prost(string, tag = "2")]
-    pub agent_id: ::prost::alloc::string::String,
-    /// 所属群组 ID
-    ///
-    /// 群组ID：消息所属的群组标识
+    pub from: ::prost::alloc::string::String,
+    /// 群组ID
     #[prost(string, tag = "3")]
     pub to: ::prost::alloc::string::String,
-    /// 发送者用户 ID
-    ///
-    /// 发送者用户ID：消息的发送方
-    #[prost(string, tag = "4")]
-    pub from: ::prost::alloc::string::String,
-    /// 消息复合内容（支持结构化消息段）
-    ///
-    /// 消息内容：支持多段复合内容（文本+图片等）
-    #[prost(message, repeated, tag = "5")]
+    /// 消息内容
+    #[prost(message, repeated, tag = "4")]
     pub content: ::prost::alloc::vec::Vec<super::message::Segment>,
-    /// 创建时间（Unix 秒时间戳）
-    ///
-    /// 消息创建时间：消息首次创建的时间戳
-    #[prost(int64, tag = "6")]
-    pub create_time: i64,
-    /// 最后更新时间（Unix 秒时间戳）
-    ///
-    /// 消息更新时间：消息最后修改的时间戳
-    #[prost(int64, tag = "7")]
-    pub update_time: i64,
-    /// 群内顺序号（用于顺序拉取）
-    ///
-    /// 群内序号：群组内消息的顺序编号，用于消息排序
-    #[prost(int64, tag = "8")]
+    /// 群内消息序号
+    #[prost(int64, tag = "5")]
     pub seq: i64,
-    /// 是否已发送到 MQ
-    ///
-    /// MQ同步状态：true表示已同步到消息队列
-    #[prost(bool, tag = "9")]
-    pub sync_mq_status: bool,
-    /// 是否被撤回
-    ///
-    /// 撤回状态：true表示消息已被撤回
-    #[prost(bool, tag = "10")]
+    /// 是否撤回
+    #[prost(bool, tag = "6")]
     pub revoked: bool,
-    /// 是否为系统消息（可用于区分人工发送和自动提示）
-    ///
-    /// 系统消息标识：true表示系统自动生成的消息
-    #[prost(bool, tag = "11")]
+    /// 是否系统消息
+    #[prost(bool, tag = "7")]
     pub is_system: bool,
+    /// 是否同步到 MQ
+    #[prost(bool, tag = "8")]
+    pub sync_mq_status: bool,
+    /// 创建时间
+    #[prost(int64, tag = "99")]
+    pub create_time: i64,
+    /// 更新时间
+    #[prost(int64, tag = "100")]
+    pub update_time: i64,
 }

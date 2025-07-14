@@ -69,7 +69,7 @@ message TagInfo {
 /**
  * 群组基本信息（用于展示和配置）
  */
-message GroupInfo {
+message GroupEntity {
   string id = 1;                     // 群组唯一ID（由系统生成）
   string name = 2;                   // 群组名称（用户可见）
   string avatar = 3;                 // 群头像URL
@@ -83,7 +83,6 @@ message GroupInfo {
   uint64 create_time = 11;            // 创建时间
   uint64 update_time = 12;            // 更新时间
 }
-
 // ==============================
 // 群成员信息结构
 // ==============================
@@ -91,7 +90,7 @@ message GroupInfo {
 /**
  * 群组成员详细信息
  */
-message GroupMemInfo {
+message GroupMemberEntity {
   string id = 1;             // 成员记录ID（内部持久化用）
   string group_id = 2;       // 所属群组ID
   string uid = 3;            // 用户唯一ID
@@ -99,6 +98,8 @@ message GroupMemInfo {
   GroupRoleType role = 5;    // 成员角色
   bool is_muted = 6;         // 是否禁言中（true=被禁言）
   string avatar = 7;         // 成员头像URL（前端展示用）
+  uint64 create_time = 8;    // 加入时间
+  uint64 update_time = 9;    // 更新时间
 }
 
 
@@ -189,4 +190,39 @@ enum ByteMessageType {
   FriendEventMsgType              = 30;   // 好友事件：申请、同意、删除等
   GroupCreateMsgType              = 31;   // 群创建通知
   GroupDismissMsgType             = 32;   // 群解散通知
+}
+enum Gender{
+    Unknown=0;// 未知
+    Male=1;   // 男性
+    Female=2; // 女性
+}
+
+
+// ==========================
+// 🚦 加好友策略（枚举定义）
+// ==========================
+enum FriendPolicy {
+  ALLOW_ANY = 0;   // 允许任何人添加好友
+  NEED_CONFIRM = 1; // 需要验证
+  DENY_ANY = 2;     // 拒绝任何人添加
+}
+
+// ==========================
+// 👤 客户端用户实体定义
+// ==========================
+message ClientEntity {
+  string id = 1;                         // 用户 ID
+  string name = 2;                       // 姓名
+  string username = 3;                   // 用户名
+  string password = 4;                   // 密码
+  string uid = 5;                        // 客户端用户 ID
+  bool enable = 6;                       // 是否启用（封号）
+  bool lock = 7;                         // 是否锁定（禁止登录）
+  string avatar = 8;                     // 头像 URL（可选，空字符串表示无）
+  FriendPolicy allow_add_friend = 9;    // 加好友策略
+  map<string, string> profile_fields = 10; // 用户基本信息字段（KV）
+  map<string, string> extend_fields = 11;  // 扩展字段（KV，可为空）
+
+  uint64 create_time = 99;               // 创建时间（Unix 秒）
+  uint64 update_time = 100;               // 最后更新时间（Unix 秒）
 }

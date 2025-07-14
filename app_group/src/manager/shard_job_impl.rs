@@ -6,12 +6,16 @@ use common::util::date_util::now;
 use dashmap::{DashMap, DashSet};
 use std::sync::Arc;
 use std::thread::current;
+use rdkafka::groups::GroupInfo;
 use tokio::sync::RwLock;
 use tonic::async_trait;
-use crate::protocol::common::GroupInfo;
+use crate::protocol::common::GroupMemberEntity;
 
 pub struct RPCSyncData {
-    group_info: GroupInfo
+    // 群组信息
+    group_info: GroupInfo,
+    // 群组数据 
+    member: Vec<GroupMemberEntity>
 }
 #[async_trait]
 impl ManagerJobOpt for ManagerJob {
