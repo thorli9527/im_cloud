@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
-    // build_biz_service();
+    build_biz_service();
     build_arb_service();
     build_arb_group_service() ;
     build_group_service();
@@ -26,7 +26,7 @@ fn build_group_service() {
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
 
-    println!("cargo:warning=✅ proto 编译完成！");
+    println!("cargo:warning=✅ proto group_service 编译完成！");
 }
 
 fn build_arb_group_service() {
@@ -162,5 +162,5 @@ fn build_biz_service() {
             }
         }
     }
-    println!("cargo:warning=✅ proto 编译完成！");
+    println!("cargo:warning=✅ proto biz_service 编译完成！");
 }

@@ -8,7 +8,11 @@ use std::sync::Arc;
 use std::thread::current;
 use tokio::sync::RwLock;
 use tonic::async_trait;
+use crate::protocol::common::GroupInfo;
 
+pub struct RPCSyncData {
+    group_info: GroupInfo
+}
 #[async_trait]
 impl ManagerJobOpt for ManagerJob {
     async fn init(&mut self) -> anyhow::Result<()> {

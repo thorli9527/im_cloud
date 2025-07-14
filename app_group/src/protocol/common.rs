@@ -49,30 +49,27 @@ pub struct GroupInfo {
     /// 群公告（群成员可见）
     #[prost(string, tag = "5")]
     pub notice: ::prost::alloc::string::String,
-    /// 群标签（英文逗号分隔）
-    #[prost(string, tag = "6")]
-    pub tags: ::prost::alloc::string::String,
     /// 加群权限控制
-    #[prost(enumeration = "JoinPermission", tag = "7")]
+    #[prost(enumeration = "JoinPermission", tag = "6")]
     pub join_permission: i32,
+    /// 群标签（英文逗号分隔）
+    #[prost(string, tag = "7")]
+    pub owner_id: ::prost::alloc::string::String,
+    /// 群组类型：0 普通群 / 1 超级群 / 2 系统群
+    #[prost(int32, tag = "8")]
+    pub group_type: i32,
     /// 是否允许通过搜索找到
-    #[prost(bool, tag = "8")]
+    #[prost(bool, tag = "9")]
     pub allow_search: bool,
-    /// 验证方式类型
-    #[prost(enumeration = "JoinQuestionType", tag = "9")]
-    pub join_question_mode: i32,
-    /// 加群题目（QUESTION 模式）
-    #[prost(string, repeated, tag = "10")]
-    pub join_questions: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    /// 正确答案（内部验证）
-    #[prost(string, tag = "11")]
-    pub join_question_answer: ::prost::alloc::string::String,
-    /// 邀请码
-    #[prost(string, tag = "12")]
-    pub join_code: ::prost::alloc::string::String,
-    /// 邀请码校验值
-    #[prost(string, tag = "13")]
-    pub join_code_answer: ::prost::alloc::string::String,
+    /// 是否启用
+    #[prost(bool, tag = "10")]
+    pub enable: bool,
+    /// 创建时间
+    #[prost(uint64, tag = "11")]
+    pub create_time: u64,
+    /// 更新时间
+    #[prost(uint64, tag = "12")]
+    pub update_time: u64,
 }
 /// *
 /// 群组成员详细信息

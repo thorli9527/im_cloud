@@ -75,14 +75,13 @@ message GroupInfo {
   string avatar = 3;                 // 群头像URL
   string description = 4;            // 群简介（支持富文本）
   string notice = 5;                 // 群公告（群成员可见）
-  string tags = 6;                   // 群标签（英文逗号分隔）
-  JoinPermission join_permission = 7;        // 加群权限控制
-  bool allow_search = 8;                     // 是否允许通过搜索找到
-  JoinQuestionType join_question_mode = 9;   // 验证方式类型
-  repeated string join_questions = 10;       // 加群题目（QUESTION 模式）
-  string join_question_answer = 11;          // 正确答案（内部验证）
-  string join_code = 12;                     // 邀请码
-  string join_code_answer = 13;              // 邀请码校验值
+  JoinPermission join_permission = 6;        // 加群权限控制
+  string owner_id = 7;                   // 群标签（英文逗号分隔）
+  int32 group_type = 8;                 // 群组类型：0 普通群 / 1 超级群 / 2 系统群
+  bool allow_search = 9;                     // 是否允许通过搜索找到
+  bool enable= 10;                        // 是否启用
+  uint64 create_time = 11;            // 创建时间
+  uint64 update_time = 12;            // 更新时间
 }
 
 // ==============================
