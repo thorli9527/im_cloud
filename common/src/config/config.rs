@@ -79,9 +79,9 @@ pub struct SysConfig {
     //全局日志级别
     pub log_leve: String,
     //默认文件路径
-    pub upload_path: String,
+    pub upload_path: Option<String>,
     //md5混淆 key
-    pub md5_key: String,
+    pub md5_key: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone,Default)]

@@ -40,7 +40,7 @@ impl ClientService {
         user.uid = user_id.to_string();
         let md5_key = &AppConfig::get().get_sys().md5_key;
         if !password.is_empty() {
-            user.password = build_md5_with_key(&password, &md5_key);
+            user.password = build_md5_with_key(&password, &md5_key.clone().unwrap());
         }
         if !username.is_empty() {
             user.username = username;

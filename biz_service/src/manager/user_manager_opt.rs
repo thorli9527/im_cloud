@@ -40,7 +40,7 @@ impl UserManagerOpt for UserManager {
         }
         let app_config = AppConfig::get();
 
-        let string = build_md5_with_key(password, &app_config.get_sys().md5_key);
+        let string = build_md5_with_key(password, &app_config.get_sys().md5_key.unwrap());
         let client = client_info.unwrap();
         if &client.password != &string {
             return Err(anyhow::anyhow!("user.or.password.error"));

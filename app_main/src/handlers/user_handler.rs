@@ -48,7 +48,7 @@ pub async fn user_add(state: web::Data<AppState>, dto: web::Json<UserAddDto>) ->
         Ok(_) => {
             let mut user = UserInfoEntity::default();
             user.user_name = dto.user_name.as_ref().unwrap().to_string();
-            user.password = build_md5_with_key(&state.config.get_sys().md5_key, &dto.password.as_ref().unwrap());
+            user.password = build_md5_with_key(&state.config.get_sys().md5_key.unwrap(), &dto.password.as_ref().unwrap());
             user.is_admin = dto.is_admin.clone();
             user.status = true;
             user.create_time = now();
@@ -83,7 +83,7 @@ pub struct UserPassChange {
 pub async fn user_change_pass(state: web::Data<AppState>, dto: web::Json<UserPassChange>) -> Result<impl Responder, AppError> {
     match &dto.validate() {
         Ok(_) => {
-            let password = build_md5_with_key(&state.config.get_sys().md5_key, &dto.password.as_ref().unwrap());
+            let password = build_md5_with_key(&state.config.get_sys().md5_key.unwrap(), &dto.password.as_ref().unwrap());
             UserService::get().dao.up_property(&dto.user_id, "status", password).await?;
             Ok(result())
         }

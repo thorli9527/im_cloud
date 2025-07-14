@@ -30,6 +30,7 @@ async fn main() -> std::io::Result<()> {
     );
     warn!("Starting server on {}", address_and_port);
     biz_service::init_service(init_mongo_db(&app_cfg).await);
+    manager::init_manager();
     // 2. 构建 ShardManager 实例
     let config = app_cfg.clone().shard.clone().unwrap();
     let mut job = ManagerJob::new(config.clone());

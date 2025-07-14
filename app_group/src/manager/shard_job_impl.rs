@@ -198,7 +198,6 @@ impl ManagerJobOpt for ManagerJob {
         let nodes = response.into_inner().nodes;
 
         let endpoints: Vec<String> = nodes.iter().map(|node| node.clone().node_addr).collect();
-
         // === Step 2: 初始化 gRPC 客户端连接 ===
         let mut group_rpc_clients = self
             .init_grpc_clients(endpoints)
@@ -256,32 +255,52 @@ impl ManagerJobOpt for ManagerJob {
             }
         }
 
+        // === Step 6: 并发同步数据到其它节点（含分片与限批） ===
         for (shard_index, (index, client)) in group_rpc_clients.iter_mut().enumerate() {
             let shard_index = shard_index as i32;
             if shard_index == current_index {
                 continue;
             }
 
-            // 发送群组
+            let mut tasks = vec![];
+
+            // 同步 group 分片数据（分批次，每批最多 5000）
             if let Some(groups) = shard_group_map.get(&shard_index) {
-                if !groups.is_empty() {
-                    let request = SyncListGroup {
-                        groups: groups.clone(),
-                        members: vec![],
+                for chunk in groups.chunks(5000) {
+                    let mut client = client.clone();
+                    let req = SyncListGroup {
+                        groups: chunk.to_vec(),
+                        members: vec![]
                     };
-                    client.sync_data(request).await?;
+                    tasks.push(tokio::spawn(async move {
+                        match client.sync_data(req).await {
+                            Ok(_) => log::info!("✅ 同步群组至 shard_{} 成功", shard_index),
+                            Err(e) => log::error!("❌ 同步群组至 shard_{} 失败: {:?}", shard_index, e),
+                        }
+                    }));
                 }
             }
 
-            // 发送成员
+            // 同步 member 分片数据（分批次，每批最多 5000）
             if let Some(members) = shard_member_map.get(&shard_index) {
-                if !members.is_empty() {
-                    let request = SyncListGroup {
+                for chunk in members.chunks(5000) {
+                    let mut client = client.clone();
+                    let req = SyncListGroup {
                         groups: vec![],
-                        members: members.clone(),
+                        members: chunk.to_vec(),
                     };
-                    client.sync_data(request).await?;
+                    tasks.push(tokio::spawn(async move {
+                        match client.sync_data(req).await {
+                            Ok(_) => log::info!("✅ 同步成员至 shard_{} 成功", shard_index),
+                            Err(e) => log::error!("❌ 同步成员至 shard_{} 失败: {:?}", shard_index, e),
+                        }
+                    }));
                 }
+            }
+
+            // 等待该目标分片的所有任务完成
+            for task in tasks {
+                let _ = task.await;
             }
         }
         Ok(())

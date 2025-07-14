@@ -65,6 +65,10 @@ impl ManagerJob {
         let mut clients = HashMap::new();
         let size = endpoints.len();
         for endpoint in endpoints {
+            //跳过自动节点
+            if endpoint == self.shard_address {
+                continue;
+            }
             let channel = Channel::from_shared(endpoint.clone())?.connect().await?;
 
             let client = ArbGroupServiceClient::new(channel);

@@ -128,7 +128,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         // 当前时间戳（毫秒）
         let now = now() as u64;
         // 构建新 entry
-        let entry = ShardNodeInfo {
+        let mut  entry = ShardNodeInfo {
             node_addr: node_addr.clone(),
             total: self.shard_nodes.len() as i32,
             version: 0,
@@ -138,6 +138,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
 
         // 插入
         self.shard_nodes.insert(node_addr.clone(), entry.clone());
+        entry.total = self.shard_nodes.len() as i32;
         //打印信息
         // log::warn!("新增分片节点: {:?}", &entry);
         return Ok(Response::new(entry));
