@@ -47,10 +47,13 @@ enum SyncDataType {
   GROUP_MEMBER_DEL = 4;
   GROUP_MEMBER_UPDATE = 5;
 }
-//同步数据请求
-message SyncDataReq{
-  SyncDataType type = 1;
-  repeated string items = 2; // 同步数据项
+message MemberRef {
+  string uid = 1;               // 用户ID
+  string group_id = 2;              // 群组ID
+}
+message SyncListGroup {
+  repeated string groups = 1;
+  repeated MemberRef members = 2;
 }
 
 // ============================

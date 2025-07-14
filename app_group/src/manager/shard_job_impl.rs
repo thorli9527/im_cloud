@@ -1,33 +1,39 @@
 use crate::manager::shard_job::{ManagerJob, ManagerJobOpt};
-use crate::manager::shard_manager::{MemData, ShardInfo, ShardManager, MEMBER_SHARD_SIZE};
-use crate::protocol::rpc_arb_models::{BaseRequest, ShardState, UpdateShardStateRequest};
+use crate::manager::shard_manager::{MEMBER_SHARD_SIZE, MemData, ShardInfo, ShardManager};
+use crate::protocol::common::GroupMemberEntity;
+use crate::protocol::rpc_arb_models::{
+    BaseRequest, MemberRef, ShardState, SyncListGroup, UpdateShardStateRequest,
+};
+use actix_web::web::get;
+use biz_service::manager::common::shard_index;
+use common::GroupId;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
 use dashmap::{DashMap, DashSet};
+use rdkafka::groups::GroupInfo;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread::current;
-use rdkafka::groups::GroupInfo;
 use tokio::sync::RwLock;
 use tonic::async_trait;
-use crate::protocol::common::GroupMemberEntity;
 
 pub struct RPCSyncData {
     // 群组信息
     group_info: GroupInfo,
-    // 群组数据 
-    member: Vec<GroupMemberEntity>
+    // 群组数据
+    member: Vec<GroupMemberEntity>,
 }
 #[async_trait]
 impl ManagerJobOpt for ManagerJob {
     async fn init(&mut self) -> anyhow::Result<()> {
-        self.client_init().await?;
+        self.init_arb_client().await?;
         Ok(())
     }
 
     async fn register_node(&mut self) -> anyhow::Result<()> {
         let shard_manager = ShardManager::get();
         let shard_address = self.shard_address.clone();
-        let client = self.client_init().await?;
+        let client = self.init_arb_client().await?;
 
         let response = client
             .register_node(BaseRequest {
@@ -56,7 +62,7 @@ impl ManagerJobOpt for ManagerJob {
     async fn change_preparing(&mut self) -> anyhow::Result<()> {
         let shard_manager = ShardManager::get();
         let shard_address = self.shard_address.clone();
-        let client = self.client_init().await?;
+        let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
             new_state: ShardState::Preparing as i32,
@@ -82,7 +88,7 @@ impl ManagerJobOpt for ManagerJob {
     async fn change_migrating(&mut self) -> anyhow::Result<()> {
         let shard_manager = ShardManager::get();
         let shard_address = self.shard_address.clone();
-        let client = self.client_init().await?;
+        let client = self.init_arb_client().await?;
 
         // 1. 设置分片状态为 Migrating
         let state_request = UpdateShardStateRequest {
@@ -135,9 +141,8 @@ impl ManagerJobOpt for ManagerJob {
                             .entry(shard_key.clone())
                             .or_insert_with(DashMap::new);
 
-                        let target_shards = target_group_map
-                            .entry(group_id.clone())
-                            .or_insert_with(|| {
+                        let target_shards =
+                            target_group_map.entry(group_id.clone()).or_insert_with(|| {
                                 (0..MEMBER_SHARD_SIZE)
                                     .map(|_| DashSet::new())
                                     .collect::<Vec<_>>()
@@ -177,45 +182,114 @@ impl ManagerJobOpt for ManagerJob {
             }
         }
 
-        log::info!("✅ 共迁移群组 {} 个至当前分片 shard_{}", migrated_group_count, current_index);
+        log::info!(
+            "✅ 共迁移群组 {} 个至当前分片 shard_{}",
+            migrated_group_count,
+            current_index
+        );
 
         Ok(())
     }
 
+    async fn sync_data(&mut self) -> anyhow::Result<()> {
+        // === Step 1: 获取仲裁服务客户端并列出所有节点 ===
+        let client = self.init_arb_client().await?;
+        let response = client.list_all_nodes(()).await?;
+        let nodes = response.into_inner().nodes;
 
+        let endpoints: Vec<String> = nodes.iter().map(|node| node.clone().node_addr).collect();
 
+        // === Step 2: 初始化 gRPC 客户端连接 ===
+        let mut group_rpc_clients = self
+            .init_grpc_clients(endpoints)
+            .await
+            .expect("init grpc clients error");
 
-    async fn sync_groups(&mut self) -> anyhow::Result<()> {
+        // === Step 3: 获取当前快照状态 ===
         let shard_manager = ShardManager::get();
-        let current = shard_manager.current.load();
-     
+        let current = shard_manager.snapshot.load();
+
         let guard = current.shard_info.read().await;
         let current_index = guard.index;
         let total_shards = guard.total;
-        for shard_entry in current.group_shard_map.iter() {
-            let (shard_key, group_map) = shard_entry.pair();
 
+        // === Step 4: 构造群组分布表 ===
+        let mut shard_group_map: HashMap<i32, Vec<GroupId>> = HashMap::new();
+        for shard_entry in current.group_shard_map.iter() {
+            let (_, group_map) = shard_entry.pair();
             for group_entry in group_map.iter() {
                 let group_id = group_entry.key();
-                let expected_index = hash_index(group_id, total_shards);
+                let shard_index = hash_index(group_id, total_shards);
+                if shard_index == current_index {
+                    continue;
+                }
+                shard_group_map
+                    .entry(shard_index)
+                    .or_insert_with(Vec::new)
+                    .push(group_id.clone());
+            }
+        }
 
-                if expected_index != current_index {
-                    log::warn!(
-                    "❗ 群组分片归属不一致: group_id={} 当前分片={} 应属分片={}",
-                    group_id,
-                    current_index,
-                    expected_index
-                );
+        // === Step 5: 构造成员分布表 ===
+        let mut shard_member_map: HashMap<i32, Vec<MemberRef>> = HashMap::new();
+        for shard_entry in current.group_member_map.iter() {
+            let (_, group_map) = shard_entry.pair();
+            for group_entry in group_map.iter() {
+                let (group_id, member_shards) = group_entry.pair();
+                let expected_index = hash_index(group_id, total_shards);
+                if expected_index == current_index {
+                    continue;
+                }
+
+                for shard in member_shards.iter() {
+                    for member in shard.iter() {
+                        let uid = member.key();
+                        shard_member_map
+                            .entry(expected_index)
+                            .or_insert_with(Vec::new)
+                            .push(MemberRef {
+                                group_id: group_id.clone(),
+                                uid: uid.clone(),
+                            });
+                    }
                 }
             }
         }
 
+        for (shard_index, (index, client)) in group_rpc_clients.iter_mut().enumerate() {
+            let shard_index = shard_index as i32;
+            if shard_index == current_index {
+                continue;
+            }
+
+            // 发送群组
+            if let Some(groups) = shard_group_map.get(&shard_index) {
+                if !groups.is_empty() {
+                    let request = SyncListGroup {
+                        groups: groups.clone(),
+                        members: vec![],
+                    };
+                    client.sync_data(request).await?;
+                }
+            }
+
+            // 发送成员
+            if let Some(members) = shard_member_map.get(&shard_index) {
+                if !members.is_empty() {
+                    let request = SyncListGroup {
+                        groups: vec![],
+                        members: members.clone(),
+                    };
+                    client.sync_data(request).await?;
+                }
+            }
+        }
         Ok(())
     }
 
     async fn change_failed(&mut self) -> anyhow::Result<()> {
         let shard_address = self.shard_address.clone();
-        let client = self.client_init().await?;
+        let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
             new_state: ShardState::Failed as i32,
@@ -226,18 +300,20 @@ impl ManagerJobOpt for ManagerJob {
 
     async fn change_ready(&mut self) -> anyhow::Result<()> {
         let shard_address = self.shard_address.clone();
-        let client = self.client_init().await?;
+        let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
             new_state: ShardState::Ready as i32,
         };
+        let shard_manager = ShardManager::get();
+        shard_manager.clean_snapshot();
         client.update_shard_state(state_request).await?;
         Ok(())
     }
 
     async fn change_normal(&mut self) -> anyhow::Result<()> {
         let shard_address = self.shard_address.clone();
-        let client = self.client_init().await?;
+        let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
             new_state: ShardState::Normal as i32,
@@ -248,7 +324,7 @@ impl ManagerJobOpt for ManagerJob {
 
     async fn change_preparing_offline(&mut self) -> anyhow::Result<()> {
         let shard_address = self.shard_address.clone();
-        let client = self.client_init().await?;
+        let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
             new_state: ShardState::PreparingOffline as i32,
@@ -259,7 +335,7 @@ impl ManagerJobOpt for ManagerJob {
 
     async fn change_offline(&mut self) -> anyhow::Result<()> {
         let shard_address = self.shard_address.clone();
-        let client = self.client_init().await?;
+        let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
             new_state: ShardState::Offline as i32,
@@ -270,7 +346,7 @@ impl ManagerJobOpt for ManagerJob {
 
     async fn heartbeat(&mut self) -> anyhow::Result<()> {
         let shard_address = self.server_host.clone();
-        let client = self.client_init().await?;
+        let client = self.init_arb_client().await?;
         client
             .heartbeat(BaseRequest {
                 node_addr: shard_address,

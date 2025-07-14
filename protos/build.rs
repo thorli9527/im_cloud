@@ -16,7 +16,7 @@ fn build_group_service() {
         .out_dir("../app_group/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
-                // "proto/common/common.proto",
+                "proto/common/common.proto",
                 "proto/group/group_models.proto",
                 "proto/group/group_service.proto",
             ],
@@ -30,7 +30,7 @@ fn build_group_service() {
 fn build_arb_group_service() {
     // 编译 app_arb proto 文件
     tonic_build::configure()
-        .build_server(false)
+        .build_server(true)
         .build_client(true)
         .type_attribute(".","#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]", )
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
@@ -48,7 +48,7 @@ fn build_arb_group_service() {
 
     tonic_build::configure()
         .build_server(true) // 如无需生成 gRPC Server 代码
-        .build_client(false) // 如无需生成 gRPC Client 代码
+        .build_client(true) // 如无需生成 gRPC Client 代码
         .type_attribute(".","#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]", )
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../app_group/src/protocol/") // 输出 Rust 模块到该目录
@@ -67,7 +67,7 @@ fn build_arb_service() {
     // 编译 app_arb proto 文件
     tonic_build::configure()
         .build_server(true)
-        .build_client(false)
+        .build_client(true)
         .type_attribute(".","#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]", )
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../app_arb/src/protocol/")
@@ -80,10 +80,8 @@ fn build_arb_service() {
             &["proto"] // ✅ 设置 proto 根为 "protos"，对应 import "arb/xxx.proto"
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
-
-
     tonic_build::configure()
-        .build_server(false) // 如无需生成 gRPC Server 代码
+        .build_server(true) // 如无需生成 gRPC Server 代码
         .build_client(true) // 如无需生成 gRPC Client 代码
         .type_attribute(".","#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]", )
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")

@@ -17,7 +17,7 @@ service ArbGroupService {
   rpc getShardNode(rpc_arb_models.BaseRequest) returns (rpc_arb_models.ShardNodeInfo);
   //更新版本号
   rpc updateVersion(UpdateVersionReq) returns (common.CommonResp);
-  // 用于 两两备份 同步数据 （群组、成员等）
-  rpc syncData(rpc_arb_models.SyncDataReq) returns (common.CommonResp);
+  //同步数据
+  rpc syncData(rpc_arb_models.SyncListGroup) returns (common.CommonResp);
 
 }

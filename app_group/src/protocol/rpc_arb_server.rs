@@ -262,3 +262,471 @@ pub mod arb_server_rpc_service_client {
         }
     }
 }
+/// Generated server implementations.
+pub mod arb_server_rpc_service_server {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
+    use tonic::codegen::*;
+    /// Generated trait containing gRPC methods that should be implemented for use with ArbServerRpcServiceServer.
+    #[async_trait]
+    pub trait ArbServerRpcService: std::marker::Send + std::marker::Sync + 'static {
+        /// === 分片管理 ===
+        async fn get_shard_node(
+            &self,
+            request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
+            tonic::Status,
+        >;
+        async fn update_shard_state(
+            &self,
+            request: tonic::Request<
+                super::super::rpc_arb_models::UpdateShardStateRequest,
+            >,
+        ) -> std::result::Result<
+            tonic::Response<super::super::common::CommonResp>,
+            tonic::Status,
+        >;
+        /// === 节点注册与生命周期 ===
+        async fn register_node(
+            &self,
+            request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
+            tonic::Status,
+        >;
+        async fn list_all_nodes(
+            &self,
+            request: tonic::Request<()>,
+        ) -> std::result::Result<
+            tonic::Response<super::super::rpc_arb_models::ListAllNodesResponse>,
+            tonic::Status,
+        >;
+        /// === 节点状态与控制 ===
+        async fn graceful_leave(
+            &self,
+            request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::super::common::CommonResp>,
+            tonic::Status,
+        >;
+        async fn heartbeat(
+            &self,
+            request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::super::common::CommonResp>,
+            tonic::Status,
+        >;
+    }
+    /// ============================
+    /// 仲裁服务接口定义
+    /// ============================
+    #[derive(Debug)]
+    pub struct ArbServerRpcServiceServer<T> {
+        inner: Arc<T>,
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
+        max_decoding_message_size: Option<usize>,
+        max_encoding_message_size: Option<usize>,
+    }
+    impl<T> ArbServerRpcServiceServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self::from_arc(Arc::new(inner))
+        }
+        pub fn from_arc(inner: Arc<T>) -> Self {
+            Self {
+                inner,
+                accept_compression_encodings: Default::default(),
+                send_compression_encodings: Default::default(),
+                max_decoding_message_size: None,
+                max_encoding_message_size: None,
+            }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> InterceptedService<Self, F>
+        where
+            F: tonic::service::Interceptor,
+        {
+            InterceptedService::new(Self::new(inner), interceptor)
+        }
+        /// Enable decompressing requests with the given encoding.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.accept_compression_encodings.enable(encoding);
+            self
+        }
+        /// Compress responses with the given encoding, if the client supports it.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.send_compression_encodings.enable(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.max_decoding_message_size = Some(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.max_encoding_message_size = Some(limit);
+            self
+        }
+    }
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for ArbServerRpcServiceServer<T>
+    where
+        T: ArbServerRpcService,
+        B: Body + std::marker::Send + 'static,
+        B::Error: Into<StdError> + std::marker::Send + 'static,
+    {
+        type Response = http::Response<tonic::body::Body>;
+        type Error = std::convert::Infallible;
+        type Future = BoxFuture<Self::Response, Self::Error>;
+        fn poll_ready(
+            &mut self,
+            _cx: &mut Context<'_>,
+        ) -> Poll<std::result::Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+        fn call(&mut self, req: http::Request<B>) -> Self::Future {
+            match req.uri().path() {
+                "/rpc_arb_server.ArbServerRpcService/GetShardNode" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetShardNodeSvc<T: ArbServerRpcService>(pub Arc<T>);
+                    impl<
+                        T: ArbServerRpcService,
+                    > tonic::server::UnaryService<
+                        super::super::rpc_arb_models::BaseRequest,
+                    > for GetShardNodeSvc<T> {
+                        type Response = super::super::rpc_arb_models::ShardNodeInfo;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::super::rpc_arb_models::BaseRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ArbServerRpcService>::get_shard_node(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetShardNodeSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rpc_arb_server.ArbServerRpcService/UpdateShardState" => {
+                    #[allow(non_camel_case_types)]
+                    struct UpdateShardStateSvc<T: ArbServerRpcService>(pub Arc<T>);
+                    impl<
+                        T: ArbServerRpcService,
+                    > tonic::server::UnaryService<
+                        super::super::rpc_arb_models::UpdateShardStateRequest,
+                    > for UpdateShardStateSvc<T> {
+                        type Response = super::super::common::CommonResp;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::super::rpc_arb_models::UpdateShardStateRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ArbServerRpcService>::update_shard_state(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = UpdateShardStateSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rpc_arb_server.ArbServerRpcService/RegisterNode" => {
+                    #[allow(non_camel_case_types)]
+                    struct RegisterNodeSvc<T: ArbServerRpcService>(pub Arc<T>);
+                    impl<
+                        T: ArbServerRpcService,
+                    > tonic::server::UnaryService<
+                        super::super::rpc_arb_models::BaseRequest,
+                    > for RegisterNodeSvc<T> {
+                        type Response = super::super::rpc_arb_models::ShardNodeInfo;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::super::rpc_arb_models::BaseRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ArbServerRpcService>::register_node(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = RegisterNodeSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rpc_arb_server.ArbServerRpcService/ListAllNodes" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListAllNodesSvc<T: ArbServerRpcService>(pub Arc<T>);
+                    impl<T: ArbServerRpcService> tonic::server::UnaryService<()>
+                    for ListAllNodesSvc<T> {
+                        type Response = super::super::rpc_arb_models::ListAllNodesResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(&mut self, request: tonic::Request<()>) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ArbServerRpcService>::list_all_nodes(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListAllNodesSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rpc_arb_server.ArbServerRpcService/GracefulLeave" => {
+                    #[allow(non_camel_case_types)]
+                    struct GracefulLeaveSvc<T: ArbServerRpcService>(pub Arc<T>);
+                    impl<
+                        T: ArbServerRpcService,
+                    > tonic::server::UnaryService<
+                        super::super::rpc_arb_models::BaseRequest,
+                    > for GracefulLeaveSvc<T> {
+                        type Response = super::super::common::CommonResp;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::super::rpc_arb_models::BaseRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ArbServerRpcService>::graceful_leave(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GracefulLeaveSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rpc_arb_server.ArbServerRpcService/heartbeat" => {
+                    #[allow(non_camel_case_types)]
+                    struct heartbeatSvc<T: ArbServerRpcService>(pub Arc<T>);
+                    impl<
+                        T: ArbServerRpcService,
+                    > tonic::server::UnaryService<
+                        super::super::rpc_arb_models::BaseRequest,
+                    > for heartbeatSvc<T> {
+                        type Response = super::super::common::CommonResp;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                super::super::rpc_arb_models::BaseRequest,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ArbServerRpcService>::heartbeat(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = heartbeatSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                _ => {
+                    Box::pin(async move {
+                        let mut response = http::Response::new(
+                            tonic::body::Body::default(),
+                        );
+                        let headers = response.headers_mut();
+                        headers
+                            .insert(
+                                tonic::Status::GRPC_STATUS,
+                                (tonic::Code::Unimplemented as i32).into(),
+                            );
+                        headers
+                            .insert(
+                                http::header::CONTENT_TYPE,
+                                tonic::metadata::GRPC_CONTENT_TYPE,
+                            );
+                        Ok(response)
+                    })
+                }
+            }
+        }
+    }
+    impl<T> Clone for ArbServerRpcServiceServer<T> {
+        fn clone(&self) -> Self {
+            let inner = self.inner.clone();
+            Self {
+                inner,
+                accept_compression_encodings: self.accept_compression_encodings,
+                send_compression_encodings: self.send_compression_encodings,
+                max_decoding_message_size: self.max_decoding_message_size,
+                max_encoding_message_size: self.max_encoding_message_size,
+            }
+        }
+    }
+    /// Generated gRPC service name
+    pub const SERVICE_NAME: &str = "rpc_arb_server.ArbServerRpcService";
+    impl<T> tonic::server::NamedService for ArbServerRpcServiceServer<T> {
+        const NAME: &'static str = SERVICE_NAME;
+    }
+}

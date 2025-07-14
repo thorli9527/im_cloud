@@ -3,12 +3,12 @@ use crate::manager::shard_manager::ShardManager;
 use crate::protocol::common::CommonResp;
 use crate::protocol::rpc_arb_group;
 use crate::protocol::rpc_arb_group::UpdateVersionReq;
-use crate::protocol::rpc_arb_models::{BaseRequest, ShardNodeInfo, SyncDataReq};
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
 use log::info;
 use std::thread::current;
 use tonic::{Request, Response, Status};
+use crate::protocol::rpc_arb_models::{BaseRequest, ShardNodeInfo, SyncListGroup};
 
 /// arb 组 客户端接口
 pub struct ArbGroupServiceImpl {
@@ -60,7 +60,22 @@ impl rpc_arb_group::arb_group_service_server::ArbGroupService for ArbGroupServic
         }))
     }
 
-    async fn sync_data(&self, request: Request<SyncDataReq>) -> Result<Response<CommonResp>, Status> {
-        todo!()
+    async fn sync_data(&self, request: Request<SyncListGroup>) -> Result<Response<CommonResp>, Status> {
+        let  shard_manager = ShardManager::get();
+        let list=request.into_inner();
+        if !list.groups.is_empty() {
+            for group in list.groups.iter() {
+                shard_manager.add_group(&group).await;;
+            }
+        }
+        if !list.members.is_empty() {
+            for member in list.members.iter() {
+                shard_manager.add_user_to_group(&member.group_id, &member.uid);
+            }
+        }
+        return Ok(Response::new(CommonResp {
+            success: true,
+            message: format!("Sync {} groups", list.groups.len()),
+        }));
     }
 }

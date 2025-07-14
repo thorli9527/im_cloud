@@ -23,6 +23,7 @@ pub struct GroupMembersPage {
     pub total: usize,
     pub members: Vec<UserId>,
 }
+
 #[derive(Debug, Default)]
 pub struct ShardInfo {
     pub version: u64,
@@ -34,19 +35,9 @@ pub struct ShardInfo {
 }
 #[derive(Debug)]
 pub struct MemData {
-    //群组分片缓存
-    // pub group_shard_map: DashMap<String, DashMap<GroupId, ()>>,
-    // //群组成员缓存
-    // // pub group_member_map: DashMap<String, DashMap<GroupId, DashSet<UserId>>>,
-    // pub group_member_map: DashMap<String, DashMap<GroupId, Vec<DashSet<UserId>>>>,
-    //
-    //
-    // //群组成员在线缓存
-    // pub group_online_member_map: DashMap<String, DashMap<GroupId, DashSet<UserId>>>,
     pub group_shard_map: DashMap<String, DashMap<GroupId, ()>>,
     pub group_member_map: DashMap<String, DashMap<GroupId, Vec<DashSet<UserId>>>>, // ⬅️ 每个 group 成员可分片
     pub group_online_member_map: DashMap<String, DashMap<GroupId, DashSet<UserId>>>,
-    //分片信息
     pub shard_info: RwLock<ShardInfo>,
 }
 
@@ -79,9 +70,6 @@ impl ShardManager {
                 group_online_member_map: Default::default(),
                 shard_info: RwLock::new(ShardInfo::default()),
             })),
-            // group_shard_map: Arc::new(DashMap::new()),
-            // group_member_map: Arc::new(DashMap::new()),
-            // group_online_member_map: Arc::new(DashMap::new()),
         }
     }
     pub fn get_node_addr(&self) -> &str {
@@ -401,6 +389,14 @@ impl ShardManager {
     pub fn clone_current_to_snapshot(&self) {
         let current = self.current.load();
         self.snapshot.store(current.clone());
+    }
+    pub fn clean_snapshot(&self) {
+        self.snapshot.store(Arc::new(MemData {
+            group_shard_map: Default::default(),
+            group_member_map: Default::default(),
+            group_online_member_map: Default::default(),
+            shard_info: RwLock::new(ShardInfo::default()),
+        }));
     }
 
     pub fn init() {

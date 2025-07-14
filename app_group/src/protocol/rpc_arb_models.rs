@@ -34,16 +34,25 @@ pub struct ShardNodeInfo {
     #[prost(int32, tag = "6")]
     pub total: i32,
 }
-/// 同步数据请求
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct SyncDataReq {
-    #[prost(enumeration = "SyncDataType", tag = "1")]
-    pub r#type: i32,
-    /// 同步数据项
-    #[prost(string, repeated, tag = "2")]
-    pub items: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+pub struct MemberRef {
+    /// 用户ID
+    #[prost(string, tag = "1")]
+    pub uid: ::prost::alloc::string::String,
+    /// 群组ID
+    #[prost(string, tag = "2")]
+    pub group_id: ::prost::alloc::string::String,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SyncListGroup {
+    #[prost(string, repeated, tag = "1")]
+    pub groups: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(message, repeated, tag = "2")]
+    pub members: ::prost::alloc::vec::Vec<MemberRef>,
 }
 /// ============================
 /// 请求结构：更新分片状态

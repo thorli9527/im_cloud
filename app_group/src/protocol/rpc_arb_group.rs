@@ -18,6 +18,178 @@ pub struct UpdateVersionReq {
     #[prost(int32, tag = "6")]
     pub total: i32,
 }
+/// Generated client implementations.
+pub mod arb_group_service_client {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
+    use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
+    #[derive(Debug, Clone)]
+    pub struct ArbGroupServiceClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl ArbGroupServiceClient<tonic::transport::Channel> {
+        /// Attempt to create a new client by connecting to a given endpoint.
+        pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        where
+            D: TryInto<tonic::transport::Endpoint>,
+            D::Error: Into<StdError>,
+        {
+            let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
+            Ok(Self::new(conn))
+        }
+    }
+    impl<T> ArbGroupServiceClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::Body>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + std::marker::Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + std::marker::Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_origin(inner: T, origin: Uri) -> Self {
+            let inner = tonic::client::Grpc::with_origin(inner, origin);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> ArbGroupServiceClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+            >>::Error: Into<StdError> + std::marker::Send + std::marker::Sync,
+        {
+            ArbGroupServiceClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with the given encoding.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.send_compressed(encoding);
+            self
+        }
+        /// Enable decompressing responses.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.accept_compressed(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_decoding_message_size(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_encoding_message_size(limit);
+            self
+        }
+        /// 获取指定节点所属分片信息
+        pub async fn get_shard_node(
+            &mut self,
+            request: impl tonic::IntoRequest<super::super::rpc_arb_models::BaseRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rpc_arb_group.ArbGroupService/getShardNode",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("rpc_arb_group.ArbGroupService", "getShardNode"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        /// 更新版本号
+        pub async fn update_version(
+            &mut self,
+            request: impl tonic::IntoRequest<super::UpdateVersionReq>,
+        ) -> std::result::Result<
+            tonic::Response<super::super::common::CommonResp>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rpc_arb_group.ArbGroupService/updateVersion",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("rpc_arb_group.ArbGroupService", "updateVersion"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        /// 同步数据
+        pub async fn sync_data(
+            &mut self,
+            request: impl tonic::IntoRequest<super::super::rpc_arb_models::SyncListGroup>,
+        ) -> std::result::Result<
+            tonic::Response<super::super::common::CommonResp>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rpc_arb_group.ArbGroupService/syncData",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("rpc_arb_group.ArbGroupService", "syncData"));
+            self.inner.unary(req, path, codec).await
+        }
+    }
+}
 /// Generated server implementations.
 pub mod arb_group_service_server {
     #![allow(
@@ -47,10 +219,10 @@ pub mod arb_group_service_server {
             tonic::Response<super::super::common::CommonResp>,
             tonic::Status,
         >;
-        /// 用于 两两备份 同步数据 （群组、成员等）
+        /// 同步数据
         async fn sync_data(
             &self,
-            request: tonic::Request<super::super::rpc_arb_models::SyncDataReq>,
+            request: tonic::Request<super::super::rpc_arb_models::SyncListGroup>,
         ) -> std::result::Result<
             tonic::Response<super::super::common::CommonResp>,
             tonic::Status,
@@ -233,7 +405,7 @@ pub mod arb_group_service_server {
                     impl<
                         T: ArbGroupService,
                     > tonic::server::UnaryService<
-                        super::super::rpc_arb_models::SyncDataReq,
+                        super::super::rpc_arb_models::SyncListGroup,
                     > for syncDataSvc<T> {
                         type Response = super::super::common::CommonResp;
                         type Future = BoxFuture<
@@ -243,7 +415,7 @@ pub mod arb_group_service_server {
                         fn call(
                             &mut self,
                             request: tonic::Request<
-                                super::super::rpc_arb_models::SyncDataReq,
+                                super::super::rpc_arb_models::SyncListGroup,
                             >,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
