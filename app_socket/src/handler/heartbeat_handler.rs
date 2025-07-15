@@ -1,7 +1,6 @@
 use crate::manager::socket_manager::get_socket_manager;
 use common::util::date_util::now;
 use std::sync::atomic::Ordering;
-use std::time::Duration;
 use tokio::time::{self, Duration, Interval};
 
 /// 启动全局统一心跳检测任务

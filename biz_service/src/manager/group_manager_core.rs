@@ -8,8 +8,7 @@ use deadpool_redis::{
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use rdkafka::groups::GroupInfo;
-use crate::common::GroupMemberEntity;
-use crate::protocol::common::{GroupEntity, GroupRoleType};
+use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
 
 /// 群组管理器
 #[derive(Debug, Clone)]

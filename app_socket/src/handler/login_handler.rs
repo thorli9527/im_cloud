@@ -1,6 +1,5 @@
 use anyhow::Result;
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
-use biz_service::protocol::auth::DeviceType;
 
 pub async fn handle_login(
     message_id: &u64,

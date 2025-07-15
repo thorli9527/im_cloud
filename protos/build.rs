@@ -2,8 +2,8 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
-    build_biz_service();
     build_arb_service();
+    build_biz_service();
     build_arb_group_service() ;
     build_group_service();
 }

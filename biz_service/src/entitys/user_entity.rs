@@ -6,8 +6,6 @@ use utoipa::ToSchema;
 pub struct UserInfoEntity {
     /// 用户唯一 ID（通常是 MongoDB 的 ObjectId，以字符串形式保存）
     pub id: String,
-    /// 所属代理/应用 ID，用于多租户或代理隔离
-    pub agent_id: String,
     /// 用户名（用于登录）
     pub user_name: String,
     /// 密码（应加密存储，例如 bcrypt 或 argon2）

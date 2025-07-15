@@ -1,7 +1,7 @@
 use crate::manager::socket_manager::SocketManager;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::time::{interval, Duration};
 
 pub async fn start_heartbeat_cleaner(manager: Arc<SocketManager>, timeout_secs: u64) {

@@ -1,4 +1,3 @@
-use std::net::TcpListener;
 use crate::kafka::kafka_consumer;
 use crate::kafka::kafka_consumer::start_consumer;
 use crate::manager::socket_manager::get_socket_manager;

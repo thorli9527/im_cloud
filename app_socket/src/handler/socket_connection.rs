@@ -1,4 +1,5 @@
 use std::net::TcpStream;
+use std::sync::Arc;
 use crate::handler::login_handler::handle_login;
 use crate::handler::logout_handler::handle_logout;
 use crate::heartbeat_handler::start_global_heartbeat_checker;
@@ -6,24 +7,15 @@ use crate::manager::socket_manager::{
     get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta,
 };
 use anyhow::{anyhow, Result};
-use biz_service::protocol::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeRepMsg, SendVerificationCodeReqMsg};
-use biz_service::protocol::common::ByteMessageType;
-use biz_service::protocol::entity::{GroupMsg, UserMsg};
-use biz_service::protocol::friend::FriendEventMsg;
-use biz_service::protocol::group::{GroupCreateMsg, GroupDismissMsg};
-use biz_service::protocol::status::HeartbeatMsg;
-use biz_service::protocol::system::SystemNotificationMsg;
-use biz_service::protocol::user::UserFlushMsg;
 use bytes::Buf;
 use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
 use futures::{SinkExt, StreamExt};
 use prost::Message;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{mpsc, Arc};
-use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
+use biz_service::common::ByteMessageType;
 
 /// 客户端连接处理入口
 pub async fn handle_connection(stream: TcpStream) -> Result<()> {

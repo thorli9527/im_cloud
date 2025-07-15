@@ -5,7 +5,7 @@ members = [
     "biz_service",
 #    "app_api",
     "app_job", "app_main", "macro",
-#    "app_socket",
+    "app_socket",
     "app_group", "app_arb", "protos"]
 [workspace.dependencies]
 actix-web = { version = "4.11.0" }
