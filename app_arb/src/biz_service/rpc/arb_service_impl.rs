@@ -1,25 +1,3 @@
-//! ArbiterService - 基于内存状态的仲裁服务实现
-//!
-//! 本模块实现一个基于内存状态的仲裁服务 ArbiterServiceImpl，使用 RwLock + Arc 进行多线程访问保护，
-//! 实现仲裁协议中的关键接口：节点注册、状态上报、分片信息查询、节点移除、版本更新等。
-//!
-//! 数据结构：
-//! - ShardNodeInfoEntry：表示某 vnode 的状态信息
-//! - NetworkNodeEntry：表示某物理节点的心跳和所拥有的 vnode 集合
-//! - ArbiterState：维护 shard 和 node 的完整状态
-//!
-//! 接口说明：
-//! - get_node：查询指定 vnode 的状态信息
-//! - update_owner：通过 CAS 更新 vnode 的 owner 地址
-//! - update_node_state：通过 CAS 更新 vnode 状态（如 Active、Leave）
-//! - register_node：注册物理节点，记录其拥有 vnode 列表
-//! - node_heartbeat：心跳接口，更新节点活跃时间与 vnode 状态
-//! - is_local_node：判断某 vnode 是否归属当前节点
-//! - list_nodes：列出所有节点及其 vnode 集合
-//! - graceful_leave：节点优雅退出（仅清理记录）
-//! - remove_node：强制剔除节点记录
-//! - get_node_info：返回某节点的仲裁视图（vnode 分布）
-//! - list_node：批量查询 vnode 状态
 
 use crate::protocol::common::CommonResp;
 use crate::protocol::rpc_arb_models::{BaseRequest, ListAllNodesResponse, ShardNodeInfo, ShardState, UpdateShardStateRequest};
@@ -36,14 +14,11 @@ use tracing::log;
 /// 分片节点状态信息
 /// 表示某个 vnode 当前的版本号、状态、归属节点及上次更新时间
 
-
-
 /// ArbiterService 实现体，持有共享状态引用
 #[derive(Clone, Default)]
 pub struct ArbiterServiceImpl {
     pub shard_nodes: Arc<DashMap<String, ShardNodeInfo>>,
 }
-
 
 #[tonic::async_trait]
 impl ArbServerRpcService for ArbiterServiceImpl {

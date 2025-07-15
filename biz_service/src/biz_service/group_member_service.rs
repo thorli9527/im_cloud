@@ -3,22 +3,26 @@ use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::as_ref_to_string;
 use common::util::date_util::now;
-use common::UserId;
+use common::{RedisPool, UserId};
 use mongodb::bson::doc;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use deadpool_redis::redis::AsyncCommands;
+use common::config::RedisConfig;
+use common::redis::redis_pool::get_redis_pool;
 use crate::protocol::common::{GroupMemberEntity, GroupRoleType};
 
 #[derive(Debug)]
 pub struct GroupMemberService {
     pub dao: BaseRepository<GroupMemberEntity>,
+   
 }
 
 impl GroupMemberService {
     pub fn new(db: Database) -> Self {
         let collection = db.collection("group_member");
-        Self { dao: BaseRepository::new(db, collection.clone()) }
+        Self { dao: BaseRepository::new(db, collection.clone())}
     }
     pub fn init(db: Database) {
         let instance = Self::new(db);
@@ -46,6 +50,29 @@ impl GroupMemberService {
         match result {
             Some(member) => Ok(member),
             None => Err(AppError::BizError("Owner not found".to_string())),
+        }
+    }
+    
+    pub async fn change_member_role(&self, group_id: impl AsRef<str>, member_id: impl AsRef<str>, new_role: &GroupRoleType) -> Result<(), AppError> {
+        let filter = doc! {"group_id":as_ref_to_string(group_id),"member_id":as_ref_to_string(member_id)};
+        let update = doc! {"$set":{"role":new_role.clone() as i32}};
+        self.dao.update(filter, update).await?;
+        Ok(())
+    }
+    
+    pub async fn find_by_group_id_and_uid(&self, group_id: &str, uid: &str) -> Result<GroupMemberEntity, AppError> {
+        // 未命中 → MongoDB 查询
+        let filter = doc! {
+            "group_id": group_id,
+            "user_id": uid
+        };
+        let result = self.dao.find_one(filter).await?;
+
+        match result {
+            Some(entity) => {
+                Ok(entity)
+            }
+            None => Err(AppError::BizError("group.member.notfound".to_string())),
         }
     }
 

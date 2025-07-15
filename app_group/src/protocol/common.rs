@@ -58,8 +58,8 @@ pub struct GroupEntity {
     /// 群标签（英文逗号分隔）
     #[prost(string, tag = "7")]
     pub owner_id: ::prost::alloc::string::String,
-    /// 群组类型：0 普通群 / 1 超级群 / 2 系统群
-    #[prost(int32, tag = "8")]
+    /// 群组类型
+    #[prost(enumeration = "GroupType", tag = "8")]
     pub group_type: i32,
     /// 是否允许通过搜索找到
     #[prost(bool, tag = "9")]
@@ -142,15 +142,13 @@ pub struct ClientEntity {
     /// 加好友策略
     #[prost(enumeration = "FriendPolicy", tag = "9")]
     pub allow_add_friend: i32,
+    #[prost(enumeration = "Gender", tag = "10")]
+    pub gender: i32,
+    #[prost(enumeration = "ClientUserType", tag = "11")]
+    pub user_type: i32,
     /// 用户基本信息字段（KV）
-    #[prost(map = "string, string", tag = "10")]
+    #[prost(map = "string, string", tag = "12")]
     pub profile_fields: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        ::prost::alloc::string::String,
-    >,
-    /// 扩展字段（KV，可为空）
-    #[prost(map = "string, string", tag = "11")]
-    pub extend_fields: ::std::collections::HashMap<
         ::prost::alloc::string::String,
         ::prost::alloc::string::String,
     >,
@@ -436,6 +434,44 @@ impl ChatTargetType {
         }
     }
 }
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum GroupType {
+    /// 未知群组类型：默认值，用于防御性处理或解析失败情况
+    UnknownGroupType = 0,
+    /// 普通群组：常规聊天群组
+    NormalGroup = 1,
+    /// 超级群组：支持更多成员和高级功能
+    SuperGroup = 2,
+    /// 系统群组：系统通知、公告等专用群组
+    SystemGroup = 3,
+}
+impl GroupType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::UnknownGroupType => "UNKNOWN_GROUP_TYPE",
+            Self::NormalGroup => "NORMAL_GROUP",
+            Self::SuperGroup => "SUPER_GROUP",
+            Self::SystemGroup => "SYSTEM_GROUP",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "UNKNOWN_GROUP_TYPE" => Some(Self::UnknownGroupType),
+            "NORMAL_GROUP" => Some(Self::NormalGroup),
+            "SUPER_GROUP" => Some(Self::SuperGroup),
+            "SYSTEM_GROUP" => Some(Self::SystemGroup),
+            _ => None,
+        }
+    }
+}
 /// ======================================
 /// 📦 字节消息类型枚举
 /// ======================================
@@ -611,6 +647,41 @@ impl FriendPolicy {
             "ALLOW_ANY" => Some(Self::AllowAny),
             "NEED_CONFIRM" => Some(Self::NeedConfirm),
             "DENY_ANY" => Some(Self::DenyAny),
+            _ => None,
+        }
+    }
+}
+/// 客户端用户类型
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ClientUserType {
+    /// 未知
+    UserTypeUnknown = 0,
+    /// 普通用户
+    UserTypeNormal = 1,
+    /// 机器人
+    UserTypeRobot = 2,
+}
+impl ClientUserType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::UserTypeUnknown => "USER_TYPE_UNKNOWN",
+            Self::UserTypeNormal => "USER_TYPE_NORMAL",
+            Self::UserTypeRobot => "USER_TYPE_ROBOT",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "USER_TYPE_UNKNOWN" => Some(Self::UserTypeUnknown),
+            "USER_TYPE_NORMAL" => Some(Self::UserTypeNormal),
+            "USER_TYPE_ROBOT" => Some(Self::UserTypeRobot),
             _ => None,
         }
     }

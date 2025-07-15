@@ -7,7 +7,7 @@
 pub struct CreateGroupReq {
     /// 可选自定义群ID
     #[prost(string, tag = "1")]
-    pub group_id: ::prost::alloc::string::String,
+    pub id: ::prost::alloc::string::String,
     /// 群名称
     #[prost(string, tag = "2")]
     pub name: ::prost::alloc::string::String,
@@ -51,7 +51,7 @@ pub struct DestroyGroupReq {
 pub struct UpdateGroupInfoReq {
     /// 群组ID
     #[prost(string, tag = "1")]
-    pub group_id: ::prost::alloc::string::String,
+    pub id: ::prost::alloc::string::String,
     /// 群名称
     #[prost(string, tag = "2")]
     pub name: ::prost::alloc::string::String,
@@ -73,21 +73,9 @@ pub struct UpdateGroupInfoReq {
     /// 是否可被搜索
     #[prost(bool, tag = "8")]
     pub allow_search: bool,
-    /// 验证方式
-    #[prost(enumeration = "super::common::JoinQuestionType", tag = "9")]
-    pub join_question_mode: i32,
-    /// 验证问题
-    #[prost(string, repeated, tag = "10")]
-    pub join_questions: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    /// 答案
-    #[prost(string, tag = "11")]
-    pub join_question_answer: ::prost::alloc::string::String,
-    /// 邀请码
-    #[prost(string, tag = "12")]
-    pub join_code: ::prost::alloc::string::String,
-    /// 验证码校验值
-    #[prost(string, tag = "13")]
-    pub join_code_answer: ::prost::alloc::string::String,
+    /// 群组类型
+    #[prost(enumeration = "super::common::GroupType", tag = "9")]
+    pub group_type: i32,
 }
 /// *
 /// 获取群组信息请求
@@ -117,9 +105,9 @@ pub struct GetGroupInfoRep {
     /// 简介
     #[prost(string, tag = "4")]
     pub description: ::prost::alloc::string::String,
-    /// 创建者UID
+    /// owner_id
     #[prost(string, tag = "5")]
-    pub creator_id: ::prost::alloc::string::String,
+    pub owner_id: ::prost::alloc::string::String,
     /// 群成员信息列表
     #[prost(message, repeated, tag = "6")]
     pub members: ::prost::alloc::vec::Vec<super::common::GroupMemberEntity>,

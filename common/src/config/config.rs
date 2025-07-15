@@ -2,6 +2,8 @@ use config::Config;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::sync::Arc;
+use crate::redis::redis_pool;
+
 #[derive(Debug, Deserialize, Clone,Default)]
 pub struct AppConfig {
     pub database: Option<DatabaseConfig>,
@@ -29,6 +31,10 @@ impl AppConfig {
     }
     pub fn init(file: &String) {
         let instance = Self::new(&file);
+        if instance.redis.is_some() {
+            let redis_config=instance.clone().redis.unwrap();
+            redis_pool::init_redis_pool(&redis_config.url).expect("Failed to init redis pool");
+        }
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
     

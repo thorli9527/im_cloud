@@ -1,13 +1,14 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use common::UserId;
+use common::{RedisPool, UserId};
 use deadpool_redis::{
-    redis::AsyncCommands, Pool as RedisPool,
+    redis::AsyncCommands,
     Pool,
 };
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use rdkafka::groups::GroupInfo;
+use crate::common::GroupMemberEntity;
 use crate::protocol::common::{GroupEntity, GroupRoleType};
 
 /// 群组管理器
@@ -70,7 +71,7 @@ pub trait GroupManagerOpt: Send + Sync {
     /// * `mute` - 是否禁言该用户（可选）。
     /// * `alian` - 用户在群内的备注名（昵称）。
     /// * `group_role` - 用户在群中的角色（成员、管理员等）。
-    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId, mute: Option<bool>, alian: &str, group_role: &GroupRoleType) -> Result<()>;
+    async fn add_user_to_group(&self, group_id: &str, user_id: &UserId,  alian: &str, group_role: &GroupRoleType) -> Result<()>;
 
     /// 将一个用户从群组中移除。
     ///
@@ -133,4 +134,10 @@ pub trait GroupManagerOpt: Send + Sync {
     /// * `page` - 页码，从 0 开始。
     /// * `page_size` - 每页成员数量。
     async fn get_group_members_by_page(&self, group_id: &str, page: usize, page_size: usize) -> Result<Vec<UserId>>;
+    
+    /// 修改群组成员角色。
+    async fn change_member_role(&self, group_id: &str, user_id: &UserId, role: &GroupRoleType)-> Result<()>;
+    
+    /// 获取群组成员信息。
+    async fn find_group_member_by_id(&self, group_id: &str, user_id: &UserId) -> Result<Option<GroupMemberEntity>>;
 }

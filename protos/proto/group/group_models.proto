@@ -9,7 +9,7 @@ import "common/common.proto"; // 引入全局定义
  * 创建群组请求
  */
 message CreateGroupReq {
-  string group_id = 1;               // 可选自定义群ID
+  string id = 1;               // 可选自定义群ID
   string name = 2;                   // 群名称
   string avatar = 3;                 // 群头像URL
   string description = 4;            // 群简介
@@ -31,7 +31,7 @@ message DestroyGroupReq {
  * 更新群组信息请求
  */
 message UpdateGroupInfoReq {
-  string group_id = 1;              // 群组ID
+  string id = 1;              // 群组ID
   string name = 2;                  // 群名称
   string avatar = 3;                // 群头像
   string description = 4;           // 群简介
@@ -39,12 +39,10 @@ message UpdateGroupInfoReq {
   string tags = 6;                  // 群标签（英文逗号分隔）
   common.JoinPermission join_permission = 7;        // 加群权限
   bool allow_search = 8;                     // 是否可被搜索
-  common.JoinQuestionType join_question_mode = 9;   // 验证方式
-  repeated string join_questions = 10;       // 验证问题
-  string join_question_answer = 11;          // 答案
-  string join_code = 12;                     // 邀请码
-  string join_code_answer = 13;              // 验证码校验值
+  common.GroupType group_type = 9;    // 群组类型
+
 }
+
 
 // ==============================
 // 群组信息获取
@@ -65,7 +63,7 @@ message GetGroupInfoRep {
   string name = 2;                  // 名称
   string avatar = 3;                // 头像URL
   string description = 4;           // 简介
-  string creator_id = 5;            // 创建者UID
+  string owner_id = 5;            //owner_id
   repeated common.GroupMemberEntity members = 6; // 群成员信息列表
 }
 

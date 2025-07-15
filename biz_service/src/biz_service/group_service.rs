@@ -31,7 +31,7 @@ impl GroupService {
     pub async fn find_by_group_id(&self, group_id: impl AsRef<str>) -> Result<GroupEntity, AppError> {
         let result = self
             .dao
-            .find_one(doc! {"group_id":as_ref_to_string(group_id)})
+            .find_by_id(group_id.as_ref())
             .await?;
         match result {
             Some(group) => Ok(group),
@@ -91,21 +91,15 @@ impl GroupService {
     }
 
     /// 解散群组
-    pub async fn dismiss_group(&self, group_id: &str, operator_id: &str) -> Result<(), AppError> {
-
+    pub async fn dismiss_group(&self, group_id: &str) -> Result<(), AppError> {
         // 2. 删除群成员信息
         let group_member_service = GroupMemberService::get();
         group_member_service
             .dao
             .delete_by_id(group_id)
             .await?;
-
         // 3. 删除群组本体
         self.dao.delete_by_id(group_id).await?;
-
-        // 4. 通知分布式群管理器清除缓存/状态
-        GroupManager::get().dismiss_group(group_id).await?;
-
         Ok(())
     }
     ///修改群名称

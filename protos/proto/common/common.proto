@@ -77,7 +77,7 @@ message GroupEntity {
   string notice = 5;                 // 群公告（群成员可见）
   JoinPermission join_permission = 6;        // 加群权限控制
   string owner_id = 7;                   // 群标签（英文逗号分隔）
-  int32 group_type = 8;                 // 群组类型：0 普通群 / 1 超级群 / 2 系统群
+  GroupType group_type = 8;                 // 群组类型
   bool allow_search = 9;                     // 是否允许通过搜索找到
   bool enable= 10;                        // 是否启用
   uint64 create_time = 11;            // 创建时间
@@ -159,6 +159,12 @@ enum ChatTargetType {
   SINGLE = 2;           // 单聊目标：消息发送到个人用户
 }
 
+enum GroupType {
+  UNKNOWN_GROUP_TYPE = 0; // 未知群组类型：默认值，用于防御性处理或解析失败情况
+  NORMAL_GROUP = 1;       // 普通群组：常规聊天群组
+  SUPER_GROUP = 2;        // 超级群组：支持更多成员和高级功能
+  SYSTEM_GROUP = 3;       // 系统群组：系统通知、公告等专用群组
+}
 // ======================================
 // 📦 字节消息类型枚举
 // ======================================
@@ -206,7 +212,15 @@ enum FriendPolicy {
   NEED_CONFIRM = 1; // 需要验证
   DENY_ANY = 2;     // 拒绝任何人添加
 }
-
+//客户端用户类型
+enum ClientUserType{
+  //未知
+  USER_TYPE_UNKNOWN = 0;
+  //普通用户
+  USER_TYPE_NORMAL = 1;
+  //机器人
+  USER_TYPE_ROBOT = 2;
+}
 // ==========================
 // 👤 客户端用户实体定义
 // ==========================
@@ -220,9 +234,10 @@ message ClientEntity {
   bool lock = 7;                         // 是否锁定（禁止登录）
   string avatar = 8;                     // 头像 URL（可选，空字符串表示无）
   FriendPolicy allow_add_friend = 9;    // 加好友策略
-  map<string, string> profile_fields = 10; // 用户基本信息字段（KV）
-  map<string, string> extend_fields = 11;  // 扩展字段（KV，可为空）
+  Gender gender = 10;
+  ClientUserType user_type = 11;
 
+  map<string, string> profile_fields = 12; // 用户基本信息字段（KV）
   uint64 create_time = 99;               // 创建时间（Unix 秒）
   uint64 update_time = 100;               // 最后更新时间（Unix 秒）
 }

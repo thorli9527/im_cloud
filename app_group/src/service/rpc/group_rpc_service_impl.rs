@@ -1,4 +1,5 @@
 use crate::manager::shard_manager::ShardManager;
+use crate::protocol::common::{CommonResp, GroupType};
 use crate::protocol::rpc_group_models::{
     AddMemberReq, ChangeMemberAliasReq, ChangeMemberRoleReq, CreateGroupReq, DestroyGroupReq,
     ExitGroupReq, GetGroupInfoRep, GetGroupInfoReq, GetMembersRep, GetMembersReq,
@@ -6,12 +7,16 @@ use crate::protocol::rpc_group_models::{
     RemoveMemberReq, TransferGroupOwnershipReq, UpdateGroupInfoReq,
 };
 use crate::protocol::rpc_group_server::group_rpc_service_server::GroupRpcService;
+use biz_service::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
 use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
-use biz_service::common::GroupEntity;
-use crate::protocol::common::CommonResp;
+use biz_service::biz_service::group_member_service::GroupMemberService;
+use biz_service::biz_service::group_service::GroupService;
+use common::repository_util::Repository;
+use common::UserId;
+use common::util::date_util::now;
 
 /// 群聊服务端rpc服务
 pub struct GroupRpcServiceImpl {
@@ -126,7 +131,6 @@ impl GroupRpcService for GroupRpcServiceImpl {
         Ok(Response::new(response))
     }
 
-
     async fn create_group(
         &self,
         request: Request<CreateGroupReq>,
@@ -135,13 +139,13 @@ impl GroupRpcService for GroupRpcServiceImpl {
 
         let req = request.into_inner();
         let group_info = GroupEntity {
-            id: "".to_string(),
-            name: "".to_string(),
-            avatar: "".to_string(),
-            description: "".to_string(),
+            id: req.id,
+            name: req.name,
+            avatar: req.avatar,
+            description: req.description,
             notice: "".to_string(),
-            owner_id: "".to_string(),
-            group_type: 0,
+            owner_id: req.owner_id,
+            group_type: GroupType::NormalGroup as i32,
             join_permission: Default::default(),
             allow_search: false,
             enable: true,
@@ -162,49 +166,133 @@ impl GroupRpcService for GroupRpcServiceImpl {
         &self,
         request: Request<DestroyGroupReq>,
     ) -> Result<Response<CommonResp>, Status> {
-        todo!()
+        let group_manager = GroupManager::get();
+        let req = request.into_inner();
+        let resp = group_manager.dismiss_group(&req.group_id).await;
+        match resp {
+            Ok(_) => Ok(Response::new(CommonResp {
+                success: true,
+                message: "Group destroyed successfully".to_string(),
+            })),
+            Err(e) => Err(Status::internal(format!("Failed to destroy group: {}", e))),
+        }
     }
 
     async fn get_group_info(
         &self,
         request: Request<GetGroupInfoReq>,
     ) -> Result<Response<GetGroupInfoRep>, Status> {
-        todo!()
+        let group_manager = GroupManager::get();
+        let req = request.into_inner();
+        let group_info = group_manager
+            .get_group_info(&req.group_id)
+            .await
+            .expect("Group not found");
+        if group_info.is_none() {
+            return Err(Status::not_found("Group not found"));
+        }
+        let group = group_info.unwrap();
+        Ok(Response::new(GetGroupInfoRep {
+            group_id: group.id,
+            name: group.name,
+            avatar: group.avatar,
+            description: group.description,
+            owner_id: group.owner_id,
+            members: vec![],
+        }))
     }
 
     async fn update_group_info(
         &self,
         request: Request<UpdateGroupInfoReq>,
     ) -> Result<Response<CommonResp>, Status> {
-        todo!()
+        let group_service = GroupService::get();
+
+        let req = request.into_inner();
+
+        let group_manager = GroupManager::get();
+
+        let group =group_service.find_by_group_id(&req.id).await.expect("Group not found");
+        let group_info = GroupEntity {
+            id: req.id,
+            name: req.name,
+            avatar: req.avatar,
+            description: req.description,
+            notice: req.notice,
+            owner_id: group.owner_id, // 这里可以根据需要设置
+            group_type: req.group_type,
+            join_permission: req.join_permission,
+            allow_search: req.allow_search,
+            enable: group.enable,
+            create_time: group.create_time, // 这里可以根据需要设置
+            update_time: now() as u64, // 这里可以根据需要设置
+        };
+        group_manager.update_group(&group_info).await.expect("Failed to update group info");
+        Ok(Response::new(CommonResp {
+            success: true,
+            message: "Group info updated successfully".to_string(),
+        }))
     }
 
     async fn add_member(
         &self,
         request: Request<AddMemberReq>,
     ) -> Result<Response<CommonResp>, Status> {
-        todo!()
+
+        let group_manager = GroupManager::get();
+        let req = request.into_inner();
+        //循环members 并添加
+        for member in req.members {
+            let option = GroupRoleType::from_i32(member.role);
+            group_manager.add_user_to_group(&req.group_id, &member.uid, &member.alias, &option.unwrap()).await.expect("add group member error");
+        }
+
+        Ok(Response::new(CommonResp {
+            success: true,
+            message: "所有成员添加成功".into(),
+        }))
     }
 
     async fn remove_member(
         &self,
         request: Request<RemoveMemberReq>,
     ) -> Result<Response<CommonResp>, Status> {
-        todo!()
+        let group_manager = GroupManager::get();
+        let req = request.into_inner();
+        for uid in req.uids {
+            group_manager.remove_user_from_group(&req.group_id, &uid).await.expect("remove group member error");
+        }
+        Ok(Response::new(CommonResp {
+            success: true,
+            message: "移除成功".into(),
+        }))
     }
 
     async fn exit_group(
         &self,
         request: Request<ExitGroupReq>,
     ) -> Result<Response<CommonResp>, Status> {
-        todo!()
+        let group_manager = GroupManager::get();
+        let req = request.into_inner();
+        group_manager.remove_user_from_group(&req.group_id, &req.uid).await.expect("remove group member error");
+        Ok(Response::new(CommonResp {
+            success: true,
+            message: "退出成功".into(),
+        }))
     }
 
     async fn change_member_role(
         &self,
         request: Request<ChangeMemberRoleReq>,
     ) -> Result<Response<CommonResp>, Status> {
-        todo!()
+        let group_manager = GroupManager::get();
+        let req = request.into_inner();
+        let group_role_type=GroupRoleType::from_i32(req.role).expect("role is invalid");
+        group_manager.change_member_role(&req.group_id, &req.uid, &group_role_type).await.expect("change group member role error");
+        Ok(Response::new(CommonResp {
+            success: true,
+            message: "".to_string(),
+        }))
     }
 
     async fn mute_member(
