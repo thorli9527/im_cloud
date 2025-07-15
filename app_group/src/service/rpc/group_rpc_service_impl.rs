@@ -1,5 +1,4 @@
 use crate::manager::shard_manager::ShardManager;
-use crate::protocol::common::{CommonResp, GroupType};
 use crate::protocol::rpc_group_models::{
     AddMemberReq, ChangeMemberAliasReq, ChangeMemberRoleReq, CreateGroupReq, DestroyGroupReq,
     ExitGroupReq, GetGroupInfoRep, GetGroupInfoReq, GetMembersRep, GetMembersReq,
@@ -7,13 +6,13 @@ use crate::protocol::rpc_group_models::{
     RemoveMemberReq, TransferGroupOwnershipReq, UpdateGroupInfoReq,
 };
 use crate::protocol::rpc_group_server::group_rpc_service_server::GroupRpcService;
-use biz_service::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
 use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
+use biz_service::protocol::common::{CommonResp, GroupEntity, GroupRoleType, GroupType};
 use common::repository_util::Repository;
 use common::UserId;
 use common::util::date_util::now;

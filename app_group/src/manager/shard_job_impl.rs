@@ -1,6 +1,5 @@
 use crate::manager::shard_job::{ManagerJob, ManagerJobOpt};
 use crate::manager::shard_manager::{MEMBER_SHARD_SIZE, MemData, ShardInfo, ShardManager};
-use crate::protocol::common::GroupMemberEntity;
 use crate::protocol::rpc_arb_models::{
     BaseRequest, MemberRef, ShardState, SyncListGroup, UpdateShardStateRequest,
 };
@@ -16,6 +15,7 @@ use std::sync::Arc;
 use std::thread::current;
 use tokio::sync::RwLock;
 use tonic::async_trait;
+use biz_service::protocol::common::GroupMemberEntity;
 
 pub struct RPCSyncData {
     // 群组信息
