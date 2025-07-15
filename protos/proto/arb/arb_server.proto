@@ -14,7 +14,7 @@ service ArbServerRpcService {
 
   // === 节点注册与生命周期 ===
   rpc RegisterNode(rpc_arb_models.BaseRequest) returns (rpc_arb_models.ShardNodeInfo);                          // 节点注册
-  rpc ListAllNodes(google.protobuf.Empty) returns (rpc_arb_models.ListAllNodesResponse);            // 查询所有节点视图
+  rpc ListAllNodes(rpc_arb_models.QueryNodeReq) returns (rpc_arb_models.ListAllNodesResponse);            // 查询所有节点视图
 
   // === 节点状态与控制 ===
   rpc GracefulLeave(rpc_arb_models.BaseRequest) returns (common.CommonResp);                         // 节点优雅退出

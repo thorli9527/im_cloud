@@ -16,14 +16,26 @@ enum ShardState {
   OFFLINE = 7;            // 节点主动下线，分片不可调度
   PREPARING_OFFLINE = 8;  // 节点准备下线，等待迁移完成
 }
-
-
+// 节点类型
+enum NodeType{
+  GROUP_NODE= 0;
+  SOCKET_NODE=1;
+}
 // =====================
 // 通用结构体定义
 // =====================
 // 基础请求，仅包含节点地址
 message BaseRequest {
-  string node_addr = 1; // 节点地址（如 192.168.1.10:9000）
+  string node_addr = 1;   // 节点地址（如 192.168.1.10:9000）
+  NodeType node_type = 2; // 节点类型
+}
+
+// =====================
+// 通用结构体定义
+// =====================
+// 基础请求，仅包含节点地址
+message QueryNodeReq {
+  NodeType node_type = 1; // 节点类型
 }
 
 
@@ -37,6 +49,7 @@ message ShardNodeInfo {
   ShardState state = 3;             // 当前状态
   uint64 last_update_time = 4;      // 最后更新时间戳（毫秒）
   int32 total= 6;                   // 分片总数
+  NodeType node_type = 7;           // 节点类型
 }
 //同步数据请求类型
 enum SyncDataType {

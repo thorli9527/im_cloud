@@ -1,6 +1,5 @@
-
 use crate::protocol::common::CommonResp;
-use crate::protocol::rpc_arb_models::{BaseRequest, ListAllNodesResponse, ShardNodeInfo, ShardState, UpdateShardStateRequest};
+use crate::protocol::rpc_arb_models::{BaseRequest, ListAllNodesResponse, NodeType, QueryNodeReq, ShardNodeInfo, ShardState, UpdateShardStateRequest};
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcService;
 use chrono::Utc;
 use common::util::date_util::now;
@@ -18,6 +17,7 @@ use tracing::log;
 #[derive(Clone, Default)]
 pub struct ArbiterServiceImpl {
     pub shard_nodes: Arc<DashMap<String, ShardNodeInfo>>,
+    pub socket_nodes: Arc<DashMap<String, ShardNodeInfo>>,
 }
 
 #[tonic::async_trait]
@@ -30,13 +30,8 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         let node_addr = req.into_inner().node_addr;
 
         match self.shard_nodes.get(&node_addr) {
-            Some(entry) => {
-                Ok(Response::new(entry.value().clone()))
-            }
-            None => Err(Status::not_found(format!(
-                "Node {} not found.",
-                node_addr
-            ))),
+            Some(entry) => Ok(Response::new(entry.value().clone())),
+            None => Err(Status::not_found(format!("Node {} not found.", node_addr))),
         }
     }
 
@@ -59,7 +54,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                         return Err(Status::invalid_argument(format!(
                             "Invalid ShardState: {}",
                             new_state
-                        )))
+                        )));
                     }
                 };
                 entry.version += 1;
@@ -74,10 +69,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                 }))
             }
 
-            None => Err(Status::not_found(format!(
-                "Node {} not found.",
-                node_addr
-            ))),
+            None => Err(Status::not_found(format!("Node {} not found.", node_addr))),
         }
     }
 
@@ -88,50 +80,98 @@ impl ArbServerRpcService for ArbiterServiceImpl {
     ) -> Result<Response<ShardNodeInfo>, Status> {
         let req = request.into_inner();
         let node_addr = req.node_addr;
+        if req.node_type == NodeType::GroupNode as i32 {
+            // 如果已存在，返回已有信息
+            if let Some(node_info) = self.shard_nodes.get(&node_addr) {
+                return Ok(Response::new(
+                    crate::protocol::rpc_arb_models::ShardNodeInfo {
+                        node_addr: node_info.node_addr.clone(),
+                        total: self.shard_nodes.len() as i32,
+                        version: node_info.version,
+                        state: node_info.state,
+                        node_type: req.node_type,
+                        last_update_time: node_info.last_update_time,
+                    },
+                ));
+            }
 
-        // 如果已存在，返回已有信息
-        if let Some(node_info) = self.shard_nodes.get(&node_addr) {
-            return Ok(Response::new(crate::protocol::rpc_arb_models::ShardNodeInfo {
-                node_addr: node_info.node_addr.clone(),
+            // 当前时间戳（毫秒）
+            let now = now() as u64;
+            // 构建新 entry
+            let mut entry = ShardNodeInfo {
+                node_addr: node_addr.clone(),
                 total: self.shard_nodes.len() as i32,
-                version: node_info.version,
-                state: node_info.state as i32,
-                last_update_time: node_info.last_update_time,
-            }));
+                version: 0,
+                node_type: req.node_type,
+                state: ShardState::Preparing as i32,
+                last_update_time: now,
+            };
+
+            // 插入
+            self.shard_nodes.insert(node_addr.clone(), entry.clone());
+            entry.total = self.shard_nodes.len() as i32;
+            //打印信息
+            // log::warn!("新增分片节点: {:?}", &entry);
+            return Ok(Response::new(entry));
+        } else {
+            // 如果已存在，返回已有信息
+            if let Some(node_info) = self.socket_nodes.get(&node_addr) {
+                return Ok(Response::new(
+                    crate::protocol::rpc_arb_models::ShardNodeInfo {
+                        node_addr: node_info.node_addr.clone(),
+                        total: self.socket_nodes.len() as i32,
+                        version: node_info.version,
+                        state: node_info.state,
+                        node_type: req.node_type,
+                        last_update_time: node_info.last_update_time,
+                    },
+                ));
+            }
+
+            // 当前时间戳（毫秒）
+            let now = now() as u64;
+            // 构建新 entry
+            let mut entry = ShardNodeInfo {
+                node_addr: node_addr.clone(),
+                total: self.shard_nodes.len() as i32,
+                version: 0,
+                node_type: req.node_type,
+                state: ShardState::Preparing as i32,
+                last_update_time: now,
+            };
+
+            // 插入
+            self.socket_nodes.insert(node_addr.clone(), entry.clone());
+            entry.total = self.socket_nodes.len() as i32;
+            //打印信息
+            // log::warn!("新增分片节点: {:?}", &entry);
+            return Ok(Response::new(entry));
         }
-
-        // 当前时间戳（毫秒）
-        let now = now() as u64;
-        // 构建新 entry
-        let mut  entry = ShardNodeInfo {
-            node_addr: node_addr.clone(),
-            total: self.shard_nodes.len() as i32,
-            version: 0,
-            state: ShardState::Preparing as i32,
-            last_update_time: now,
-        };
-
-        // 插入
-        self.shard_nodes.insert(node_addr.clone(), entry.clone());
-        entry.total = self.shard_nodes.len() as i32;
-        //打印信息
-        // log::warn!("新增分片节点: {:?}", &entry);
-        return Ok(Response::new(entry));
     }
     async fn list_all_nodes(
         &self,
-        _request: Request<()>,
+        request: Request<QueryNodeReq>,
     ) -> Result<Response<ListAllNodesResponse>, Status> {
+        let req = request.into_inner();
+        if req.node_type == NodeType::GroupNode as i32 {
+            let nodes: Vec<ShardNodeInfo> = self
+                .shard_nodes
+                .iter()
+                .map(|entry| entry.value().clone())
+                .collect();
+
+            log::info!("获取所有节点信息");
+            let response = ListAllNodesResponse { nodes };
+            return Ok(Response::new(response));
+        }
         let nodes: Vec<ShardNodeInfo> = self
-            .shard_nodes
+            .socket_nodes
             .iter()
             .map(|entry| entry.value().clone())
             .collect();
-
         log::info!("获取所有节点信息");
-
         let response = ListAllNodesResponse { nodes };
-        Ok(Response::new(response))
+        return Ok(Response::new(response));
     }
 
     async fn graceful_leave(
@@ -166,7 +206,10 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         }
     }
 
-    async fn heartbeat(&self, request: Request<BaseRequest>) -> Result<Response<CommonResp>, Status> {
+    async fn heartbeat(
+        &self,
+        request: Request<BaseRequest>,
+    ) -> Result<Response<CommonResp>, Status> {
         match self.shard_nodes.get_mut(&request.get_ref().node_addr) {
             Some(mut entry) => {
                 let value: &mut ShardNodeInfo = entry.value_mut();
@@ -186,4 +229,3 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         }
     }
 }
-

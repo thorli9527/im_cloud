@@ -1,4 +1,3 @@
-use std::net::TcpStream;
 use std::sync::Arc;
 use crate::handler::login_handler::handle_login;
 use crate::handler::logout_handler::handle_logout;
@@ -13,9 +12,17 @@ use common::util::date_util::now;
 use futures::{SinkExt, StreamExt};
 use prost::Message;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-use biz_service::common::ByteMessageType;
+use biz_service::protocol::common::ByteMessageType;
+use biz_service::protocol::msg::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeReqMsg};
+use biz_service::protocol::msg::entity::{GroupMsgEntity, UserMsgEntity};
+use biz_service::protocol::msg::friend::FriendEventMsg;
+use biz_service::protocol::msg::group::{GroupCreateMsg, GroupDismissMsg};
+use biz_service::protocol::msg::status::HeartbeatMsg;
+use biz_service::protocol::msg::system::SystemNotificationMsg;
+use biz_service::protocol::msg::user::UserFlushMsg;
 
 /// 客户端连接处理入口
 pub async fn handle_connection(stream: TcpStream) -> Result<()> {
@@ -30,7 +37,6 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
 
     let connection = ConnectionInfo {
         meta: ConnectionMeta {
-            agent_id: None,
             uid: None,
             device_type: None,
         },
@@ -87,12 +93,11 @@ async fn read_loop(
                 let login_req = LoginReqMsg::decode(bytes)?;
                 let i = login_req.device_type as i32;
                 let device_type = DeviceType::from_i32(i).unwrap();
-                let message_id = login_req.message_id.unwrap();
+                let message_id = login_req.message_id;
                 handle_login(
                     &message_id,
                     &login_req.username,
                     &login_req.password,
-                    &login_req.app_key,
                     &device_type,
                 )
                 .await?;
@@ -102,13 +107,12 @@ async fn read_loop(
                 let logout_req = LogoutReqMsg::decode(bytes)?;
                 log::info!("🛂 收到w登录请求");
                 if let Some(conn) = get_socket_manager().get(conn_key) {
-                    if let (Some(agent_id), Some(uid), Some(device_type)) = (
-                        &conn.meta.agent_id,
+                    if let ( Some(uid), Some(device_type)) = (
                         &conn.meta.uid,
                         &conn.meta.device_type,
                     ) {
-                        let message_id = logout_req.message_id.unwrap();
-                        handle_logout(&message_id, agent_id, uid,device_type).await?;
+                        let message_id = logout_req.message_id;
+                        handle_logout(&message_id,  uid,device_type).await?;
                     } else {
                         log::warn!("Logout 请求未携带完整连接信息: {:?}", conn_key);
                     }
@@ -137,11 +141,11 @@ async fn read_loop(
                 log::debug!("🔴 用户下线");
             }
             ByteMessageType::UserMsgType => {
-                let _ = UserMsg::decode(bytes)?;
+                let _ = UserMsgEntity::decode(bytes)?;
                 log::debug!("📨 普通消息处理");
             }
             ByteMessageType::GroupMsgType => {
-                let _ = GroupMsg::decode(bytes)?;
+                let _ = GroupMsgEntity::decode(bytes)?;
                 log::debug!("👥 群聊消息处理");
             }
             ByteMessageType::FriendEventMsgType => {

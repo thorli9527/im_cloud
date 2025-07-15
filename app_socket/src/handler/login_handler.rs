@@ -1,11 +1,11 @@
 use anyhow::Result;
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
+use biz_service::protocol::msg::auth::DeviceType;
 
 pub async fn handle_login(
     message_id: &u64,
     user_name: &str,
     password: &str,
-    app_key: &str,
     device_type: &DeviceType,
 ) -> Result<String> {
     let user_manager = UserManager::get();

@@ -1,11 +1,10 @@
 use anyhow::Result;
 use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
-use biz_service::protocol::auth::DeviceType;
+use biz_service::protocol::msg::auth::DeviceType;
 use common::UserId;
 
 pub async fn handle_logout(
     message_id: &u64,
-    agent_id: &str,
     uid: &UserId,
     device_type: &DeviceType,
 ) -> Result<()> {

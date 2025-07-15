@@ -11,7 +11,8 @@ use once_cell::sync::OnceCell;
 use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
-use biz_service::common::ByteMessageType;
+use biz_service::protocol::common::ByteMessageType;
+use biz_service::protocol::msg::auth::DeviceType;
 
 /// 客户端连接唯一标识
 #[derive(Clone, Eq, PartialEq, Hash,Debug)]
@@ -20,7 +21,6 @@ pub struct ConnectionId(pub String);
 /// 连接元信息（用户、设备、客户端等）
 #[derive(Clone)]
 pub struct ConnectionMeta {
-    pub agent_id:Option<String>,
     pub uid: Option<UserId>,
     pub device_type: Option<DeviceType>,
 }

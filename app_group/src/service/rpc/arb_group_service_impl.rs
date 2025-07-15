@@ -29,6 +29,7 @@ impl rpc_arb_group::arb_group_service_server::ArbGroupService for ArbGroupServic
             version: shard_info.version,
             state: shard_info.state as i32,
             last_update_time: shard_info.last_update_time,
+            node_type:req.node_type,
             total:shard_info.total,
         };
         Ok(Response::new(info))

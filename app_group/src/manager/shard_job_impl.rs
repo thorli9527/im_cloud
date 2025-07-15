@@ -1,8 +1,6 @@
 use crate::manager::shard_job::{ManagerJob, ManagerJobOpt};
 use crate::manager::shard_manager::{MEMBER_SHARD_SIZE, MemData, ShardInfo, ShardManager};
-use crate::protocol::rpc_arb_models::{
-    BaseRequest, MemberRef, ShardState, SyncListGroup, UpdateShardStateRequest,
-};
+use crate::protocol::rpc_arb_models::{BaseRequest, MemberRef, NodeType, QueryNodeReq, ShardState, SyncListGroup, UpdateShardStateRequest};
 use actix_web::web::get;
 use biz_service::manager::common::shard_index;
 use common::GroupId;
@@ -38,6 +36,7 @@ impl ManagerJobOpt for ManagerJob {
         let response = client
             .register_node(BaseRequest {
                 node_addr: shard_address,
+                node_type: NodeType::GroupNode as i32,
             })
             .await?;
 
@@ -192,9 +191,15 @@ impl ManagerJobOpt for ManagerJob {
     }
 
     async fn sync_data(&mut self) -> anyhow::Result<()> {
+        let shard_manager = ShardManager::get();
+        let shard_address = self.shard_address.clone();
         // === Step 1: 获取仲裁服务客户端并列出所有节点 ===
         let client = self.init_arb_client().await?;
-        let response = client.list_all_nodes(()).await?;
+      
+        let request=QueryNodeReq {
+            node_type: NodeType::GroupNode as i32,
+        };
+        let response = client.list_all_nodes(request).await?;
         let nodes = response.into_inner().nodes;
 
         let endpoints: Vec<String> = nodes.iter().map(|node| node.clone().node_addr).collect();
@@ -369,6 +374,7 @@ impl ManagerJobOpt for ManagerJob {
         client
             .heartbeat(BaseRequest {
                 node_addr: shard_address,
+                node_type: NodeType::GroupNode as i32,
             })
             .await?;
         Ok(())

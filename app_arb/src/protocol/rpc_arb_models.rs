@@ -10,6 +10,21 @@ pub struct BaseRequest {
     /// 节点地址（如 192.168.1.10:9000）
     #[prost(string, tag = "1")]
     pub node_addr: ::prost::alloc::string::String,
+    /// 节点类型
+    #[prost(enumeration = "NodeType", tag = "2")]
+    pub node_type: i32,
+}
+/// =====================
+/// 通用结构体定义
+/// =====================
+/// 基础请求，仅包含节点地址
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct QueryNodeReq {
+    /// 节点类型
+    #[prost(enumeration = "NodeType", tag = "1")]
+    pub node_type: i32,
 }
 /// ============================
 /// 分片节点元信息
@@ -33,6 +48,9 @@ pub struct ShardNodeInfo {
     /// 分片总数
     #[prost(int32, tag = "6")]
     pub total: i32,
+    /// 节点类型
+    #[prost(enumeration = "NodeType", tag = "7")]
+    pub node_type: i32,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -137,6 +155,35 @@ impl ShardState {
             "READY" => Some(Self::Ready),
             "OFFLINE" => Some(Self::Offline),
             "PREPARING_OFFLINE" => Some(Self::PreparingOffline),
+            _ => None,
+        }
+    }
+}
+/// 节点类型
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum NodeType {
+    GroupNode = 0,
+    SocketNode = 1,
+}
+impl NodeType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::GroupNode => "GROUP_NODE",
+            Self::SocketNode => "SOCKET_NODE",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "GROUP_NODE" => Some(Self::GroupNode),
+            "SOCKET_NODE" => Some(Self::SocketNode),
             _ => None,
         }
     }

@@ -6,6 +6,9 @@ url = "redis://127.0.0.1:6379/"
 [server]
 host = "127.0.0.1"
 port = 8080
+[shard]
+shard_address = "http://127.0.0.1:30000"
+server_host = "http://127.0.0.1:50051"
 [cache]
 node_id = 0
 node_total = 1

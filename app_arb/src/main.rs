@@ -15,6 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from_str(&app_cfg.get_shard().server_host.unwrap())?;
     let svc = ArbiterServiceImpl {
         shard_nodes: Arc::new(Default::default()),
+        socket_nodes: Arc::new(Default::default()),
     };
 
     tonic::transport::Server::builder()
