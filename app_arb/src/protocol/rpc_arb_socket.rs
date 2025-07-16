@@ -8,8 +8,8 @@ pub mod arb_socket_service_client {
         clippy::wildcard_imports,
         clippy::let_unit_value,
     )]
-    use tonic::codegen::http::Uri;
     use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
     #[derive(Debug, Clone)]
     pub struct ArbSocketServiceClient<T> {
         inner: tonic::client::Grpc<T>,

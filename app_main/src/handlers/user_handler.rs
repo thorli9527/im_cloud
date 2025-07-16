@@ -8,10 +8,13 @@ use common::util::common_utils::build_md5_with_key;
 use common::util::date_util::now;
 use mongodb::bson;
 use mongodb::bson::doc;
-use r#macro::QueryFilter;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
+use web::Json;
+use common::config::AppConfig;
+use mongodb::bson::Document;
+use mongo_macro::QueryFilter;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_list);
@@ -28,9 +31,9 @@ pub struct UserInfoQueryDto {
 }
 
 #[post("/user/list")]
-pub async fn user_list(dto: web::Json<UserInfoQueryDto>) -> Result<impl Responder, AppError> {
+pub async fn user_list(dto: Json<UserInfoQueryDto>) -> Result<impl Responder, AppError> {
     let page_result = UserService::get().dao.query_by_page(dto.to_query_doc(), dto.page_size, Option::Some(OrderType::Asc), "_id").await?;
-    Ok(web::Json(result_data(page_result)))
+    Ok(Json(result_data(page_result)))
 }
 
 #[derive(Serialize, Deserialize, Debug, Validate, ToSchema, Clone)]
@@ -43,12 +46,14 @@ pub struct UserAddDto {
     pub is_admin: bool,
 }
 #[post("/user/add")]
-pub async fn user_add(state: web::Data<AppState>, dto: web::Json<UserAddDto>) -> Result<impl Responder, AppError> {
+pub async fn user_add(dto: Json<UserAddDto>) -> Result<impl Responder, AppError> {
     match &dto.validate() {
         Ok(_) => {
             let mut user = UserInfoEntity::default();
+            let sys_config = AppConfig::get().clone().sys.clone().unwrap();
+            let md5_key = &sys_config.md5_key.unwrap();
             user.user_name = dto.user_name.as_ref().unwrap().to_string();
-            user.password = build_md5_with_key(&state.config.get_sys().md5_key.unwrap(), &dto.password.as_ref().unwrap());
+            user.password = build_md5_with_key(&md5_key, &dto.password.as_ref().unwrap());
             user.is_admin = dto.is_admin.clone();
             user.status = true;
             user.create_time = now();
@@ -80,7 +85,7 @@ pub struct UserPassChange {
 }
 
 #[post("/user/change/pass")]
-pub async fn user_change_pass(state: web::Data<AppState>, dto: web::Json<UserPassChange>) -> Result<impl Responder, AppError> {
+pub async fn user_change_pass(state: web::Data<AppState>, dto: Json<UserPassChange>) -> Result<impl Responder, AppError> {
     match &dto.validate() {
         Ok(_) => {
             let password = build_md5_with_key(&state.config.get_sys().md5_key.unwrap(), &dto.password.as_ref().unwrap());

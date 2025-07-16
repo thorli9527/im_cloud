@@ -6,7 +6,31 @@ fn main() {
     build_biz_service();
     build_arb_group_service();
     build_group_service();
+    build_app_main_client();
 }
+
+fn build_app_main_client() {
+    tonic_build::configure()
+        .build_server(false)
+        .build_client(true)
+        .type_attribute(
+            ".",
+            "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
+        )
+        .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
+        .out_dir("../app_main/src/protocol/")
+        .compile_protos(
+            &[
+                "proto/common/common.proto",
+                "proto/arb/arb_models.proto",
+                "proto/arb/arb_socket.proto",
+                "proto/arb/arb_group.proto",
+            ],
+            &["proto"], // ✅ 设置 proto 根为 "protos"，对应 import "arb/xxx.proto"
+        )
+        .expect("💥 Proto 编译失败，请检查路径和语法！");
+}
+
 fn build_group_service() {
     tonic_build::configure()
         .build_server(true) // 如无需生成 gRPC Server 代码
@@ -128,7 +152,7 @@ fn build_arb_service() {
             &["proto"], // ✅ 设置 proto 根为 "protos"，对应 import "arb/xxx.proto"
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
-    
+
     tonic_build::configure()
         .build_server(false) // 如无需生成 gRPC Server 代码
         .build_client(true) // 如无需生成 gRPC Client 代码

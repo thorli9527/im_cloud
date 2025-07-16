@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 common = { path = "../common" }
+mongo_macro = { path = "../mongo_macro" }
+bson = "2.15.0"
 actix-web.workspace = true
 serde.workspace = true
 mongodb.workspace = true

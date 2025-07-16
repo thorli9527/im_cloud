@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 common = { path = "../common" }
 biz_service = { path = "../biz_service" }
-macro = { path = "../macro" }
 actix-web.workspace = true
 actix-files.workspace = true
 validator.workspace = true

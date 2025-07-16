@@ -1,14 +1,14 @@
-use crate::result::result;
-use actix_web::{post, web, Responder};
+use crate::result::{result, result_data, result_error_msg};
+use actix_web::{Responder, post, web};
 use biz_service::biz_service::user_service::UserService;
 use common::errors::AppError;
-use common::repository_util::Repository;
 use mongodb::bson;
-use r#macro::QueryFilter;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::option::Option;
 use utoipa::ToSchema;
 use validator::Validate;
+use mongo_macro::{ QueryFilter};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(auth_login);
@@ -28,7 +28,6 @@ pub struct LoginInfoDto {
 #[serde(rename_all = "camelCase")]
 pub struct LoginSessionDto {
     pub token: String,
-    pub user_id: String,
     pub user_name: String,
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -47,77 +46,28 @@ pub struct LoginResult {
     )
 )]
 #[post("/auth/login")]
-pub async fn auth_login(// dto: web::Json<LoginInfoDto>,
-    // session: Session,
-    // state: web::Data<AppState>,
-) -> Result<impl Responder, AppError> {
-    let service = UserService::get();
-    let x = service.dao.query_all().await.unwrap();
-
-    if (1 == 1) {
-        return Ok(result());
+pub async fn auth_login(dto: web::Json<LoginInfoDto>) -> Result<impl Responder, AppError> {
+    if let Err(e) = dto.validate() {
+        return Ok(web::Json(result_error_msg(&e.to_string())));
     }
-    //
-    // match &dto.validate() {
-    //     Ok(_) => {
-    //         let user_info_opt = user_service.dao.find_one(dto.to_query_doc()).await?;
-    //         let user_info = match user_info_opt {
-    //             Some(u) => u,
-    //             None => {
-    //                 if 1==1{
-    //                     let mut new_user = UserInfo::default();
-    //                     new_user.user_name = dto.user_name.as_ref().unwrap().to_string();
-    //                     new_user.password = build_md5_with_key(&state.config.sys.md5_key, dto.password.as_ref().unwrap());
-    //                     new_user.is_admin=true;
-    //                     new_user.status=true;
-    //                     new_user.create_time=1;
-    //                     user_service.dao.insert(&new_user);
-    //                 }
-    //
-    //                 return Ok(web::Json(result_error_msg("user.or.password.error")));
-    //             }
-    //         };
-    //
-    //         let password = build_md5_with_key(&state.config.sys.md5_key, dto.password.as_ref().unwrap());
-    //         if password!=user_info.password{
-    //             return Ok(web::Json(result_error_msg("user.or.password.error")));
-    //         }
-    //         let string = &state.config.sys.md5_key;
-    //         let token = build_id();
-    //         let login_session = LoginSessionDto { user_id: user_info.id.to_string(), user_name: user_info.user_name.clone(), token };
-    //         session.insert("user_token", login_session.clone()).unwrap();
-    //         return Ok(web::Json(result_data(login_session.token.clone())));
-    //     }
-    //     Err(e) => {
-    //         return Ok(web::Json(result_error_msg(e.to_string().as_str())));
-    //     }
-    // }
-    Ok(result())
-}
-#[utoipa::path(
-    post,
-    path = "/auth/info",
-    request_body = LoginInfoDto,
-    responses(
-      (status = 200, description = "Hello response")
-    )
-)]
-pub async fn auth_info() -> Result<LoginSessionDto, AppError> {
-    // let result = session.get::<LoginSessionDto>("user_token")?;
-    // if (result.is_some()) {
-    //     return Ok(result.unwrap());
-    // }
-    return Err(AppError::Unauthorized("auth_error".to_string()));
+    let user_name = &dto.user_name.clone().unwrap();
+    let password = &dto.password.clone().unwrap();
+    let user_service = UserService::get();
+    let (token, user_info) = user_service.build_login(user_name, password).await?;
+    let value = json!({"token":token,"user_name":user_info.user_name});
+    Ok(web::Json(result_data(value)))
 }
 #[utoipa::path(
     post,
     path = "/auth/logout",
     request_body = LoginInfoDto,
     responses(
-      (status = 200, description = "Hello response")
+        (status = 200, description = "Hello response", body = String)
     )
 )]
 #[post("/auth/logout")]
-async fn auth_logout() -> Result<impl Responder, AppError> {
+async fn auth_logout(dto: web::Json<LoginSessionDto>) -> Result<impl Responder, AppError> {
+    let user_service = UserService::get();
+    user_service.login_out(&dto.user_name).await?;
     Ok(result())
 }

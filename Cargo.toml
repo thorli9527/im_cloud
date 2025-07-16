@@ -1,33 +1,35 @@
 [workspace]
 resolver = "2"
 members = [
-    "protos",
+    "mongo_macro",
+#    "protos",
     "common",
     "biz_service",
-#    "app_api",
-    "app_job", "app_main", "macro",
+    "app_job",
+    "app_main",
     "app_socket",
-    "app_group", "app_arb", ]
+    "app_group",
+    "app_arb",  ]
 [workspace.dependencies]
 actix-web = { version = "4.11.0" }
 actix-service = { version = "2.0.3" }
 actix-files = { version = "0.6.6" }
 chrono = { version = "0.4.41" }
-config = { version = "0.15.11" }
+config = { version = "0.15.13" }
 log = { version = "0.4.27" }
 mongodb = { version = "3.2.4", features = ["sync"] }
 mongo_indexed_derive = { version = "2.0.0" }
 serde_json = { version = "1.0.140" }
 futures = { version = "0.3.31" }
 serde = { version = "1.0.219", features = ["derive"] }
-twox-hash={version = "2.1.1"}
+twox-hash = { version = "2.1.1" }
 deadpool-redis = { version = "0.21.1", features = ["tokio-comp"] }
 tokio = { version = "1.13.1", features = ["full"] }
 async-trait = { version = "0.1.88" }
 quote = { version = "1.0.40" }
 syn = { version = "2.0.104" }
 anyhow = { version = "1.0.98" }
-futures-util={version = "0.3.31"}
+futures-util = { version = "0.3.31" }
 thiserror = { version = "2.0.12" }
 env_logger = { version = "0.11.8" }
 utoipa = { version = "5.3.1" }
@@ -39,21 +41,18 @@ validator = { version = "0.20.0", features = ["derive"] }
 lazy_static = { version = "1.5.0" }
 rustflake = { version = "0.1.1" }
 walkdir = { version = "2.5.0" }
-arc-swap={version = "1.7.1"}
+arc-swap = { version = "1.7.1" }
 tempfile = { version = "3.20.0" }
 md-5 = "0.10.6"
-tokio-util={version = "0.7.14"}
+tokio-util = { version = "0.7.14" }
 prost = { version = "0.13.1" }
 tonic = { version = "0.13.1" }
 once_cell = { version = "1.21.3" }
-time={version = "0.3.41"}
-bytes={version = "1.10.1"}
+time = { version = "0.3.41" }
+bytes = { version = "1.10.1" }
 moka = { version = "0.12.10", default-features = false, features = ["sync"] }
 sha1 = { version = "0.10.6" }
 dashmap = { version = "6.1.0" }
-prost-types={ version = "0.13.1"}
-tracing={ version = "0.1.41"}
+prost-types = { version = "0.13.1" }
+tracing = { version = "0.1.41" }
 rdkafka = { version = "0.38.0", features = ["tokio", "cmake-build"] }
-
-
-

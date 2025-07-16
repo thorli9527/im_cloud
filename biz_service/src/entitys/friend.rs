@@ -1,8 +1,11 @@
 use crate::protocol::msg::friend::FriendSourceType;
+use common::index_trait::MongoIndexModelProvider;
+use mongo_macro::MongoIndexModelProvider as MongoDeriveMongoIndex;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema, MongoDeriveMongoIndex)]
+#[mongo_index(fields["uid", "friend_id"], unique)]
 pub struct FriendEntity {
     pub id: String,                    // 用户 ID
     pub uid: String,                   // 用户 ID

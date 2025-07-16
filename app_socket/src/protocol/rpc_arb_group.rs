@@ -27,8 +27,8 @@ pub mod arb_group_service_client {
         clippy::wildcard_imports,
         clippy::let_unit_value,
     )]
-    use tonic::codegen::http::Uri;
     use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
     #[derive(Debug, Clone)]
     pub struct ArbGroupServiceClient<T> {
         inner: tonic::client::Grpc<T>,

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 common = { path = "../common" }
 biz_service = { path = "../biz_service" }
-macro = { path = "../macro" }
+mongo_macro = { path = "../mongo_macro" }
 actix-web.workspace = true
 actix-files.workspace = true
 actix-service.workspace = true
@@ -24,3 +24,6 @@ anyhow.workspace = true
 
 once_cell.workspace = true
 chrono.workspace = true
+tokio.workspace = true
+tonic.workspace = true
+prost.workspace = true

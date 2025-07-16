@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use futures::stream::TryStreamExt;
 use mongodb::bson::oid::ObjectId;
 use mongodb::bson::{doc, Bson};
-use mongodb::options::FindOptions;
-use mongodb::{bson, bson::Document, Collection, Database};
+use mongodb::options::{FindOptions, IndexOptions};
+use mongodb::{bson, bson::Document, Collection, Database, IndexModel};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::cmp::PartialEq;
 use std::marker::PhantomData;
@@ -46,12 +46,14 @@ pub struct BaseRepository<T: Send + Sync> {
     pub collection: Collection<Document>, // 线程安全的数据库连接池
     pub db: Database,
     _marker: PhantomData<T>,
+    
 }
 
 impl<T: Send + Sync> BaseRepository<T> {
     pub fn new(db: Database, collection: Collection<Document>) -> Self {
         Self { collection, db, _marker: Default::default() }
     }
+    
 }
 
 #[async_trait]
