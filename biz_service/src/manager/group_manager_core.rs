@@ -8,21 +8,23 @@ use deadpool_redis::{
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use rdkafka::groups::GroupInfo;
+use common::redis::redis_pool::RedisPoolTools;
 use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
 
 /// 群组管理器
 #[derive(Debug, Clone)]
 pub struct GroupManager {
-    pub pool: RedisPool,
+    pub pool: Arc<RedisPool>,
 }
 
 impl GroupManager {
-    fn new(pool: RedisPool, use_local_cache: bool) -> Self {
+    fn new(pool: Arc<RedisPool>) -> Self {
         Self { pool }
     }
     
-    pub fn init(pool: Pool, use_local_cache: bool) {
-        let instance = Self::new(pool, use_local_cache);
+    pub fn init() {
+        let pool = RedisPoolTools::get().clone();
+        let instance = Self::new(pool);
         INSTANCE.set(Arc::new(instance)).expect("AgentService already initialized");
     }
 

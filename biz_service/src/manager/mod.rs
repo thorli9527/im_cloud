@@ -8,7 +8,7 @@ pub mod group_manager_impl;
 pub mod user_manager_core;
 pub mod user_manager_opt;
 
-pub fn init(pool: Pool, use_local_cache: bool) {
-    UserManager::new(pool.clone());
-    GroupManager::init(pool.clone(), use_local_cache);
+pub fn init() {
+    UserManager::new();
+    GroupManager::init();
 }

@@ -10,7 +10,6 @@ use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use deadpool_redis::redis::AsyncCommands;
 use common::config::RedisConfig;
-use common::redis::redis_pool::get_redis_pool;
 use crate::protocol::common::{GroupMemberEntity, GroupRoleType};
 
 #[derive(Debug)]

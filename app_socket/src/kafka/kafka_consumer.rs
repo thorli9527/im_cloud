@@ -52,15 +52,15 @@ pub fn get_consumer() -> Option<Arc<StreamConsumer>> {
 }
 
 /// 启动 Kafka 消费循环
-pub async fn start_consumer(kafka_cfg: KafkaConfig, socket_manager: Arc<SocketManager>) -> Result<()> {
+pub async fn start_consumer(kafka_cfg: &KafkaConfig, socket_manager: Arc<SocketManager>) -> Result<()> {
     let consumer: StreamConsumer = ClientConfig::new()
         .set("group.id", "im-dispatch-group")
-        .set("bootstrap.servers", &kafka_cfg.brokers)
+        .set("bootstrap.servers", kafka_cfg.brokers.clone())
         .set("enable.auto.commit", "false") // 手动提交 offset
         .create()?;
 
-    consumer.subscribe(&[&kafka_cfg.topic_single, &kafka_cfg.topic_group])?;
-    log::info!("✅ Kafka 消费者已启动，订阅主题：{}, {}", kafka_cfg.topic_single, kafka_cfg.topic_group);
+    consumer.subscribe(&[&kafka_cfg.topic_single.clone(), &kafka_cfg.topic_group.clone()])?;
+    log::info!("✅ Kafka 消费者已启动，订阅主题：{}, {}", &kafka_cfg.topic_single, &kafka_cfg.topic_group);
 
     let arc_consumer = Arc::new(consumer);
     if CONSUMER.set(arc_consumer.clone()).is_err() {

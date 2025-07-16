@@ -6,19 +6,23 @@ use once_cell::sync::OnceCell;
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::redis::redis_pool::{RedisPoolTools};
+use crate::RedisPool;
+
 /// RedisTemplate 是 Redis 操作的统一入口点，封装了连接池并提供 Value/List/Hash 操作接口
 #[derive(Clone, Debug)]
 pub struct RedisTemplate {
-    pub pool: Pool,
+    pub pool: Arc<RedisPool>,
 }
 
 impl RedisTemplate {
-    fn new(pool: Pool) -> Self {
+    fn new() -> Self {
+        let pool =  RedisPoolTools::get().clone();
         RedisTemplate { pool }
     }
 
-    pub fn init(pool: Pool) {
-        let instance = Self::new(pool);
+    pub fn init() {
+        let instance = Self::new();
         INSTANCE.set(Arc::new(instance)).expect("AgentService already initialized");
     }
 

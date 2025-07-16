@@ -1,7 +1,4 @@
 use std::sync::Arc;
-use crate::handler::login_handler::handle_login;
-use crate::handler::logout_handler::handle_logout;
-use crate::heartbeat_handler::start_global_heartbeat_checker;
 use crate::manager::socket_manager::{
     get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta,
 };
@@ -23,6 +20,9 @@ use biz_service::protocol::msg::group::{GroupCreateMsg, GroupDismissMsg};
 use biz_service::protocol::msg::status::HeartbeatMsg;
 use biz_service::protocol::msg::system::SystemNotificationMsg;
 use biz_service::protocol::msg::user::UserFlushMsg;
+use crate::socket::heartbeat_handler::start_global_heartbeat_checker;
+use crate::socket::login_handler::handle_login;
+use crate::socket::logout_handler::handle_logout;
 
 /// 客户端连接处理入口
 pub async fn handle_connection(stream: TcpStream) -> Result<()> {

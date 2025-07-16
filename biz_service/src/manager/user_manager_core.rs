@@ -15,7 +15,7 @@ use crate::protocol::common::ClientEntity;
 /// `UserManager` 管理用户在线状态、群组缓存、初始化状态及 Redis 通信。
 pub struct UserManager {
     /// Redis 连接池，用于访问用户状态、群组数据、事件队列等。
-    pub pool: RedisPool,
+    pub pool: Arc<common::RedisPool>,
 
     /// 标记是否已初始化，避免重复初始化。
     /// 使用 Arc + AtomicBool 保证跨线程安全修改。

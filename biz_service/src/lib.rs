@@ -7,6 +7,6 @@ pub mod biz_service;
 pub mod entitys;
 pub mod manager;
 pub mod protocol;
-pub fn init_service(db: Database) {
-    biz_service::init_service(db);
+pub fn init_service() {
+    biz_service::init_service();
 }

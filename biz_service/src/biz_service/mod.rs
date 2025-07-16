@@ -11,8 +11,10 @@ pub mod user_service;
 
 use crate::biz_service::friend_event_service::FriendEventService;
 use mongodb::Database;
+use common::db::Db;
 
-pub fn init_service(db: Database) {
+pub fn init_service() {
+    let db = Db::get();
     client_service::ClientService::init(db.clone());
     country_service::CountryService::init(db.clone());
     group_member_service::GroupMemberService::init(db.clone());

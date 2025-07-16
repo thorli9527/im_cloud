@@ -204,11 +204,7 @@ impl ManagerJobOpt for ManagerJob {
 
         let endpoints: Vec<String> = nodes.iter().map(|node| node.clone().node_addr).collect();
         // === Step 2: 初始化 gRPC 客户端连接 ===
-        let mut group_rpc_clients = self
-            .init_grpc_clients(endpoints)
-            .await
-            .expect("init grpc clients error");
-
+        let mut group_rpc_clients = self.init_grpc_clients(endpoints).await.expect("init grpc clients error");
         // === Step 3: 获取当前快照状态 ===
         let shard_manager = ShardManager::get();
         let current = shard_manager.snapshot.load();

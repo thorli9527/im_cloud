@@ -1,28 +1,42 @@
 // src/common/redis_pool.rs
-use deadpool_redis::{Config, Runtime};
-use once_cell::sync::OnceCell;
+
 use std::sync::Arc;
+use once_cell::sync::OnceCell;
 use anyhow::{Result, anyhow};
-use deadpool_redis::redis::AsyncCommands;
+use deadpool_redis::{Config, Runtime};
 use crate::RedisPool;
 
-static REDIS_POOL: OnceCell<Arc<RedisPool>> = OnceCell::new();
-
-/// 初始化 Redis 连接池（应在程序启动时调用一次）
-pub fn init_redis_pool(redis_url: &str) -> Result<()> {
-    let cfg = Config::from_url(redis_url);
-    let pool = cfg.create_pool(Some(Runtime::Tokio1))?;
-    REDIS_POOL.set(Arc::new(pool)).map_err(|_| anyhow!("Redis pool already initialized"))
+/// RedisPool 连接池封装，支持全局共享。
+#[derive(Clone)]
+pub struct RedisPoolTools {
+    pub pool: Arc<RedisPool>,
 }
 
-/// 获取 Redis 连接池句柄（必须先调用 `init_redis_pool`）
-pub fn get_redis_pool() -> Arc<RedisPool> {
-    REDIS_POOL.get().expect("Redis pool is not initialized").clone()
+impl RedisPoolTools {
+    /// 创建 RedisPool 实例
+    fn new(pool: Arc<RedisPool>) -> Self {
+        Self { pool }
+    }
+
+    /// 初始化 RedisPool，全局只能初始化一次。
+    ///
+    /// # Panics
+    /// 如果多次调用，则返回错误。
+    pub fn init(redis_url: &str) -> Result<()> {
+        let cfg = Config::from_url(redis_url);
+        let raw_pool = cfg.create_pool(Some(Runtime::Tokio1))?;
+        let instance = Self::new(Arc::new(raw_pool));
+        INSTANCE.set(instance).map_err(|_| anyhow!("Redis pool already initialized"))
+    }
+
+    /// 获取全局 RedisPool 实例引用
+    ///
+    /// # Panics
+    /// 如果未初始化，则 panic。
+    pub fn get() -> &'static Arc<RedisPool> {
+        &INSTANCE.get().expect("Redis pool is not initialized").pool
+    }
 }
 
-/// 获取 Redis 异步连接（推荐使用此方法而非手动获取）
-pub async fn get_redis_conn() -> Result<deadpool_redis::Connection> {
-    let pool = get_redis_pool();
-    let conn = pool.get().await?;
-    Ok(conn)
-}
+// 全局 RedisPool 单例（私有）
+static INSTANCE: OnceCell<RedisPoolTools> = OnceCell::new();

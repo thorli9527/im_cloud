@@ -6,3 +6,4 @@ mod typing_notice_handler;
 pub mod heartbeat_handler;
 mod logout_handler;
 pub mod message;
+pub mod socket_server;

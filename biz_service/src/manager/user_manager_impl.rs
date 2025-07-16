@@ -3,6 +3,8 @@ use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use twox_hash::XxHash64;
+use common::config::RedisConfig;
+use common::redis::redis_pool::RedisPoolTools;
 use crate::protocol::common::{GroupEntity, GroupMemberEntity};
 
 pub const MAX_CLEAN_COUNT: usize = 100;
@@ -21,9 +23,9 @@ impl UserManager {
     /// - `shard_count`: 本地在线缓存分片数量
     /// - `use_local_cache`: 是否启用本地缓存
     /// - `group_map`: 预初始化的分片群组缓存结构
-    pub fn new(pool: RedisPool) -> Self {
+    pub fn new() -> Self {
         let manager = Self {
-            pool,
+            pool:RedisPoolTools::get().clone(),
             is_initialized: Arc::new(AtomicBool::new(false)),
             init_notify: Arc::new(Notify::new()),
             friend_map: Arc::new(DashMap::<String, DashMap<UserId, ()>>::new()),
