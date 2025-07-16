@@ -1,6 +1,5 @@
-use crate::handlers::common_handler::*;
-use crate::handlers::user_handler::*;
 use crate::handlers::auth_handler::*;
+use crate::handlers::common_handler::*;
 use crate::result::ApiResponse;
 use actix_web::{get, web, HttpResponse, Responder};
 use utoipa::OpenApi;
@@ -9,7 +8,7 @@ use utoipa::OpenApi;
 #[openapi(
     paths(
         status,
-        auth_login,
+        user_login,
         auth_logout
     ),
     components(schemas(

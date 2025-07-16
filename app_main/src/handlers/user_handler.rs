@@ -1,22 +1,21 @@
-use crate::result::{result, result_data, result_error, result_error_msg, ApiResponse, AppState};
+use crate::result::{result, result_data, result_error, AppState};
 use actix_web::{post, web, Responder};
 use anyhow::anyhow;
-use chrono::Utc;
 use biz_service::biz_service::user_service::UserService;
 use biz_service::entitys::user_entity::UserInfoEntity;
+use common::config::AppConfig;
 use common::errors::AppError;
+use common::models::property_value::PropertyValue;
 use common::repository_util::{OrderType, Repository};
 use common::util::common_utils::{build_md5_with_key, build_uuid};
 use common::util::date_util::now;
+use mongo_macro::QueryFilter;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use utoipa::ToSchema;
 use validator::Validate;
 use web::Json;
-use common::config::AppConfig;
-use serde_json::json;
-use common::models::property_value::{PropertyValue, TypeValue};
-use mongo_macro::QueryFilter;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_list);

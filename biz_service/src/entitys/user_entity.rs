@@ -1,21 +1,25 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use common::index_trait::MongoIndexModelProvider;
+use mongo_macro::MongoIndexModelProvider as MongoDeriveMongoIndex;
 
 /// 用户信息结构体，用于存储系统用户账号、权限和身份信息
-#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
+/// 用户信息结构
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema, MongoDeriveMongoIndex)]
+#[mongo_index(fields["user_name"], unique)]
 pub struct UserInfoEntity {
-    /// 用户唯一 ID（通常是 MongoDB 的 ObjectId，以字符串形式保存）
+    /// 用户唯一 ID（字符串形式）
     pub id: String,
     /// 用户名（用于登录）
     pub user_name: String,
-    /// 密码（应加密存储，例如 bcrypt 或 argon2）
+    /// 加密后的密码（存储哈希，例如 bcrypt）
     pub password: String,
-    /// 用户状态（true 表示启用，false 表示禁用/冻结）
+    /// 用户状态（true=启用, false=禁用/冻结）
     pub status: bool,
-    /// 是否为管理员（true 表示拥有系统管理权限）
+    /// 是否为管理员（true=超级管理员，拥有所有权限）
     pub is_admin: bool,
-    /// 创建时间（Unix 秒时间戳）
+    /// 创建时间（Unix 时间戳，秒）
     pub create_time: u64,
-    /// 最后更新时间（Unix 秒时间戳）
+    /// 最后更新时间（Unix 时间戳，秒）
     pub update_time: u64,
 }

@@ -4,6 +4,11 @@ pub mod friend;
 pub mod group_join_request;
 pub mod read_index;
 pub mod user_entity;
+pub mod role_entity;
+pub mod permission_entity;
+pub mod user_role_entity;
+pub mod role_permission_entity;
+pub mod menu_entity;
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};

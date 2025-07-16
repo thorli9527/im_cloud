@@ -10,6 +10,7 @@ use mongodb::Database;
 use mongodb::bson::doc;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use common::util::date_util::now;
 
 #[derive(Debug)]
 pub struct UserService {
@@ -73,6 +74,60 @@ impl UserService {
             .expect("redis.error");
 
         Ok((token, user_info))
+    }
+
+    /// 根据用户名查询用户信息
+    pub async fn get_by_username(&self, username: &str) -> Result<Option<UserInfoEntity>> {
+        let filter = doc! { "user_name": username };
+        let mut users = self.dao.query(filter).await?;
+        if users.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(users.remove(0)))
+        }
+    }
+
+    /// 验证用户名和明文密码，匹配则返回用户信息，否则返回None
+    pub async fn authenticate(&self, username: &str, plain_password: &str) -> Result<Option<(String,UserInfoEntity)>> {
+        if let Some(user) = self.get_by_username(username).await? {
+            // 检查用户状态
+            if !user.status {
+                return Ok(None);  // 用户被禁用
+            }
+            let sys_config = AppConfig::get().clone().sys.clone().unwrap();
+            let md5_key = &sys_config.md5_key.unwrap();
+            
+            if user.password != build_md5_with_key(plain_password, md5_key) {
+                let redis_template = RedisTemplate::get();
+                let token = build_uuid();
+                let token_key = format!("token:{}", token);
+                redis_template
+                    .ops_for_value()
+                    .set(&token_key, &user, Some(30))
+                    .await
+                    .expect("redis.error");
+                Ok(Some((token,user.clone())))
+            }
+            else {
+                Ok(None)
+            }
+           
+        } else {
+            Ok(None)
+        }
+    }
+    /// 添加新用户（注册功能，密码在外部先加密后传入）
+    pub async fn add_user(&self, username: &str, hashed_password: &str, is_admin: bool, status: bool) -> Result<String> {
+        let entity = UserInfoEntity {
+            id: "".into(),
+            user_name: username.into(),
+            password: hashed_password.into(),
+            status,
+            is_admin,
+            create_time: now() as u64,
+            update_time: now() as u64,
+        };
+        self.dao.insert(&entity).await
     }
 }
 static INSTANCE: OnceCell<Arc<UserService>> = OnceCell::new();

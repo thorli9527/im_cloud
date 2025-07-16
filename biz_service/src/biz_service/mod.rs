@@ -8,6 +8,11 @@ pub mod kafka_service;
 pub mod mq_message_group_service;
 pub mod mq_message_user_service;
 pub mod user_service;
+pub mod permission_service;
+pub mod role_service;
+pub mod user_role_service;
+pub mod menu_service;
+pub mod role_permission_service;
 
 use crate::biz_service::friend_event_service::FriendEventService;
 use common::db::Db;
