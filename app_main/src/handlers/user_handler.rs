@@ -1,19 +1,21 @@
-use crate::result::{result, result_data, result_error, AppState};
+use crate::result::{result, result_data, result_error, result_error_msg, ApiResponse, AppState};
 use actix_web::{post, web, Responder};
+use anyhow::anyhow;
+use chrono::Utc;
 use biz_service::biz_service::user_service::UserService;
 use biz_service::entitys::user_entity::UserInfoEntity;
 use common::errors::AppError;
 use common::repository_util::{OrderType, Repository};
-use common::util::common_utils::build_md5_with_key;
+use common::util::common_utils::{build_md5_with_key, build_uuid};
 use common::util::date_util::now;
-use mongodb::bson;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
 use web::Json;
 use common::config::AppConfig;
-use mongodb::bson::Document;
+use serde_json::json;
+use common::models::property_value::{PropertyValue, TypeValue};
 use mongo_macro::QueryFilter;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -47,29 +49,94 @@ pub struct UserAddDto {
 }
 #[post("/user/add")]
 pub async fn user_add(dto: Json<UserAddDto>) -> Result<impl Responder, AppError> {
-    match &dto.validate() {
-        Ok(_) => {
-            let mut user = UserInfoEntity::default();
-            let sys_config = AppConfig::get().clone().sys.clone().unwrap();
-            let md5_key = &sys_config.md5_key.unwrap();
-            user.user_name = dto.user_name.as_ref().unwrap().to_string();
-            user.password = build_md5_with_key(&md5_key, &dto.password.as_ref().unwrap());
-            user.is_admin = dto.is_admin.clone();
-            user.status = true;
-            user.create_time = now();
-            UserService::get().dao.insert(&user).await?;
-            Ok(result())
-        }
-        Err(e) => return Ok(result_error(e.to_string())),
+    if let Err(e) = &dto.validate() {
+        return Ok(result_error(e.to_string()));
     }
-}
-#[post("/user/change/{user_id}/{state}")]
-pub async fn user_change(parmas: web::Path<(String, bool)>) -> Result<impl Responder, AppError> {
-    let (user_id, state) = parmas.into_inner();
-    UserService::get().dao.up_property(&user_id, "status", state).await?;
+    let user_service = UserService::get();
+    let user = user_service.dao.find_one(doc! {"user_name": &dto.user_name}).await?;
+    if user.is_some() {
+        return Ok(result_error("用户已存在"));
+    }
+    let sys_config = AppConfig::get().clone().sys.clone().unwrap();
+    let md5_key = &sys_config.md5_key.unwrap();
+    let user_summery = dto.clone();
+    let now = now() as u64;
+    let user = UserInfoEntity {
+        id: build_uuid(),
+        user_name: user_summery.user_name.unwrap(),
+        password: build_md5_with_key(&user_summery.password.unwrap(), md5_key),
+        status: true,
+        is_admin: false,
+        create_time: now,
+        update_time: now,
+    };
+    user_service.dao.insert(&user).await?;
     Ok(result())
 }
 
+#[post("/user/change/{uid}")]
+pub async fn property_change(
+    uid: web::Path<String>,
+    body: Json<PropertyValue>,
+) -> Result<impl Responder, AppError>{
+    let property = body.into_inner();
+    let allowed_fields = ["status", "is_admin"];
+
+    if !allowed_fields.contains(&property.property_name.as_str()) {
+        return Ok(web::Json(json!({
+            "code": 500,
+            "message": format!("字段 '{}' 不支持修改", property.property_name)
+        })));
+    }
+
+    let user_service = UserService::get();
+    let user = user_service
+        .dao
+        .find_by_id(&uid)
+        .await
+        .map_err(|e| anyhow!("用户查询失败: {}", e))?;
+
+    if user.is_none() {
+        return Ok(web::Json(json!({
+                "code": 500,
+                "message": "字段暂不支持修改"
+            })));
+    }
+
+    let mut user = user.unwrap();
+    let new_value = property.value.trim();
+    match property.property_name.as_str() {
+        "status" => {
+            user.status = new_value
+                .parse::<bool>()
+                .map_err(|_| anyhow!("status 字段应为 true 或 false"))?;
+        }
+        "is_admin" => {
+            user.is_admin = new_value
+                .parse::<bool>()
+                .map_err(|_| anyhow!("is_admin 字段应为 true 或 false"))?;
+        }
+        _ => {
+            return Ok(web::Json(json!({
+              "code": 500,
+                "message": "字段暂不支持修改"
+            })));
+        }
+    }
+
+    user.update_time = now() as u64;
+
+    user_service
+        .dao
+        .save(&user)
+        .await
+        .expect("更新用户信息失败");
+
+    return Ok(web::Json(json!({
+                "code": 0,
+                "message": "字段暂不支持修改"
+            })));
+}
 #[post("/user/del/{user_id}")]
 pub async fn user_del(user_id: web::Path<String>) -> Result<impl Responder, AppError> {
     UserService::get().dao.delete_by_id(&user_id).await?;
@@ -78,14 +145,14 @@ pub async fn user_del(user_id: web::Path<String>) -> Result<impl Responder, AppE
 
 #[derive(Serialize, Deserialize, Debug, Validate, ToSchema, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct UserPassChange {
+pub struct ResetPassword {
     pub user_id: String,
     #[validate(length(min = 5, message = "密码太短"))]
     pub password: Option<String>,
 }
 
-#[post("/user/change/pass")]
-pub async fn user_change_pass(state: web::Data<AppState>, dto: Json<UserPassChange>) -> Result<impl Responder, AppError> {
+#[post("/user/reset/password")]
+pub async fn reset_password(state: web::Data<AppState>, dto: Json<ResetPassword>) -> Result<impl Responder, AppError> {
     match &dto.validate() {
         Ok(_) => {
             let password = build_md5_with_key(&state.config.get_sys().md5_key.unwrap(), &dto.password.as_ref().unwrap());
@@ -94,4 +161,58 @@ pub async fn user_change_pass(state: web::Data<AppState>, dto: Json<UserPassChan
         }
         Err(e) => return Ok(result_error(e.to_string())),
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Validate, ToSchema, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UserPassChange {
+    pub user_id: String,
+
+    #[validate(length(min = 5, message = "原密码太短"))]
+    pub old_password: Option<String>,
+
+    #[validate(length(min = 5, message = "新密码太短"))]
+    pub new_password: Option<String>,
+}
+#[post("/user/change/pass")]
+pub async fn user_change_pass(
+    state: web::Data<AppState>,
+    dto: Json<UserPassChange>,
+) -> Result<impl Responder, AppError> {
+    // Step 1: 校验字段合法性
+    dto.validate().map_err(|e| anyhow!(e.to_string()))?;
+
+    let user_id = &dto.user_id;
+    let old_password = dto.old_password.as_ref().unwrap();
+    let new_password = dto.new_password.as_ref().unwrap();
+
+    let user_service = UserService::get();
+
+    // Step 2: 查询用户信息
+    let user = user_service
+        .dao
+        .find_by_id(user_id)
+        .await
+        .map_err(|e| anyhow!(format!("用户查询失败: {}", e)))?;
+
+    if user.is_none() {
+        return Ok(result_error("用户不存在"));
+    }
+    let md5_key = AppConfig::get().clone().sys.clone().unwrap().md5_key.unwrap();
+    let user = user.unwrap();
+
+    // Step 3: 验证原密码
+    let input_encrypted = build_md5_with_key(old_password, &md5_key);
+    if user.password != input_encrypted {
+        return Ok(result_error("原密码不正确"));
+    }
+
+    // Step 4: 构建新密码并更新
+    let new_encrypted = build_md5_with_key(new_password, &md5_key);
+    user_service
+        .dao
+        .up_property(user_id, "password", new_encrypted)
+        .await?;
+
+    Ok(result())
 }

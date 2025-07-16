@@ -15,7 +15,7 @@ pub struct UserInfoEntity {
     /// 是否为管理员（true 表示拥有系统管理权限）
     pub is_admin: bool,
     /// 创建时间（Unix 秒时间戳）
-    pub create_time: i64,
+    pub create_time: u64,
     /// 最后更新时间（Unix 秒时间戳）
-    pub update_time: i64,
+    pub update_time: u64,
 }

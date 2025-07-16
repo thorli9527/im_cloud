@@ -3,6 +3,7 @@ pub mod errors;
 pub mod redis;
 pub mod repository;
 pub mod util;
+pub mod models;
 
 pub use repository::*;
 use serde::{Deserialize, Serialize};
