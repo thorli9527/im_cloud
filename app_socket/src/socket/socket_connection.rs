@@ -1,17 +1,10 @@
-use std::sync::Arc;
 use crate::manager::socket_manager::{
     get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta,
 };
+use crate::socket::heartbeat_handler::start_global_heartbeat_checker;
+use crate::socket::login_handler::handle_login;
+use crate::socket::logout_handler::handle_logout;
 use anyhow::{anyhow, Result};
-use bytes::Buf;
-use common::util::common_utils::build_uuid;
-use common::util::date_util::now;
-use futures::{SinkExt, StreamExt};
-use prost::Message;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use tokio::net::TcpStream;
-use tokio::sync::mpsc;
-use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeReqMsg};
 use biz_service::protocol::msg::entity::{GroupMsgEntity, UserMsgEntity};
@@ -20,9 +13,16 @@ use biz_service::protocol::msg::group::{GroupCreateMsg, GroupDismissMsg};
 use biz_service::protocol::msg::status::HeartbeatMsg;
 use biz_service::protocol::msg::system::SystemNotificationMsg;
 use biz_service::protocol::msg::user::UserFlushMsg;
-use crate::socket::heartbeat_handler::start_global_heartbeat_checker;
-use crate::socket::login_handler::handle_login;
-use crate::socket::logout_handler::handle_logout;
+use bytes::Buf;
+use common::util::common_utils::build_uuid;
+use common::util::date_util::now;
+use futures::{SinkExt, StreamExt};
+use prost::Message;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
+use tokio::net::TcpStream;
+use tokio::sync::mpsc;
+use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
 
 /// 客户端连接处理入口
 pub async fn handle_connection(stream: TcpStream) -> Result<()> {

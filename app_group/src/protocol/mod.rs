@@ -1,4 +1,3 @@
-
 use biz_service::protocol::common as common;
 pub mod rpc_arb_models {
     include!("rpc_arb_models.rs");

@@ -1,6 +1,6 @@
 use crate::biz_service::kafka_service::KafkaService;
 use crate::protocol::common::ByteMessageType;
-use crate::protocol::msg::entity::{ GroupMsgEntity};
+use crate::protocol::msg::entity::GroupMsgEntity;
 use crate::protocol::msg::message::Segment;
 use common::config::AppConfig;
 use common::errors::AppError;

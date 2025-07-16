@@ -1,10 +1,10 @@
 // src/common/redis_pool.rs
 
-use std::sync::Arc;
-use once_cell::sync::OnceCell;
-use anyhow::{Result, anyhow};
-use deadpool_redis::{Config, Runtime};
 use crate::RedisPool;
+use anyhow::{anyhow, Result};
+use deadpool_redis::{Config, Runtime};
+use once_cell::sync::OnceCell;
+use std::sync::Arc;
 
 /// RedisPool 连接池封装，支持全局共享。
 #[derive(Clone)]

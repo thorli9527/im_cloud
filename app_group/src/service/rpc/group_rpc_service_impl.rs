@@ -1,31 +1,45 @@
 use crate::manager::shard_manager::ShardManager;
+use crate::protocol::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
 use crate::protocol::rpc_group_models::{
     AddMemberReq, ChangeMemberAliasReq, ChangeMemberRoleReq, CreateGroupReq, DestroyGroupReq,
     ExitGroupReq, GetGroupInfoRep, GetGroupInfoReq, GetMembersRep, GetMembersReq,
     GetOnlineMembersReq, GetOnlineMembersResp, MuteMemberReq, OfflineReq, OnlineReq,
     RemoveMemberReq, TransferGroupOwnershipReq, UpdateGroupInfoReq,
 };
-use crate::protocol::rpc_group_server::group_rpc_service_server::GroupRpcService;
+use crate::protocol::rpc_group_server::group_rpc_service_server::{GroupRpcService, GroupRpcServiceServer};
+use crate::service::rpc::arb_group_service_impl::ArbGroupServiceImpl;
+use biz_service::biz_service::group_service::GroupService;
 use biz_service::manager::group_manager_core::{GroupManager, GroupManagerOpt};
+use biz_service::protocol::common::{CommonResp, GroupEntity, GroupRoleType, GroupType};
+use common::config::AppConfig;
+use common::util::date_util::now;
 use once_cell::sync::OnceCell;
+use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
-use biz_service::biz_service::group_member_service::GroupMemberService;
-use biz_service::biz_service::group_service::GroupService;
-use biz_service::protocol::common::{CommonResp, GroupEntity, GroupRoleType, GroupType};
-use common::repository_util::Repository;
-use common::UserId;
-use common::util::date_util::now;
 
 /// 群聊服务端rpc服务
-pub struct GroupRpcServiceImpl {
-    // 这里可以添加一些共享状态或依赖注入
-}
+pub struct GroupRpcServiceImpl {}
 
 impl GroupRpcServiceImpl {
+    pub async fn start(&self) {
+        // 读取配置文件
+        let app_cfg = AppConfig::get();
+        let addr = SocketAddr::from_str(&app_cfg.get_shard().server_host.unwrap()).expect("Invalid address");
+        let svc = GroupRpcServiceImpl {};
+
+        tonic::transport::Server::builder()
+            .add_service(GroupRpcServiceServer::new(svc))
+            .serve(addr)
+            .await
+            .expect("Failed to start server");
+        log::warn!("GroupRpcServiceServer started");
+    }
     pub fn new() -> Self {
         Self {}
     }
+
     pub async fn hash_group_id(&self, group_id: &str) -> usize {
         let shard_manager = ShardManager::get();
         let guard = shard_manager.current.load();
@@ -211,7 +225,10 @@ impl GroupRpcService for GroupRpcServiceImpl {
 
         let group_manager = GroupManager::get();
 
-        let group =group_service.find_by_group_id(&req.id).await.expect("Group not found");
+        let group = group_service
+            .find_by_group_id(&req.id)
+            .await
+            .expect("Group not found");
         let group_info = GroupEntity {
             id: req.id,
             name: req.name,
@@ -224,9 +241,12 @@ impl GroupRpcService for GroupRpcServiceImpl {
             allow_search: req.allow_search,
             enable: group.enable,
             create_time: group.create_time, // 这里可以根据需要设置
-            update_time: now() as u64, // 这里可以根据需要设置
+            update_time: now() as u64,      // 这里可以根据需要设置
         };
-        group_manager.update_group(&group_info).await.expect("Failed to update group info");
+        group_manager
+            .update_group(&group_info)
+            .await
+            .expect("Failed to update group info");
         Ok(Response::new(CommonResp {
             success: true,
             message: "Group info updated successfully".to_string(),
@@ -237,13 +257,15 @@ impl GroupRpcService for GroupRpcServiceImpl {
         &self,
         request: Request<AddMemberReq>,
     ) -> Result<Response<CommonResp>, Status> {
-
         let group_manager = GroupManager::get();
         let req = request.into_inner();
         //循环members 并添加
         for member in req.members {
             let option = GroupRoleType::from_i32(member.role);
-            group_manager.add_user_to_group(&req.group_id, &member.uid, &member.alias, &option.unwrap()).await.expect("add group member error");
+            group_manager
+                .add_user_to_group(&req.group_id, &member.uid, &member.alias, &option.unwrap())
+                .await
+                .expect("add group member error");
         }
 
         Ok(Response::new(CommonResp {
@@ -259,7 +281,10 @@ impl GroupRpcService for GroupRpcServiceImpl {
         let group_manager = GroupManager::get();
         let req = request.into_inner();
         for uid in req.uids {
-            group_manager.remove_user_from_group(&req.group_id, &uid).await.expect("remove group member error");
+            group_manager
+                .remove_user_from_group(&req.group_id, &uid)
+                .await
+                .expect("remove group member error");
         }
         Ok(Response::new(CommonResp {
             success: true,
@@ -273,7 +298,10 @@ impl GroupRpcService for GroupRpcServiceImpl {
     ) -> Result<Response<CommonResp>, Status> {
         let group_manager = GroupManager::get();
         let req = request.into_inner();
-        group_manager.remove_user_from_group(&req.group_id, &req.uid).await.expect("remove group member error");
+        group_manager
+            .remove_user_from_group(&req.group_id, &req.uid)
+            .await
+            .expect("remove group member error");
         Ok(Response::new(CommonResp {
             success: true,
             message: "退出成功".into(),
@@ -286,8 +314,11 @@ impl GroupRpcService for GroupRpcServiceImpl {
     ) -> Result<Response<CommonResp>, Status> {
         let group_manager = GroupManager::get();
         let req = request.into_inner();
-        let group_role_type=GroupRoleType::from_i32(req.role).expect("role is invalid");
-        group_manager.change_member_role(&req.group_id, &req.uid, &group_role_type).await.expect("change group member role error");
+        let group_role_type = GroupRoleType::from_i32(req.role).expect("role is invalid");
+        group_manager
+            .change_member_role(&req.group_id, &req.uid, &group_role_type)
+            .await
+            .expect("change group member role error");
         Ok(Response::new(CommonResp {
             success: true,
             message: "".to_string(),

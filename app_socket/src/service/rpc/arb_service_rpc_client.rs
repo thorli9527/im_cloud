@@ -1,19 +1,19 @@
 // 在 app_socket 中添加节点注册与心跳逻辑到 app_arb 服务
 
-use std::clone;
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use config::Config;
-use once_cell::sync::OnceCell;
-use tokio::sync::RwLock;
-use tonic::transport::Channel;
+use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
 use crate::protocol::rpc_arb_models::{BaseRequest, NodeType, QueryNodeReq, ShardNodeInfo};
-use tokio::time::{interval, Duration};
+use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use biz_service::manager::group_manager_core::GroupManager;
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::hash_index;
-use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
+use config::Config;
+use once_cell::sync::OnceCell;
+use std::clone;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use tokio::time::{interval, Duration};
+use tonic::transport::Channel;
 
 #[derive(Debug, Clone)]
 pub struct ArbClient {
@@ -32,9 +32,7 @@ impl ArbClient {
             .server_host
             .clone()
             .ok_or_else(|| anyhow::anyhow!("Missing server_host in ShardConfig"))?;
-
-        let client = ArbServerRpcServiceClient::connect(node_addr.clone()).await?;
-
+        let client = ArbServerRpcServiceClient::connect(format!("http://{}", node_addr)).await?;
         Ok(Self {
             arb_client: client,
             shard_clients: HashMap::new(),
@@ -52,8 +50,7 @@ impl ArbClient {
         let shard_config = AppConfig::get().shard.clone().unwrap();
         let mut arb_client = ArbClient::new(&shard_config).await?;
 
-
-         arb_client.register().await?;
+        arb_client.register().await?;
 
         // 初始化 shard clients 列表
         arb_client.init_shard_clients().await?;
@@ -62,14 +59,20 @@ impl ArbClient {
             "[ArbClient] Init complete: shard_clients = {}",
             arb_client.shard_clients.len()
         );
-        INSTANCE.set(Arc::new(RwLock::new(arb_client))).expect("ArbClient init failed");
+        INSTANCE
+            .set(Arc::new(RwLock::new(arb_client)))
+            .expect("ArbClient init failed");
         Ok(())
     }
-    pub fn get_shard_client(&self, group_id:&str,shard_id: u32) -> anyhow::Result<ArbGroupServiceClient<Channel>> {
-        let shard_group_index=hash_index(group_id,self.shard_clients.len() as i32);
-        for (node_addr,client) in &self.shard_clients  {
-            let shard_node_index=hash_index(&node_addr,self.shard_clients.len() as i32);
-            if shard_node_index==shard_group_index {
+    pub fn get_shard_client(
+        &self,
+        group_id: &str,
+        shard_id: u32,
+    ) -> anyhow::Result<ArbGroupServiceClient<Channel>> {
+        let shard_group_index = hash_index(group_id, self.shard_clients.len() as i32);
+        for (node_addr, client) in &self.shard_clients {
+            let shard_node_index = hash_index(&node_addr, self.shard_clients.len() as i32);
+            if shard_node_index == shard_group_index {
                 return Ok(client.clone());
             }
         }
@@ -103,7 +106,8 @@ impl ArbClient {
             .map_err(|e| anyhow::anyhow!("Failed to list group nodes: {}", e))?
             .into_inner();
 
-        let new_addrs: HashSet<String> = resp.nodes
+        let new_addrs: HashSet<String> = resp
+            .nodes
             .iter()
             .filter(|n| n.node_type == NodeType::GroupNode as i32)
             .map(|n| n.node_addr.clone())

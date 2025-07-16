@@ -1,11 +1,9 @@
+use crate::redis::redis_pool::RedisPoolTools;
+use crate::repository::db::Db;
 use config::Config;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::sync::Arc;
-use crate::redis::redis_pool;
-use crate::redis::redis_pool::RedisPoolTools;
-use crate::RedisPool;
-use crate::repository::db::Db;
 
 #[derive(Debug, Deserialize, Clone,Default)]
 pub struct AppConfig {

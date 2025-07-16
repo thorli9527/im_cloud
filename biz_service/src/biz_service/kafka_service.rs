@@ -1,6 +1,5 @@
 use crate::protocol::common::ByteMessageType;
-use anyhow::{anyhow, Error, Result};
-use bytes::Bytes;
+use anyhow::{anyhow, Result};
 use common::config::KafkaConfig;
 use once_cell::sync::OnceCell;
 use prost::Message;

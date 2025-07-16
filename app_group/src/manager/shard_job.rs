@@ -1,9 +1,11 @@
 use crate::manager;
 use crate::manager::shard_manager;
-use crate::manager::shard_manager::{GROUP_SHARD_SIZE, ShardManager};
+use crate::manager::shard_manager::{ShardManager, GROUP_SHARD_SIZE};
+use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
+use crate::protocol::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use crate::service::rpc::group_rpc_service_impl::GroupRpcServiceImpl;
-use common::config::ShardConfig;
+use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::hash_index;
 use common::{GroupId, UserId};
 use dashmap::{DashMap, DashSet};
@@ -15,10 +17,8 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tonic::async_trait;
 use tonic::transport::Channel;
-use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use crate::protocol::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
 
-pub struct ManagerJob {
+pub struct ArbManagerJob {
     //分片仲裁服务器接口信息
     pub arb_client: Option<ArbServerRpcServiceClient<Channel>>,
     pub shard_address: String,
@@ -26,12 +26,13 @@ pub struct ManagerJob {
     pub cancel_token: CancellationToken,
     pub heartbeat_handle: Option<JoinHandle<()>>,
 }
-impl ManagerJob {
-    pub fn new(shard_config: ShardConfig) -> Self {
+impl ArbManagerJob {
+    pub fn new() -> Self {
+        let config = AppConfig::get().clone().shard.clone().unwrap();
         Self {
             arb_client: None,
-            shard_address: shard_config.shard_address.unwrap(),
-            server_host: shard_config.server_host.unwrap(),
+            shard_address: config.shard_address.unwrap(),
+            server_host: config.server_host.unwrap(),
             cancel_token: CancellationToken::new(),
             heartbeat_handle: None,
         }
@@ -40,8 +41,12 @@ impl ManagerJob {
     /// 启动心跳和生命周期任务
     pub async fn start(&mut self) -> () {
         self.register_node().await.expect("register node error");
-        self.change_preparing().await.expect("change preparing error");
-        self.change_migrating().await.expect("change migrating error");
+        self.change_preparing()
+            .await
+            .expect("change preparing error");
+        self.change_migrating()
+            .await
+            .expect("change migrating error");
         self.sync_data().await.expect("sync groups error");
         self.change_ready().await.expect("change ready error");
         self.change_normal().await.expect("change normal error");
@@ -54,12 +59,15 @@ impl ManagerJob {
         &mut self,
     ) -> anyhow::Result<&mut ArbServerRpcServiceClient<Channel>> {
         if self.arb_client.is_none() {
-            let client = ArbServerRpcServiceClient::connect(self.server_host.clone()).await?;
+            let node_addr = self.server_host.clone();
+            let client =
+                ArbServerRpcServiceClient::connect(format!("http://{}", node_addr)).await?;
             self.arb_client = Some(client);
         }
         Ok(self.arb_client.as_mut().unwrap())
     }
-    pub async fn init_grpc_clients(&self,
+    pub async fn init_grpc_clients(
+        &self,
         endpoints: Vec<String>,
     ) -> Result<HashMap<i32, ArbGroupServiceClient<Channel>>, Box<dyn std::error::Error>> {
         let mut clients = HashMap::new();
@@ -69,8 +77,9 @@ impl ManagerJob {
             if endpoint == self.shard_address {
                 continue;
             }
-            let channel = Channel::from_shared(endpoint.clone())?.connect().await?;
-
+            let channel = Channel::from_shared(format!("http://{}", endpoint))?
+                .connect()
+                .await?;
             let client = ArbGroupServiceClient::new(channel);
             clients.insert(hash_index(&endpoint, size as i32), client);
         }
@@ -102,8 +111,8 @@ impl ManagerJob {
     }
 
     // 轻量 clone，只克隆非连接字段
-    fn clone_light(&self) -> ManagerJob {
-        ManagerJob {
+    fn clone_light(&self) -> ArbManagerJob {
+        ArbManagerJob {
             arb_client: None, // 避免 tonic 客户端跨线程问题
             shard_address: self.shard_address.clone(),
             server_host: self.server_host.clone(),

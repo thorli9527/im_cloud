@@ -1,7 +1,5 @@
 #![feature(unwrap_infallible)]
 
-use mongodb::Database;
-
 pub mod biz_const;
 pub mod biz_service;
 pub mod entitys;

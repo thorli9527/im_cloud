@@ -2,8 +2,8 @@
 url = "mongodb://localhost:27017"
 db_name = "group"
 [shard]
-shard_address = "http://127.0.0.1:20000"
-server_host = "http://127.0.0.1:50051"
+shard_address = "127.0.0.1:51000"
+server_host = "127.0.0.1:50000"
 [redis]
 url = "redis://127.0.0.1:6379/"
 [server]

@@ -11,9 +11,9 @@ use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tonic::Status;
 use tonic::codegen::http::status;
 use tonic::transport::Channel;
+use tonic::Status;
 use tracing::log;
 use twox_hash::XxHash64;
 

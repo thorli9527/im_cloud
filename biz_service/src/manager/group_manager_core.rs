@@ -1,15 +1,11 @@
+use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
 use anyhow::Result;
 use async_trait::async_trait;
+use common::redis::redis_pool::RedisPoolTools;
 use common::{RedisPool, UserId};
-use deadpool_redis::{
-    redis::AsyncCommands,
-    Pool,
-};
+use deadpool_redis::redis::AsyncCommands;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use rdkafka::groups::GroupInfo;
-use common::redis::redis_pool::RedisPoolTools;
-use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
 
 /// 群组管理器
 #[derive(Debug, Clone)]

@@ -1,8 +1,8 @@
-use mongodb::{Client, Database};
-use mongodb::options::ClientOptions;
-use once_cell::sync::OnceCell;
-use anyhow::{Result, anyhow};
 use crate::config::DatabaseConfig;
+use anyhow::{anyhow, Result};
+use mongodb::options::ClientOptions;
+use mongodb::{Client, Database};
+use once_cell::sync::OnceCell;
 
 #[derive(Clone)]
 pub struct Db {

@@ -1,14 +1,13 @@
+use crate::protocol::common::ClientEntity;
 use crate::protocol::msg::auth::DeviceType;
 use crate::protocol::msg::friend::FriendSourceType;
 use anyhow::Result;
 use async_trait::async_trait;
 use common::{ClientTokenDto, UserId};
 use dashmap::DashMap;
-use deadpool_redis::Pool as RedisPool;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Notify;
-use crate::protocol::common::ClientEntity;
 
 /// 全局用户管理器
 #[derive(Debug, Clone)]

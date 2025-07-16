@@ -10,7 +10,6 @@ pub mod mq_message_user_service;
 pub mod user_service;
 
 use crate::biz_service::friend_event_service::FriendEventService;
-use mongodb::Database;
 use common::db::Db;
 
 pub fn init_service() {

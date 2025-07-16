@@ -1,19 +1,15 @@
 use crate::protocol::common::CommonResp;
 use crate::protocol::rpc_arb_models::{BaseRequest, ListAllNodesResponse, NodeType, QueryNodeReq, ShardNodeInfo, ShardState, UpdateShardStateRequest};
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcService;
-use chrono::Utc;
+use crate::protocol::rpc_arb_socket::arb_socket_service_client::ArbSocketServiceClient;
 use common::util::date_util::now;
 use dashmap::DashMap;
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tonic::{Request, Response, Status};
 use tonic::transport::Channel;
+use tonic::{Request, Response, Status};
 use tracing::log;
-use common::util::common_utils::hash_index;
-use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use crate::protocol::rpc_arb_socket::arb_socket_service_client::ArbSocketServiceClient;
 
 /// 分片节点状态信息
 /// 表示某个 vnode 当前的版本号、状态、归属节点及上次更新时间
@@ -28,7 +24,7 @@ pub struct ArbiterServiceImpl {
 
 
 impl ArbiterServiceImpl {
-   
+
     pub async fn init_socket_clients(&self) -> Result<Vec<ArbSocketServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
         let mut endpoints=Vec::new();
         for ref node in self.socket_nodes.iter() {
@@ -37,13 +33,13 @@ impl ArbiterServiceImpl {
         }
         let mut clients = Vec::new();
         for endpoint in endpoints {
-            let channel = Channel::from_shared(endpoint.clone())?.connect().await?;
+            let channel = Channel::from_shared(format!("http://{}",endpoint.clone()))?.connect().await?;
             let client = ArbSocketServiceClient::new(channel);
             clients.push(client);
         }
         Ok(clients)
     }
-    
+
 }
 
 #[tonic::async_trait]

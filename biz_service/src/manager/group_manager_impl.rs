@@ -5,11 +5,10 @@ use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
 use anyhow::Result;
 use async_trait::async_trait;
-use common::UserId;
 use common::repository_util::Repository;
 use common::util::date_util::now;
-use deadpool_redis::redis::{AsyncCommands, cmd};
-use serde_json::json;
+use common::UserId;
+use deadpool_redis::redis::{cmd, AsyncCommands};
 
 #[async_trait]
 impl GroupManagerOpt for GroupManager {

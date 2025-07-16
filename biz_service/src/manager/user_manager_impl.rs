@@ -1,11 +1,10 @@
+use crate::protocol::common::{GroupEntity, GroupMemberEntity};
+use common::redis::redis_pool::RedisPoolTools;
 use deadpool_redis::redis::{cmd, AsyncCommands};
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use twox_hash::XxHash64;
-use common::config::RedisConfig;
-use common::redis::redis_pool::RedisPoolTools;
-use crate::protocol::common::{GroupEntity, GroupMemberEntity};
 
 pub const MAX_CLEAN_COUNT: usize = 100;
 pub const USER_ONLINE_TTL_SECS: u64 = 300;

@@ -1,11 +1,12 @@
-use crate::manager::shard_job::{ManagerJob, ManagerJobOpt};
-use crate::manager::shard_manager::{MEMBER_SHARD_SIZE, MemData, ShardInfo, ShardManager};
+use crate::manager::shard_job::{ArbManagerJob, ManagerJobOpt};
+use crate::manager::shard_manager::{MemData, ShardInfo, ShardManager, MEMBER_SHARD_SIZE};
 use crate::protocol::rpc_arb_models::{BaseRequest, MemberRef, NodeType, QueryNodeReq, ShardState, SyncListGroup, UpdateShardStateRequest};
 use actix_web::web::get;
 use biz_service::manager::common::shard_index;
-use common::GroupId;
+use biz_service::protocol::common::GroupMemberEntity;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
+use common::GroupId;
 use dashmap::{DashMap, DashSet};
 use rdkafka::groups::GroupInfo;
 use std::collections::HashMap;
@@ -13,7 +14,6 @@ use std::sync::Arc;
 use std::thread::current;
 use tokio::sync::RwLock;
 use tonic::async_trait;
-use biz_service::protocol::common::GroupMemberEntity;
 
 pub struct RPCSyncData {
     // 群组信息
@@ -22,7 +22,7 @@ pub struct RPCSyncData {
     member: Vec<GroupMemberEntity>,
 }
 #[async_trait]
-impl ManagerJobOpt for ManagerJob {
+impl ManagerJobOpt for ArbManagerJob {
     async fn init(&mut self) -> anyhow::Result<()> {
         self.init_arb_client().await?;
         Ok(())
@@ -195,7 +195,7 @@ impl ManagerJobOpt for ManagerJob {
         let shard_address = self.shard_address.clone();
         // === Step 1: 获取仲裁服务客户端并列出所有节点 ===
         let client = self.init_arb_client().await?;
-      
+
         let request=QueryNodeReq {
             node_type: NodeType::GroupNode as i32,
         };

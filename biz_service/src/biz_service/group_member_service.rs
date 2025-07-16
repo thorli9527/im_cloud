@@ -1,16 +1,15 @@
+use crate::protocol::common::{GroupMemberEntity, GroupRoleType};
 use anyhow::Result;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::as_ref_to_string;
 use common::util::date_util::now;
-use common::{RedisPool, UserId};
+use common::UserId;
+use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use deadpool_redis::redis::AsyncCommands;
-use common::config::RedisConfig;
-use crate::protocol::common::{GroupMemberEntity, GroupRoleType};
 
 #[derive(Debug)]
 pub struct GroupMemberService {

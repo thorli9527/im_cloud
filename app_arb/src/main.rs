@@ -2,12 +2,13 @@ mod service;
 mod protocol;
 
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcServiceServer;
+use crate::service::rpc::arb_service_impl::ArbiterServiceImpl;
 use common::config::AppConfig;
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
-use crate::service::rpc::arb_service_impl::ArbiterServiceImpl;
+use std::sync::Arc;
+use tracing::log;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,6 +26,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(ArbServerRpcServiceServer::new(svc))
         .serve(addr)
         .await?;
-
+    log::warn!("ArbServerRpcServiceServer started");
     Ok(())
 }

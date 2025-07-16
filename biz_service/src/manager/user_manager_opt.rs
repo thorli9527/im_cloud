@@ -6,8 +6,6 @@ use crate::manager::user_manager_core::{UserManager, UserManagerOpt, USER_ONLINE
 use crate::protocol::common::{ByteMessageType, ClientEntity};
 use crate::protocol::msg::auth::{DeviceType, LoginRespMsg, LogoutRespMsg, OfflineStatueMsg, OnlineStatusMsg};
 use crate::protocol::msg::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
-use actix_web::cookie::time::macros::time;
-use actix_web::web::get;
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use common::config::AppConfig;
@@ -16,9 +14,7 @@ use common::repository_util::Repository;
 use common::util::common_utils::{build_md5_with_key, build_snow_id, build_uuid};
 use common::util::date_util::now;
 use common::{ClientTokenDto, UserId};
-use dashmap::DashMap;
 use deadpool_redis::redis::AsyncCommands;
-use futures_util::TryFutureExt;
 use mongodb::bson::doc;
 use tokio::try_join;
 
@@ -140,6 +136,29 @@ impl UserManagerOpt for UserManager {
         Ok(())
     }
 
+    async fn is_online(&self, user_id: &UserId) -> Result<bool> {
+        let (redis_key, field_key) = self.make_online_key(user_id);
+        let mut conn = self.pool.get().await?;
+        Ok(conn.hexists(&redis_key, &field_key).await?)
+    }
+
+    async fn is_all_device_offline(&self, user_id: &UserId) -> Result<bool> {
+        Ok(!self.is_online(user_id).await?)
+    }
+
+    async fn get_online_devices(&self,  user_id: &UserId) -> Result<Vec<DeviceType>> {
+        let (redis_key, field_key) = self.make_online_key( user_id);
+        let mut conn = self.pool.get().await?;
+        if let Some(s) = conn.hget::<_, _, Option<String>>(&redis_key, &field_key).await? {
+            Ok(s.split(',')
+                .filter_map(|d| d.parse::<i32>().ok())
+                .filter_map(DeviceType::from_i32)
+                .collect())
+        } else {
+            Ok(vec![])
+        }
+    }
+
     async fn offline(&self,  user_id: &UserId, device_type: &DeviceType) -> Result<()> {
         let (redis_key, field_key) = self.make_online_key( user_id);
         let mut conn = self.pool.get().await?;
@@ -178,29 +197,6 @@ impl UserManagerOpt for UserManager {
         }
 
         Ok(())
-    }
-
-    async fn is_online(&self, user_id: &UserId) -> Result<bool> {
-        let (redis_key, field_key) = self.make_online_key(user_id);
-        let mut conn = self.pool.get().await?;
-        Ok(conn.hexists(&redis_key, &field_key).await?)
-    }
-
-    async fn get_online_devices(&self,  user_id: &UserId) -> Result<Vec<DeviceType>> {
-        let (redis_key, field_key) = self.make_online_key( user_id);
-        let mut conn = self.pool.get().await?;
-        if let Some(s) = conn.hget::<_, _, Option<String>>(&redis_key, &field_key).await? {
-            Ok(s.split(',')
-                .filter_map(|d| d.parse::<i32>().ok())
-                .filter_map(DeviceType::from_i32)
-                .collect())
-        } else {
-            Ok(vec![])
-        }
-    }
-
-    async fn is_all_device_offline(&self, user_id: &UserId) -> Result<bool> {
-        Ok(!self.is_online(user_id).await?)
     }
 
     async fn sync_user(&self, _user: ClientEntity) -> anyhow::Result<()> {
@@ -299,17 +295,6 @@ impl UserManagerOpt for UserManager {
 
         Ok(token_key)
     }
-    /// 获取指定 uid + 设备的 token（单设备支持）
-    async fn get_token_by_uid_device(
-        &self,
-        uid: &UserId,
-        device_type: &DeviceType,
-    ) -> Result<Option<String>> {
-        let mut conn = self.pool.get().await?;
-        let index_key = format!("token:index:{}:{}", uid, *device_type as i32);
-        let token: Option<String> = conn.get(&index_key).await.context("获取 token 索引失败")?;
-        Ok(token)
-    }
     /// 删除指定 token（包括索引 + 主数据 + 集合成员）
     async fn delete_token(&self, token: &str) -> Result<()> {
         let mut conn = self.pool.get().await?;
@@ -334,6 +319,15 @@ impl UserManagerOpt for UserManager {
             .context("删除 token 主数据失败")?;
         Ok(())
     }
+    /// 检查 token 是否存在
+    async fn verify_token(&self, token: &str) -> Result<bool> {
+        let mut conn = self.pool.get().await?;
+        let exists: bool = conn
+            .exists(format!("token:{}", token))
+            .await
+            .context("检查 token 失败")?;
+        Ok(exists)
+    }
     /// 清空某用户所有 token（通过集合 smembers）
     async fn clear_tokens_by_user(&self, user_id: &UserId) -> Result<()> {
         let token_set_key = format!("token:uid:{}", user_id);
@@ -345,14 +339,16 @@ impl UserManagerOpt for UserManager {
         let _: () = conn.del(&token_set_key).await?;
         Ok(())
     }
-    /// 检查 token 是否存在
-    async fn verify_token(&self, token: &str) -> Result<bool> {
+    /// 获取指定 uid + 设备的 token（单设备支持）
+    async fn get_token_by_uid_device(
+        &self,
+        uid: &UserId,
+        device_type: &DeviceType,
+    ) -> Result<Option<String>> {
         let mut conn = self.pool.get().await?;
-        let exists: bool = conn
-            .exists(format!("token:{}", token))
-            .await
-            .context("检查 token 失败")?;
-        Ok(exists)
+        let index_key = format!("token:index:{}:{}", uid, *device_type as i32);
+        let token: Option<String> = conn.get(&index_key).await.context("获取 token 索引失败")?;
+        Ok(token)
     }
 
     /// 获取 token 对应的客户端身份
