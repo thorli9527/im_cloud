@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use common::index_trait::MongoIndexModelProvider;
 use mongo_macro::MongoIndexModelProvider as MongoDeriveMongoIndex;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// 菜单结构，用于构建前端动态菜单树
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema, MongoDeriveMongoIndex)]

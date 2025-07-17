@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use common::index_trait::MongoIndexModelProvider;
 use mongo_macro::MongoIndexModelProvider as MongoDeriveMongoIndex;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 /// 权限点结构，用于表示系统中可控的操作或资源
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema, MongoDeriveMongoIndex)]
 #[mongo_index(fields["code"], unique)]

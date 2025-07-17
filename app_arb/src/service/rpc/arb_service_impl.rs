@@ -1,11 +1,14 @@
 use crate::protocol::common::CommonResp;
+use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
+use crate::protocol::rpc_arb_group::UpdateVersionReq;
 use crate::protocol::rpc_arb_models::{BaseRequest, ListAllNodesResponse, NodeType, QueryNodeReq, ShardNodeInfo, ShardState, UpdateShardStateRequest};
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcService;
 use crate::protocol::rpc_arb_socket::arb_socket_service_client::ArbSocketServiceClient;
 use common::util::date_util::now;
 use dashmap::DashMap;
+use std::clone;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::transport::Channel;
 use tonic::{Request, Response, Status};
@@ -39,6 +42,20 @@ impl ArbiterServiceImpl {
         }
         Ok(clients)
     }
+    pub async fn init_shard_clients(&self) -> Result<Vec<ArbGroupServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut endpoints=Vec::new();
+        for ref node in self.shard_nodes.iter() {
+            let node_info = node.value();
+            endpoints.push(node_info.node_addr.clone());
+        }
+        let mut clients = Vec::new();
+        for endpoint in endpoints {
+            let channel = Channel::from_shared(format!("http://{}",endpoint.clone()))?.connect().await?;
+            let client = ArbGroupServiceClient::new(channel);
+            clients.push(client);
+        }
+        Ok(clients)
+    }
 
 }
 
@@ -62,11 +79,11 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         request: Request<UpdateShardStateRequest>,
     ) -> Result<Response<CommonResp>, Status> {
         let req = request.into_inner();
-        let node_addr = req.node_addr;
+        let current_node_addr = req.node_addr.clone();
         let new_state = req.new_state;
-
+        
         // 更新目标节点状态
-        match self.shard_nodes.get_mut(&node_addr) {
+        match self.shard_nodes.get_mut(&current_node_addr) {
             Some(mut entry) => {
                 entry.state = match ShardState::from_i32(new_state) {
                     Some(valid_state) => valid_state as i32,
@@ -79,34 +96,38 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                 };
                 entry.version += 1;
                 entry.last_update_time = now() as u64;
+                if entry.node_type == NodeType::GroupNode as i32 {
+                    entry.total = self.shard_nodes.len() as i32;
+                  
+                    // 如果新状态是 Normal，检查所有 shard 状态
+                    if req.new_state == ShardState::Normal as i32 {
+                        // 统计是否所有 shard 节点状态为 Normal
+                        let all_normal = self.shard_nodes.iter().all(|entry| {
+                            entry.value().state == ShardState::Normal as i32
+                            
+                        });
 
-                // 如果新状态是 Normal，检查所有 shard 状态
-                if req.new_state == ShardState::Normal as i32 {
-                    // 统计是否所有 shard 节点状态为 Normal
-                    let all_normal = self.shard_nodes.iter().all(|entry| {
-                        entry.value().state == ShardState::Normal as i32
-                    });
+                        if all_normal {
+                            // 升级 arb_version
+                            let new_version = self.arb_version.fetch_add(1, Ordering::SeqCst) + 1;
 
-                    if all_normal {
-                        // 升级 arb_version
-                        let new_version = self.arb_version.fetch_add(1, Ordering::SeqCst) + 1;
+                            log::info!(
+                                "[ArbVersion] All shard nodes are Normal. Upgrading arb_version to {}",
+                                new_version
+                            );
 
-                        log::info!(
-                            "[ArbVersion] All shard nodes are Normal. Upgrading arb_version to {}",
-                            new_version
-                        );
-
-                        // 通知所有 socket 节点刷新 shard 列表
-                        if let Ok(mut socket_clients) = self.init_socket_clients().await {
-                            for client in socket_clients.iter_mut() {
-                                let _ = client.flush_shard_list(Request::new(())).await;
+                            // 通知所有 socket 节点刷新 shard 列表
+                            if let Ok(mut socket_clients) = self.init_socket_clients().await {
+                                for client in socket_clients.iter_mut() {
+                                    let _ = client.flush_shard_list(Request::new(())).await;
+                                }
                             }
+                        } else {
+                            log::info!(
+                                "[ArbVersion] Node {} is Normal, but not all are Normal yet.",
+                                current_node_addr
+                            );
                         }
-                    } else {
-                        log::info!(
-                            "[ArbVersion] Node {} is Normal, but not all are Normal yet.",
-                            node_addr
-                        );
                     }
                 }
 
@@ -114,12 +135,12 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                     success: true,
                     message: format!(
                         "Updated node {} to state {:?}, version = {}",
-                        node_addr, entry.state, entry.version
+                        current_node_addr, entry.state, entry.version
                     ),
                 }))
             }
 
-            None => Err(Status::not_found(format!("Node {} not found.", node_addr))),
+            None => Err(Status::not_found(format!("Node {} not found.", current_node_addr))),
         }
     }
 
@@ -145,18 +166,33 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                     },
                 ));
             }
-
+            let current_total = self.shard_nodes.len() as i32 + 1;
             // 当前时间戳（毫秒）
             let now = now() as u64;
             // 构建新 entry
             let mut entry = ShardNodeInfo {
                 node_addr: node_addr.clone(),
-                total: self.shard_nodes.len() as i32,
+                total: current_total,
                 version: 0,
                 node_type: req.node_type,
                 state: ShardState::Preparing as i32,
                 last_update_time: now,
             };
+           
+            for (mut item) in self.shard_nodes.iter_mut() {
+                item.state=ShardState::Preparing as i32;
+                let mut client_list =self.init_shard_clients().await.expect("init shard clients error");
+                for mut client in client_list.iter_mut() {
+                    let request=Request::new(UpdateVersionReq{
+                        node_addr: item.node_addr.clone(),
+                        version: item.version,
+                        state: item.state,
+                        last_update_time: now,
+                        total: current_total,
+                    });
+                    client.update_version(request).await.expect("update version error");
+                }
+            }
 
             // 插入
             self.shard_nodes.insert(node_addr.clone(), entry.clone());

@@ -1,16 +1,16 @@
 use crate::entitys::user_entity::UserInfoEntity;
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
 use common::config::AppConfig;
 use common::redis::redis_template::RedisTemplate;
 use common::redis::redis_template::ValueOps;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::{build_md5_with_key, build_uuid};
-use mongodb::Database;
+use common::util::date_util::now;
 use mongodb::bson::doc;
+use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use common::util::date_util::now;
 
 #[derive(Debug)]
 pub struct UserService {

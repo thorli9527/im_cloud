@@ -30,7 +30,7 @@ impl ManagerJobOpt for ArbManagerJob {
 
     async fn register_node(&mut self) -> anyhow::Result<()> {
         let shard_manager = ShardManager::get();
-        let shard_address = self.shard_address.clone();
+        let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
 
         let response = client
@@ -45,14 +45,22 @@ impl ManagerJobOpt for ArbManagerJob {
         let mut shard_info = current.shard_info.write().await;
 
         // 设置初始状态
-        shard_info.state = ShardState::Registered;
+        shard_info.state = ShardState::Preparing;
         shard_info.last_update_time = now() as u64;
         shard_info.last_heartbeat = shard_info.last_update_time;
 
         let info = response.into_inner();
         shard_info.index = hash_index(&info.node_addr, info.total);
         shard_info.total = info.total;
-
+       
+        // let handler=tokio::spawn(async {
+        //     let mut  this = self.);
+        //     if let Err(e) = this.change_preparing().await {
+        //         eprintln!("change_preparing error: {}", e);
+        //     }
+        //     
+        // });
+     
         Ok(())
     }
 
@@ -60,7 +68,12 @@ impl ManagerJobOpt for ArbManagerJob {
     /// 表示目标节点已准备好接收群组（例如缓存准备、校验完成等）
     async fn change_preparing(&mut self) -> anyhow::Result<()> {
         let shard_manager = ShardManager::get();
-        let shard_address = self.shard_address.clone();
+        let shard_address = shard_manager.shard_address.clone();
+
+        let current = shard_manager.current.load();
+        let mut shard_info = current.shard_info.write().await;
+        shard_info.state= ShardState::Registered;
+        
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
@@ -76,9 +89,15 @@ impl ManagerJobOpt for ArbManagerJob {
             shard_info.last_heartbeat = shard_info.last_update_time;
             // ✅ 存储快照
             shard_manager.clone_current_to_snapshot();
+            // ✅ 迁移状态已设置为 Preparing 开始同步数据
+            if let Err(e) = self.change_migrating().await {
+                log::error!("❌ sync groups error: {:?}", e);
+                shard_info.state= ShardState::Registered;
+            }
             // ✅ 清空 current
             shard_manager.clear_current();
             log::info!("🔄 current 分片数据已清空，准备进入迁移流程");
+           
         }
         Ok(())
     }
@@ -86,7 +105,12 @@ impl ManagerJobOpt for ArbManagerJob {
     /// 通常意味着不再接受新写入，同时准备数据转移
     async fn change_migrating(&mut self) -> anyhow::Result<()> {
         let shard_manager = ShardManager::get();
-        let shard_address = self.shard_address.clone();
+        let shard_address = shard_manager.shard_address.clone();
+        
+        let current = shard_manager.current.load();
+        let mut shard_info = current.shard_info.write().await;
+        shard_info.state= ShardState::Migrating;
+        
         let client = self.init_arb_client().await?;
 
         // 1. 设置分片状态为 Migrating
@@ -180,19 +204,20 @@ impl ManagerJobOpt for ArbManagerJob {
                 migrated_group_count += 1;
             }
         }
-
+        if let Err(e) = self.sync_data().await {
+            log::error!("❌ sync groups error: {:?}", e);
+            shard_info.state= ShardState::Migrating;
+        }
         log::info!(
             "✅ 共迁移群组 {} 个至当前分片 shard_{}",
             migrated_group_count,
             current_index
         );
-
         Ok(())
     }
 
     async fn sync_data(&mut self) -> anyhow::Result<()> {
         let shard_manager = ShardManager::get();
-        let shard_address = self.shard_address.clone();
         // === Step 1: 获取仲裁服务客户端并列出所有节点 ===
         let client = self.init_arb_client().await?;
 
@@ -204,7 +229,7 @@ impl ManagerJobOpt for ArbManagerJob {
 
         let endpoints: Vec<String> = nodes.iter().map(|node| node.clone().node_addr).collect();
         // === Step 2: 初始化 gRPC 客户端连接 ===
-        let mut group_rpc_clients = self.init_grpc_clients(endpoints).await.expect("init grpc clients error");
+        let mut group_rpc_clients = shard_manager.init_grpc_clients(endpoints).await.expect("init grpc clients error");
         // === Step 3: 获取当前快照状态 ===
         let shard_manager = ShardManager::get();
         let current = shard_manager.snapshot.load();
@@ -304,11 +329,21 @@ impl ManagerJobOpt for ArbManagerJob {
                 let _ = task.await;
             }
         }
+        if let Err(e) = self.change_ready().await {
+            let shard_manager = ShardManager::get();
+
+            let current = shard_manager.current.load();
+            let mut shard_info = current.shard_info.write().await;
+            shard_info.state= ShardState::Ready;
+            log::error!("❌ sync groups error: {:?}", e);
+            shard_info.state= ShardState::Registered;
+        }
         Ok(())
     }
 
     async fn change_failed(&mut self) -> anyhow::Result<()> {
-        let shard_address = self.shard_address.clone();
+        let  shard_manager = ShardManager::get();
+        let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
@@ -319,7 +354,11 @@ impl ManagerJobOpt for ArbManagerJob {
     }
 
     async fn change_ready(&mut self) -> anyhow::Result<()> {
-        let shard_address = self.shard_address.clone();
+        let  shard_manager = ShardManager::get();
+        let current = shard_manager.current.load();
+        let mut shard_info = current.shard_info.write().await;
+        shard_info.state= ShardState::Ready;
+        let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
@@ -328,22 +367,29 @@ impl ManagerJobOpt for ArbManagerJob {
         let shard_manager = ShardManager::get();
         shard_manager.clean_snapshot();
         client.update_shard_state(state_request).await?;
+        self.change_normal().await?;
         Ok(())
     }
 
     async fn change_normal(&mut self) -> anyhow::Result<()> {
-        let shard_address = self.shard_address.clone();
+        let  shard_manager = ShardManager::get();
+        let current = shard_manager.current.load();
+        let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
             new_state: ShardState::Normal as i32,
         };
         client.update_shard_state(state_request).await?;
+
+        let mut shard_info = current.shard_info.write().await;
+        shard_info.state= ShardState::Normal;
         Ok(())
     }
 
     async fn change_preparing_offline(&mut self) -> anyhow::Result<()> {
-        let shard_address = self.shard_address.clone();
+        let  shard_manager = ShardManager::get();
+        let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,
@@ -354,7 +400,8 @@ impl ManagerJobOpt for ArbManagerJob {
     }
 
     async fn change_offline(&mut self) -> anyhow::Result<()> {
-        let shard_address = self.shard_address.clone();
+        let  shard_manager = ShardManager::get();
+        let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
             node_addr: shard_address,

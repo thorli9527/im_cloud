@@ -1,18 +1,9 @@
 use crate::manager::shard_job::ArbManagerJob;
-use crate::manager::shard_manager::ShardManager;
-use crate::service::rpc::group_rpc_service_impl;
 use crate::service::rpc::group_rpc_service_impl::GroupRpcServiceImpl;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer};
+use log::warn;
 use common::config::AppConfig;
-use common::errors::AppError;
-use deadpool_redis::{Pool, PoolConfig};
-use mongodb::options::ClientOptions;
-use mongodb::{Client, Database};
-use std::str::FromStr;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tracing::log::{warn, LevelFilter};
 
 mod manager;
 mod protocol;
@@ -23,8 +14,6 @@ async fn main() -> std::io::Result<()> {
     AppConfig::init(&"group-config.toml".to_string()).await;
     // 读取配置文件
     let app_cfg = AppConfig::get();
-    //初始化日志
-    init_log(&app_cfg.clone()).expect("init log error");
 
     let address_and_port = format!(
         "{}:{}",
@@ -57,12 +46,4 @@ async fn main() -> std::io::Result<()> {
     .bind(address_and_port)?
     .run()
     .await
-}
-
-pub fn init_log(config: &AppConfig) -> Result<(), AppError> {
-    let mut builder = env_logger::Builder::new();
-    let log_level = &config.get_sys().log_leve;
-    let mut filter = builder.filter(None, LevelFilter::from_str(log_level).unwrap());
-    filter.init();
-    Ok(())
 }

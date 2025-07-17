@@ -451,6 +451,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "app_test"
+version = "0.1.0"
+dependencies = [
+ "tokio",
+]
+
+[[package]]
 name = "arc-swap"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

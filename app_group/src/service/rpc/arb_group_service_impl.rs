@@ -1,18 +1,18 @@
-use std::net::SocketAddr;
-use std::str::FromStr;
 use crate::manager::shard_manager;
 use crate::manager::shard_manager::ShardManager;
 use crate::protocol::rpc_arb_group;
+use crate::protocol::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
 use crate::protocol::rpc_arb_group::UpdateVersionReq;
 use crate::protocol::rpc_arb_models::{BaseRequest, ShardNodeInfo, SyncListGroup};
 use biz_service::protocol::common::CommonResp;
+use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
 use log::info;
+use std::net::SocketAddr;
+use std::str::FromStr;
 use std::thread::current;
 use tonic::{Request, Response, Status};
-use common::config::AppConfig;
-use crate::protocol::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
 
 /// arb 组 客户端接口
 pub struct ArbGroupServiceImpl {

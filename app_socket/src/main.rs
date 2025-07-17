@@ -4,9 +4,6 @@ use app_socket::service::rpc::arb_socket_server_impl::ArbSocketRpcServiceImpl;
 use app_socket::socket::socket_server::start_server;
 use biz_service::biz_service::kafka_service::KafkaService;
 use common::config::AppConfig;
-use common::errors::AppError;
-use log::LevelFilter;
-use std::str::FromStr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
@@ -18,9 +15,6 @@ use tokio::net::TcpListener;
 async fn main() -> anyhow::Result<()> {
     AppConfig::init(&"socket-config.toml".to_string()).await;
     let config = AppConfig::get();
-    //初始化日志
-    init_log(&config).expect("init log error");
-
     //初始化 kafka
     KafkaService::init(&config.get_kafka()).await;
 
@@ -37,12 +31,4 @@ async fn main() -> anyhow::Result<()> {
     let bind_cfg = format!("{}:{}", &config.get_server().host, &config.get_server().port);
     let listener = TcpListener::bind(bind_cfg).await?;
     start_server(listener, &config.get_kafka().clone()).await
-}
-
-pub fn init_log(config: &AppConfig) -> Result<(), AppError> {
-    let mut builder = env_logger::Builder::new();
-    let log_level = &config.get_sys().log_leve;
-    let filter = builder.filter(None, LevelFilter::from_str(log_level).unwrap());
-    filter.init();
-    Ok(())
 }

@@ -1,5 +1,5 @@
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Lit, Meta};
+use syn::{parse_macro_input, DeriveInput, Lit};
 
 pub fn expand_index_model_provider(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);

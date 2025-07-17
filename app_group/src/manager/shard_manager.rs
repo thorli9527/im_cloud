@@ -16,6 +16,8 @@ use tonic::transport::Channel;
 use tonic::Status;
 use tracing::log;
 use twox_hash::XxHash64;
+use common::util::common_utils::hash_index;
+use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
 
 pub const GROUP_SHARD_SIZE: usize = 16;
 pub const MEMBER_SHARD_SIZE: usize = 8;
@@ -24,7 +26,7 @@ pub struct GroupMembersPage {
     pub members: Vec<UserId>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default,Clone)]
 pub struct ShardInfo {
     pub version: u64,
     pub state: ShardState,
@@ -51,25 +53,29 @@ pub struct ShardManager {
     pub shard_config: ShardConfig,
     // 当前分片数据
     pub current: ArcSwap<MemData>,
+    pub shard_address:String,
 }
 
 impl ShardManager {
     pub fn new(shard_config: ShardConfig) -> Self {
         let shard_info = shard_config.clone();
+        let mut info = ShardInfo::default();
+        info.state = ShardState::Registered;
         Self {
             snapshot: ArcSwap::new(Arc::new(MemData {
                 group_shard_map: Default::default(),
                 group_member_map: Default::default(),
                 group_online_member_map: Default::default(),
-                shard_info: RwLock::new(ShardInfo::default()),
+                shard_info: RwLock::new(info.clone()),
             })),
             shard_config: shard_info,
             current: ArcSwap::new(Arc::new(MemData {
                 group_shard_map: Default::default(),
                 group_member_map: Default::default(),
                 group_online_member_map: Default::default(),
-                shard_info: RwLock::new(ShardInfo::default()),
+                shard_info: RwLock::new(info.clone()),
             })),
+            shard_address: shard_config.shard_address.clone().unwrap_or_default(),
         }
     }
     pub fn get_node_addr(&self) -> &str {
@@ -77,6 +83,25 @@ impl ShardManager {
             .shard_address
             .as_deref()
             .expect("shard_address must be set")
+    }
+    pub async fn init_grpc_clients(
+        &self,
+        endpoints: Vec<String>,
+    ) -> std::result::Result<HashMap<i32, ArbGroupServiceClient<Channel>>, Box<dyn std::error::Error>> {
+        let mut clients = HashMap::new();
+        let size = endpoints.len();
+        for endpoint in endpoints {
+            //跳过自动节点
+            if endpoint == self.shard_config.shard_address.clone().unwrap() {
+                continue;
+            }
+            let channel = Channel::from_shared(format!("http://{}", endpoint))?
+                .connect()
+                .await?;
+            let client = ArbGroupServiceClient::new(channel);
+            clients.insert(hash_index(&endpoint, size as i32), client);
+        }
+        Ok(clients)
     }
 
     /// 计算群组分片索引（用于分配 group → shard）

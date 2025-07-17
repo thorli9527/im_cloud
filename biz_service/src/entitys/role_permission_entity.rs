@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use common::index_trait::MongoIndexModelProvider;
 use mongo_macro::MongoIndexModelProvider as MongoDeriveMongoIndex;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 /// 角色权限关联结构体，表示某个角色拥有的权限项
 /// 角色与权限关联表，用于表示角色拥有哪些权限点（多对多关系）
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema, MongoDeriveMongoIndex)]

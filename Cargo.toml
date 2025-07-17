@@ -9,7 +9,7 @@ members = [
     "app_main",
     "app_socket",
     "app_group",
-    "app_arb",  ]
+    "app_arb", "app_test",  ]
 [workspace.dependencies]
 actix-web = { version = "4.11.0" }
 actix-service = { version = "2.0.3" }

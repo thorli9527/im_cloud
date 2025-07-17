@@ -1,20 +1,19 @@
-use crate::result::{result, result_data, result_error_msg};
-use actix_web::{HttpMessage, HttpRequest, HttpResponse, Responder, get, post, web};
+use crate::result::result;
+use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
+use biz_service::biz_service::menu_service::MenuService;
 use biz_service::biz_service::permission_service::PermissionService;
 use biz_service::biz_service::role_permission_service::RolePermissionService;
 use biz_service::biz_service::user_role_service::UserRoleService;
 use biz_service::biz_service::user_service::UserService;
+use biz_service::entitys::menu_entity::MenuEntity;
 use common::errors::AppError;
 use common::repository_util::Repository;
 use mongo_macro::QueryFilter;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::option::Option;
 use utoipa::ToSchema;
 use validator::Validate;
-use biz_service::biz_service::menu_service::MenuService;
-use biz_service::entitys::menu_entity::MenuEntity;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(user_login);

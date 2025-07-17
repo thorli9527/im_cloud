@@ -1,5 +1,3 @@
-#![feature(unwrap_infallible)]
-
 pub mod biz_const;
 pub mod biz_service;
 pub mod entitys;

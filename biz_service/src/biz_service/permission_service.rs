@@ -1,10 +1,10 @@
-use common::repository_util::{BaseRepository, Repository};
-use mongodb::{bson::doc, Database};
+use crate::entitys::permission_entity::PermissionEntity;
 use anyhow::Result;
+use common::repository_util::{BaseRepository, Repository};
+use common::util::date_util::now;
+use mongodb::{bson::doc, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use common::util::date_util::now;
-use crate::entitys::permission_entity::PermissionEntity;
 #[derive(Debug)]
 pub struct PermissionService {
     pub dao: BaseRepository<PermissionEntity>,

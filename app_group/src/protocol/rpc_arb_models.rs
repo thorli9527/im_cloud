@@ -116,9 +116,9 @@ pub enum ShardState {
     Migrating = 3,
     /// 节点异常、下线、心跳失联等状态
     Failed = 4,
-    /// 正在准备接管分片（目标节点）
+    /// 正在准备接管分片（准备中）
     Preparing = 5,
-    /// 接管准备完成，可切换 owner
+    /// 接管准备完成，分片已可调度
     Ready = 6,
     /// 节点主动下线，分片不可调度
     Offline = 7,

@@ -1,58 +1,68 @@
-use crate::manager;
-use crate::manager::shard_manager;
-use crate::manager::shard_manager::{ShardManager, GROUP_SHARD_SIZE};
+use crate::manager::shard_manager::ShardManager;
 use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use crate::protocol::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
+use crate::protocol::rpc_arb_models::ShardState;
+use crate::protocol::rpc_arb_models::ShardState::{Migrating, Normal, Preparing, Ready, Registered};
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
-use crate::service::rpc::group_rpc_service_impl::GroupRpcServiceImpl;
-use common::config::{AppConfig, ShardConfig};
-use common::util::common_utils::hash_index;
-use common::{GroupId, UserId};
-use dashmap::{DashMap, DashSet};
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::thread::current;
-use tokio::sync::Mutex;
-use tokio::task::JoinHandle;
-use tokio_util::sync::CancellationToken;
+use common::config::AppConfig;
+use std::time::Duration;
+use tokio::time::sleep;
 use tonic::async_trait;
 use tonic::transport::Channel;
 
 pub struct ArbManagerJob {
-    //分片仲裁服务器接口信息
     pub arb_client: Option<ArbServerRpcServiceClient<Channel>>,
-    pub shard_address: String,
     pub server_host: String,
-    pub cancel_token: CancellationToken,
-    pub heartbeat_handle: Option<JoinHandle<()>>,
 }
 impl ArbManagerJob {
     pub fn new() -> Self {
         let config = AppConfig::get().clone().shard.clone().unwrap();
         Self {
             arb_client: None,
-            shard_address: config.shard_address.unwrap(),
             server_host: config.server_host.unwrap(),
-            cancel_token: CancellationToken::new(),
-            heartbeat_handle: None,
         }
     }
 
     /// 启动心跳和生命周期任务
     pub async fn start(&mut self) -> () {
-        self.register_node().await.expect("register node error");
-        self.change_preparing()
-            .await
-            .expect("change preparing error");
-        self.change_migrating()
-            .await
-            .expect("change migrating error");
-        self.sync_data().await.expect("sync groups error");
-        self.change_ready().await.expect("change ready error");
-        self.change_normal().await.expect("change normal error");
         self.start_heartbeat_loop();
+        self.check_status_task().await;
+        
     }
+    /// 启动分片状态自检任务（后台常驻）
+    pub async fn check_status_task(&mut self) {
+        loop {
+            sleep(Duration::from_secs(15)).await;
+            let shard_manager = ShardManager::get();
+            let current = shard_manager.current.load();
+            let shard_info = current.shard_info.read().await;
 
+            if shard_info.state == Registered {
+                if let Err(e) = self.register_node().await {
+                    log::error!("register_node error: {:?}", e);
+                }
+            }
+            if shard_info.state == Migrating {
+                if let Err(e) = self.change_migrating().await {
+                    log::error!("change_migrating error: {:?}", e);
+                }
+            }
+            if shard_info.state == Preparing {
+                if let Err(e) = self.change_preparing().await {
+                    log::error!("Preparing error: {:?}", e);
+                }
+            }
+            if shard_info.state == Ready {
+                if let Err(e) = self.change_ready().await {
+                    log::error!("Ready error: {:?}", e);
+                }
+            }
+            if shard_info.state == Normal {
+                if let Err(e) = self.change_normal().await {
+                    log::error!("Normal error: {:?}", e);
+                }
+            }
+        }
+    }
     /// 停止所有任务
     pub fn stop(&self) {}
     pub async fn init_arb_client(
@@ -66,38 +76,13 @@ impl ArbManagerJob {
         }
         Ok(self.arb_client.as_mut().unwrap())
     }
-    pub async fn init_grpc_clients(
-        &self,
-        endpoints: Vec<String>,
-    ) -> Result<HashMap<i32, ArbGroupServiceClient<Channel>>, Box<dyn std::error::Error>> {
-        let mut clients = HashMap::new();
-        let size = endpoints.len();
-        for endpoint in endpoints {
-            //跳过自动节点
-            if endpoint == self.shard_address {
-                continue;
-            }
-            let channel = Channel::from_shared(format!("http://{}", endpoint))?
-                .connect()
-                .await?;
-            let client = ArbGroupServiceClient::new(channel);
-            clients.insert(hash_index(&endpoint, size as i32), client);
-        }
-        Ok(clients)
-    }
 
     fn start_heartbeat_loop(&mut self) {
-        let cancel_token = self.cancel_token.clone();
-        let mut this = self.clone_light(); // 👈 克隆必要字段以避免借用冲突
-
-        self.heartbeat_handle = Some(tokio::spawn(async move {
+        let mut this = self.clone_light(); 
+         Some(tokio::spawn(async move {
             let interval = std::time::Duration::from_secs(10);
             loop {
                 tokio::select! {
-                    _ = cancel_token.cancelled() => {
-                        log::info!("🛑 心跳任务已取消");
-                        break;
-                    }
                     _ = tokio::time::sleep(interval) => {
                         if let Err(e) = this.heartbeat().await {
                             log::warn!("⚠️ 心跳失败: {:?}", e);
@@ -111,13 +96,13 @@ impl ArbManagerJob {
     }
 
     // 轻量 clone，只克隆非连接字段
-    fn clone_light(&self) -> ArbManagerJob {
+    pub fn clone_light(&self) -> ArbManagerJob {
         ArbManagerJob {
             arb_client: None, // 避免 tonic 客户端跨线程问题
-            shard_address: self.shard_address.clone(),
+            // shard_address: self.shard_address.clone(),
             server_host: self.server_host.clone(),
-            cancel_token: self.cancel_token.clone(),
-            heartbeat_handle: None,
+            // cancel_token: self.cancel_token.clone(),
+            // heartbeat_handle: None,
         }
     }
 }

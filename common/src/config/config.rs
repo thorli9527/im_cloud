@@ -1,9 +1,12 @@
+use std::str::FromStr;
 use crate::redis::redis_pool::RedisPoolTools;
 use crate::repository::db::Db;
 use config::Config;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::sync::Arc;
+use log::LevelFilter;
+use crate::errors::AppError;
 
 #[derive(Debug, Deserialize, Clone,Default)]
 pub struct AppConfig {
@@ -41,6 +44,14 @@ impl AppConfig {
             let database_config=instance.clone().database.unwrap();
             Db::init(&database_config).await.expect("init database error");
         }
+        
+        if instance.sys.is_some(){
+            let log_lovel=instance.clone().sys.unwrap().log_leve;
+            if log_lovel.is_some(){
+                init_log(&log_lovel.clone().unwrap()).expect("init log error");
+            }
+            
+        }
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
     
@@ -71,6 +82,13 @@ impl AppConfig {
     }
     //强制下线
 }
+
+pub fn init_log(log_lovel: &str) -> Result<(), AppError> {
+    let mut builder = env_logger::Builder::new();
+    let filter = builder.filter(None, LevelFilter::from_str(log_lovel).unwrap());
+    filter.init();
+    Ok(())
+}
 static INSTANCE: OnceCell<Arc<AppConfig>> = OnceCell::new();
 #[derive(Debug, Deserialize, Clone,Default)]
 pub struct CacheConfig {
@@ -89,7 +107,7 @@ pub struct RedisConfig {
 #[derive(Debug, Deserialize, Clone,Default)]
 pub struct SysConfig {
     //全局日志级别
-    pub log_leve: String,
+    pub log_leve: Option<String>,
     //默认文件路径
     pub upload_path: Option<String>,
     //md5混淆 key

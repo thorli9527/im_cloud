@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use common::index_trait::MongoIndexModelProvider;
 use mongo_macro::MongoIndexModelProvider as MongoDeriveMongoIndex;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// 用户信息结构体，用于存储系统用户账号、权限和身份信息
 /// 用户信息结构
