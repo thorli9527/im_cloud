@@ -9,12 +9,13 @@ enum ShardState {
   UNSPECIFIED = 0;        // 默认值，表示未明确设置状态
   REGISTERED = 1;         // 节点已注册，等待分片分配（未调度）
   NORMAL = 2;             // 分片正常运行中（已调度完成）
-  MIGRATING = 3;          // 正在迁移（当前节点将转出）
-  FAILED = 4;             // 节点异常、下线、心跳失联等状态
-  PREPARING = 5;          // 正在准备接管分片（目标节点）
+  PREPARING = 3;          // 正在准备接管分片（ current 切换 snapshot）
+  MIGRATING = 4;          // 正在迁移（snapshot 迁移当前节点数据）
+  SYNCING = 5;            // 正在同步数据（snapshot 迁移其它节点数据）
   READY = 6;              // 接管准备完成，可切换 owner
-  OFFLINE = 7;            // 节点主动下线，分片不可调度
-  PREPARING_OFFLINE = 8;  // 节点准备下线，等待迁移完成
+  FAILED = 7;             // 节点异常、下线、心跳失联等状态
+  OFFLINE = 8;            // 节点主动下线，分片不可调度
+  PREPARING_OFFLINE = 9;  // 节点准备下线，等待迁移完成
 }
 // 节点类型
 enum NodeType{
@@ -61,12 +62,13 @@ enum SyncDataType {
   GROUP_MEMBER_UPDATE = 5;
 }
 message MemberRef {
-  string uid = 1;               // 用户ID
-  string group_id = 2;              // 群组ID
+  string uid = 1;                        // 用户ID
+  string group_id = 2;                   // 群组ID
 }
 message SyncListGroup {
-  repeated string groups = 1;
-  repeated MemberRef members = 2;
+  repeated string groups = 1;            // 群组ID列表
+  repeated MemberRef members = 2;        // 成员列表
+  repeated MemberRef on_line_member = 3; // 在线成员
 }
 
 // ============================

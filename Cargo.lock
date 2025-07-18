@@ -3562,6 +3562,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "protos"
+version = "0.1.0"
+dependencies = [
+ "prost 0.13.5",
+ "prost-build 0.14.1",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
 name = "pulsar"
 version = "6.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

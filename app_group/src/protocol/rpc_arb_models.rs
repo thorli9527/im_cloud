@@ -67,10 +67,15 @@ pub struct MemberRef {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SyncListGroup {
+    /// 群组ID列表
     #[prost(string, repeated, tag = "1")]
     pub groups: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// 成员列表
     #[prost(message, repeated, tag = "2")]
     pub members: ::prost::alloc::vec::Vec<MemberRef>,
+    /// 在线成员
+    #[prost(message, repeated, tag = "3")]
+    pub on_line_member: ::prost::alloc::vec::Vec<MemberRef>,
 }
 /// ============================
 /// 请求结构：更新分片状态
@@ -112,18 +117,20 @@ pub enum ShardState {
     Registered = 1,
     /// 分片正常运行中（已调度完成）
     Normal = 2,
-    /// 正在迁移（当前节点将转出）
-    Migrating = 3,
-    /// 节点异常、下线、心跳失联等状态
-    Failed = 4,
-    /// 正在准备接管分片（准备中）
-    Preparing = 5,
-    /// 接管准备完成，分片已可调度
+    /// 正在准备接管分片（ current 切换 snapshot）
+    Preparing = 3,
+    /// 正在迁移（snapshot 迁移当前节点数据）
+    Migrating = 4,
+    /// 正在同步数据（snapshot 迁移其它节点数据）
+    Syncing = 5,
+    /// 接管准备完成，可切换 owner
     Ready = 6,
+    /// 节点异常、下线、心跳失联等状态
+    Failed = 7,
     /// 节点主动下线，分片不可调度
-    Offline = 7,
+    Offline = 8,
     /// 节点准备下线，等待迁移完成
-    PreparingOffline = 8,
+    PreparingOffline = 9,
 }
 impl ShardState {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -135,10 +142,11 @@ impl ShardState {
             Self::Unspecified => "UNSPECIFIED",
             Self::Registered => "REGISTERED",
             Self::Normal => "NORMAL",
-            Self::Migrating => "MIGRATING",
-            Self::Failed => "FAILED",
             Self::Preparing => "PREPARING",
+            Self::Migrating => "MIGRATING",
+            Self::Syncing => "SYNCING",
             Self::Ready => "READY",
+            Self::Failed => "FAILED",
             Self::Offline => "OFFLINE",
             Self::PreparingOffline => "PREPARING_OFFLINE",
         }
@@ -149,10 +157,11 @@ impl ShardState {
             "UNSPECIFIED" => Some(Self::Unspecified),
             "REGISTERED" => Some(Self::Registered),
             "NORMAL" => Some(Self::Normal),
-            "MIGRATING" => Some(Self::Migrating),
-            "FAILED" => Some(Self::Failed),
             "PREPARING" => Some(Self::Preparing),
+            "MIGRATING" => Some(Self::Migrating),
+            "SYNCING" => Some(Self::Syncing),
             "READY" => Some(Self::Ready),
+            "FAILED" => Some(Self::Failed),
             "OFFLINE" => Some(Self::Offline),
             "PREPARING_OFFLINE" => Some(Self::PreparingOffline),
             _ => None,

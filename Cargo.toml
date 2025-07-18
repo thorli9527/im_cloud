@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
+    "protos",
     "mongo_macro",
-#    "protos",
     "common",
     "biz_service",
     "app_job",

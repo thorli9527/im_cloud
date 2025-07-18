@@ -8,8 +8,8 @@ pub mod arb_server_rpc_service_client {
         clippy::wildcard_imports,
         clippy::let_unit_value,
     )]
-    use tonic::codegen::http::Uri;
     use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
     /// ============================
     /// 仲裁服务接口定义
     /// ============================
