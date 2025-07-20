@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use dashmap::{DashMap, DashSet};
 use biz_service::biz_service::group_member_service::GroupMemberService;
-use biz_service::protocol::msg::group_models::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
+use biz_service::protocol::msg::group_models::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
 use common::GroupId;
 use crate::manager::shard_manager::{ShardManager, ShardManagerMqOpt, ShardManagerOpt};
 use crate::protocol::rpc_arb_models::ShardState;
@@ -157,6 +157,14 @@ impl ShardManagerMqOpt for ShardManager {
     }
 
     async fn transfer_owner_ship(&self, msg: &TransferOwnershipMsg) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    async fn member_online(&self, msg: &MemberOnlineMsg) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    async fn member_offline(&self, msg: &MemberOnlineMsg) -> anyhow::Result<()> {
         todo!()
     }
 }

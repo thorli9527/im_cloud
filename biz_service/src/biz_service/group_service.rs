@@ -44,7 +44,7 @@ impl GroupService {
     pub async fn create_group(
         &self,
         group: &GroupEntity,
-        members: &Vec<String>,
+        ids: &Vec<String>,
     ) -> anyhow::Result<()> {
         let old_info = self
             .dao
@@ -94,7 +94,7 @@ impl GroupService {
                 .await?;
 
             // 4. 插入其余初始成员
-            for user_id in members {
+            for user_id in ids {
                 if user_id == &group.owner_id {
                     continue; // 跳过群主
                 }
@@ -127,8 +127,8 @@ impl GroupService {
                 conn.sadd::<_, _, ()>(&admin_key, &group.owner_id).await?;
 
                 // 添加初始成员
-                if !members.is_empty() {
-                    let other_members: Vec<String> = members
+                if !ids.is_empty() {
+                    let other_members: Vec<String> = ids
                         .iter()
                         .filter(|u| *u != &group.owner_id)
                         .cloned()
@@ -162,7 +162,7 @@ impl GroupService {
     }
 
     /// 解散群组（MongoDB + Redis 全清理）
-    pub async fn dismiss_group(&self, group_id: &str) -> Result<(), AppError> {
+    pub async fn dismiss_group(&self, group_id: &str,operator_id: &str) -> Result<(), AppError> {
         let group_member_service = GroupMemberService::get();
 
         // Step 1: 开启 MongoDB 事务

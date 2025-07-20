@@ -176,7 +176,7 @@ impl GroupMemberService {
     }
 
     /// 从缓存优先读取分页成员列表，否则回源 MongoDB
-    pub async fn find_by_group_id(
+    pub async fn query_by_group_id(
         &self,
         group_id: &str,
         page_size: i64,

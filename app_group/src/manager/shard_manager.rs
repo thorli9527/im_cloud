@@ -3,11 +3,7 @@ use crate::protocol::rpc_arb_models::ShardState;
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use anyhow::Result;
 use arc_swap::ArcSwap;
-use biz_service::protocol::msg::group_models::{
-    ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg,
-    HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MuteMemberMsg, RemoveMembersMsg,
-    RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg,
-};
+use biz_service::protocol::msg::group_models::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::hash_index;
 use common::{GroupId, UserId};
@@ -130,6 +126,10 @@ pub trait ShardManagerMqOpt: Send + Sync {
 
     /// 转让群主身份
     async fn transfer_owner_ship(&self, msg: &TransferOwnershipMsg) -> anyhow::Result<()>;
+    
+    async fn member_online(&self, msg:&MemberOnlineMsg) -> anyhow::Result<()>;
+    
+    async fn member_offline(&self, msg:&MemberOnlineMsg) -> anyhow::Result<()>;
 }
 
 impl ShardManager {

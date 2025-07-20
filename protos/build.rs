@@ -5,7 +5,7 @@ fn main() {
     build_arb_service();
     build_biz_service();
     build_arb_group_service();
-    // build_group_service();
+    build_group_service();
     build_app_main_client();
 }
 

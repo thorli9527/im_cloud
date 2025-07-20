@@ -16,7 +16,7 @@ use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 use biz_service::biz_service::kafka_group_service::{GROUP_NODE_MSG_TOPIC};
 use biz_service::protocol::msg::group::GroupCreateMsg;
-use biz_service::protocol::msg::group_models::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, GroupNodeMsgType, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
+use biz_service::protocol::msg::group_models::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, GroupNodeMsgType, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
 use crate::manager::shard_manager::{ShardManager, ShardManagerMqOpt};
 
 type MessageId = u64;
@@ -148,6 +148,14 @@ pub async fn handle_kafka_message(msg: &OwnedMessage) -> Result<()> {
         GroupNodeMsgType::TransferOwnershipMsgType => {
             let msg = TransferOwnershipMsg::decode(body)?;
             shard_manager.transfer_owner_ship(&msg).await?;
+        }
+        GroupNodeMsgType::MemberOnlineMsgType => {
+            let msg = MemberOnlineMsg::decode(body)?;
+            shard_manager.member_online(&msg).await?;
+        }
+        GroupNodeMsgType::MemberOfflineMsgType => {
+            let msg = MemberOnlineMsg::decode(body)?;
+            shard_manager.member_offline(&msg).await?;
         }
         GroupNodeMsgType::UnknownMsgType | _ => {
             return Err(anyhow!("不支持的 GroupNodeMsgType: {}", payload[0]));
