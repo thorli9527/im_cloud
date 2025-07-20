@@ -1,4 +1,4 @@
-use crate::biz_service::kafka_service::KafkaService;
+use crate::biz_service::kafka_socket_service::KafkaService;
 use crate::protocol::common::ByteMessageType;
 use crate::protocol::msg::entity::UserMsgEntity;
 use crate::protocol::msg::message::Segment;
@@ -71,8 +71,7 @@ impl UserMessageService {
         // 发送到 Kafka
         let app_config = AppConfig::get();
         let msg_type: ByteMessageType = ByteMessageType::UserMsgType;
-        let data_index=0 as u8;
-        kafka_service.send_proto( &msg_type,&data_index,&message,&message.message_id, &app_config.get_kafka().topic_single).await?;
+        kafka_service.send_proto( &msg_type,&message,&message.message_id, &app_config.get_kafka().topic_single).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

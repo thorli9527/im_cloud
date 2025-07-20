@@ -24,6 +24,7 @@ moka.workspace = true
 sha1.workspace = true
 dashmap.workspace = true
 tokio.workspace = true
+num_enum.workspace = true
 rdkafka.workspace = true
 futures-util.workspace = true
 prost.workspace = true
@@ -31,6 +32,8 @@ serde_json.workspace = true
 prost-types = "0.12"
 twox-hash.workspace = true
 bytes = "1.10.1"
+rand = "0.9.1"
+tracing = "0.1.41"
 [build-dependencies]
 regex = "1.11.1"
 prost-build.version = "0.13.1"

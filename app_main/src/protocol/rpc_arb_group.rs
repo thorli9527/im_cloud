@@ -110,32 +110,7 @@ pub mod arb_group_service_client {
             self
         }
         /// 获取指定节点所属分片信息
-        pub async fn get_shard_node(
-            &mut self,
-            request: impl tonic::IntoRequest<super::super::rpc_arb_models::BaseRequest>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::unknown(
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/rpc_arb_group.ArbGroupService/getShardNode",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("rpc_arb_group.ArbGroupService", "getShardNode"),
-                );
-            self.inner.unary(req, path, codec).await
-        }
+        ///  rpc getShardNode(rpc_arb_models.BaseRequest) returns (rpc_arb_models.NodeInfo);
         /// 更新版本号
         pub async fn update_version(
             &mut self,

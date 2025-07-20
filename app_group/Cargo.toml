@@ -28,6 +28,7 @@ tokio-util = "0.7.15"
 twox-hash.workspace = true
 arc-swap.workspace = true
 log = "0.4.27"
+async-trait = "0.1.88"
 [build-dependencies]
 tonic = "0.13.1"
 tonic-build = "0.13.1"

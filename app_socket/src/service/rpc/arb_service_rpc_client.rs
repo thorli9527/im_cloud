@@ -1,9 +1,7 @@
 // 在 app_socket 中添加节点注册与心跳逻辑到 app_arb 服务
 
 use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use crate::protocol::rpc_arb_models::{BaseRequest, NodeType, QueryNodeReq, ShardNodeInfo};
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
-use biz_service::manager::group_manager_core::GroupManager;
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::hash_index;
 use config::Config;
@@ -14,6 +12,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{interval, Duration};
 use tonic::transport::Channel;
+use crate::protocol::rpc_arb_models::{BaseRequest, NodeInfo, NodeType, QueryNodeReq};
 
 #[derive(Debug, Clone)]
 pub struct ArbClient {
@@ -23,11 +22,15 @@ pub struct ArbClient {
     pub shard_clients: HashMap<String, ArbGroupServiceClient<Channel>>,
     ///当前节点地址
     pub node_addr: String,
+    /// kafka地址
+    pub kafka_addr: String,
+    /// socket服务地址
+    pub socket_addr: String,
 }
 
 impl ArbClient {
     /// 创建 ArbClient 并注册自身地址
-    pub async fn new(shard_config: &ShardConfig) -> anyhow::Result<Self> {
+    pub async fn new(shard_config: &ShardConfig, kafka_addr: &str,socket_addr:&str) -> anyhow::Result<Self> {
         let node_addr = shard_config
             .server_host
             .clone()
@@ -37,6 +40,8 @@ impl ArbClient {
             arb_client: client,
             shard_clients: HashMap::new(),
             node_addr,
+            socket_addr:socket_addr.to_string(),
+            kafka_addr: kafka_addr.to_string(),
         })
     }
     pub fn get() -> Arc<RwLock<ArbClient>> {
@@ -48,7 +53,9 @@ impl ArbClient {
     /// 注册本节点 + 初始化 shard_clients
     pub async fn init() -> anyhow::Result<()> {
         let shard_config = AppConfig::get().shard.clone().unwrap();
-        let mut arb_client = ArbClient::new(&shard_config).await?;
+        let kafka_addr = AppConfig::get().kafka.clone().unwrap();
+        let socket_addr = AppConfig::get().socket.clone().unwrap();
+        let mut arb_client = ArbClient::new(&shard_config, &kafka_addr.brokers, &socket_addr.node_addr).await?;
 
         arb_client.register().await?;
 
@@ -78,10 +85,12 @@ impl ArbClient {
         }
         Err(anyhow::anyhow!("no shard node"))
     }
-    pub async fn register(&mut self) -> anyhow::Result<ShardNodeInfo> {
+    pub async fn register(&mut self) -> anyhow::Result<NodeInfo> {
         let req = BaseRequest {
             node_addr: self.node_addr.clone(),
             node_type: NodeType::SocketNode as i32,
+            kafka_addr: Some(self.kafka_addr.clone()),
+            socket_addr: Some(self.socket_addr.clone()),
         };
         let resp = self.arb_client.register_node(req).await?.into_inner();
         Ok(resp)
@@ -148,20 +157,23 @@ impl ArbClient {
     }
     pub fn start_heartbeat(arb: Arc<RwLock<ArbClient>>) {
         let arb_clone = arb.clone();
+
         tokio::spawn(async move {
             let node_addr;
             let mut client;
-            {
-                let guard = arb_clone.read().await;
-                client = guard.arb_client.clone();
-                node_addr = guard.node_addr.clone();
-            }
+            let guard = arb_clone.read().await;
+            client = guard.arb_client.clone();
+            node_addr = guard.node_addr.clone();
+            let kafka_addr = guard.kafka_addr.clone();
+
             let mut interval = interval(Duration::from_secs(5));
             loop {
                 interval.tick().await;
                 let req = BaseRequest {
                     node_addr: node_addr.clone(),
                     node_type: NodeType::SocketNode as i32,
+                    kafka_addr: Some(kafka_addr.clone()),
+                    socket_addr: Some(node_addr.clone()),
                 };
                 match client.heartbeat(req).await {
                     Ok(_) => log::info!("[Heartbeat] Sent heartbeat for node: {}", node_addr),

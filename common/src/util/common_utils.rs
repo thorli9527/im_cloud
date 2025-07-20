@@ -6,10 +6,11 @@ use std::hash::{Hash, Hasher};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use md5::{Digest, Md5};
+use rand::distr::Alphanumeric;
 use serde::{Deserialize, Serialize};
 use twox_hash::XxHash64;
 use uuid::Uuid;
-
+use rand::Rng;
 pub fn copy_to<A, B>(a: &A, b: &B) -> B
 where
     A: Serialize + for<'de> Deserialize<'de>,
@@ -45,6 +46,19 @@ pub fn build_md5_with_key(content: &str, key: &str) -> String {
     let result = hasher.finalize();
     let hex_string = encode(result);
     hex_string
+}
+
+
+pub fn build_uid() -> String {
+    const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
+    let mut rng = rand::rng();
+
+    (0..16)
+        .map(|_| {
+            let i = rng.random_range(0..CHARSET.len());
+            CHARSET[i] as char
+        })
+        .collect()
 }
 
 pub struct SafeSnowflake {
@@ -95,6 +109,4 @@ impl SafeSnowflake {
     }
 }
 
-pub fn as_ref_to_string<T: AsRef<str>>(input: T) -> String {
-    input.as_ref().to_string()
-}
+

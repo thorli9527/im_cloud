@@ -13,6 +13,12 @@ pub struct BaseRequest {
     /// 节点类型
     #[prost(enumeration = "NodeType", tag = "2")]
     pub node_type: i32,
+    /// Kafka 地址（可选，用于消息传递）
+    #[prost(string, optional, tag = "3")]
+    pub kafka_addr: ::core::option::Option<::prost::alloc::string::String>,
+    /// Socket 地址（可选，用于实时通信）
+    #[prost(string, optional, tag = "4")]
+    pub socket_addr: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// =====================
 /// 通用结构体定义
@@ -32,7 +38,7 @@ pub struct QueryNodeReq {
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ShardNodeInfo {
+pub struct NodeInfo {
     /// 所属节点地址
     #[prost(string, tag = "1")]
     pub node_addr: ::prost::alloc::string::String,
@@ -51,6 +57,12 @@ pub struct ShardNodeInfo {
     /// 节点类型
     #[prost(enumeration = "NodeType", tag = "7")]
     pub node_type: i32,
+    /// Kafka 地址（可选，用于消息传递）
+    #[prost(string, optional, tag = "8")]
+    pub kafka_addr: ::core::option::Option<::prost::alloc::string::String>,
+    /// Socket 地址（可选，用于实时通信）
+    #[prost(string, optional, tag = "9")]
+    pub socket_addr: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -94,14 +106,14 @@ pub struct UpdateShardStateRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListShardNodesResponse {
     #[prost(message, repeated, tag = "1")]
-    pub nodes: ::prost::alloc::vec::Vec<ShardNodeInfo>,
+    pub nodes: ::prost::alloc::vec::Vec<NodeInfo>,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListAllNodesResponse {
     #[prost(message, repeated, tag = "1")]
-    pub nodes: ::prost::alloc::vec::Vec<ShardNodeInfo>,
+    pub nodes: ::prost::alloc::vec::Vec<NodeInfo>,
 }
 /// =====================
 /// 枚举：分片节点状态定义

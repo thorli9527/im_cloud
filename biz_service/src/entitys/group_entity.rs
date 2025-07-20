@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
-pub struct GroupJoinEntity {
+pub struct RequestJoinGroupEntity {
     pub id: String,                   // 申请记录唯一 ID（如雪花 ID 或 UUID 字符串）
     pub group_id: String,             // 群组 ID
     pub applicant_id: String,         // 申请人用户 ID

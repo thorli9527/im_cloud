@@ -1,5 +1,5 @@
-use crate::result::{result, result_data, result_error, AppState};
-use actix_web::{post, web, Responder};
+use crate::result::{result, result_data, result_error};
+use actix_web::{Responder, post, web};
 use anyhow::anyhow;
 use biz_service::biz_service::user_service::UserService;
 use biz_service::entitys::user_entity::UserInfoEntity;
@@ -33,7 +33,15 @@ pub struct UserInfoQueryDto {
 
 #[post("/user/list")]
 pub async fn user_list(dto: Json<UserInfoQueryDto>) -> Result<impl Responder, AppError> {
-    let page_result = UserService::get().dao.query_by_page(dto.to_query_doc(), dto.page_size, Option::Some(OrderType::Asc), "_id").await?;
+    let page_result = UserService::get()
+        .dao
+        .query_by_page(
+            dto.to_query_doc(),
+            dto.page_size,
+            Some(OrderType::Asc),
+            "_id",
+        )
+        .await?;
     Ok(Json(result_data(page_result)))
 }
 
@@ -52,7 +60,10 @@ pub async fn user_add(dto: Json<UserAddDto>) -> Result<impl Responder, AppError>
         return Ok(result_error(e.to_string()));
     }
     let user_service = UserService::get();
-    let user = user_service.dao.find_one(doc! {"user_name": &dto.user_name}).await?;
+    let user = user_service
+        .dao
+        .find_one(doc! {"user_name": &dto.user_name})
+        .await?;
     if user.is_some() {
         return Ok(result_error("用户已存在"));
     }
@@ -77,7 +88,7 @@ pub async fn user_add(dto: Json<UserAddDto>) -> Result<impl Responder, AppError>
 pub async fn property_change(
     uid: web::Path<String>,
     body: Json<PropertyValue>,
-) -> Result<impl Responder, AppError>{
+) -> Result<impl Responder, AppError> {
     let property = body.into_inner();
     let allowed_fields = ["status", "is_admin"];
 
@@ -97,9 +108,9 @@ pub async fn property_change(
 
     if user.is_none() {
         return Ok(web::Json(json!({
-                "code": 500,
-                "message": "字段暂不支持修改"
-            })));
+            "code": 500,
+            "message": "字段暂不支持修改"
+        })));
     }
 
     let mut user = user.unwrap();
@@ -132,9 +143,9 @@ pub async fn property_change(
         .expect("更新用户信息失败");
 
     return Ok(web::Json(json!({
-                "code": 0,
-                "message": "字段暂不支持修改"
-            })));
+        "code": 0,
+        "message": "字段暂不支持修改"
+    })));
 }
 #[post("/user/del/{user_id}")]
 pub async fn user_del(user_id: web::Path<String>) -> Result<impl Responder, AppError> {
@@ -151,11 +162,18 @@ pub struct ResetPassword {
 }
 
 #[post("/user/reset/password")]
-pub async fn reset_password(state: web::Data<AppState>, dto: Json<ResetPassword>) -> Result<impl Responder, AppError> {
+pub async fn reset_password(dto: Json<ResetPassword>) -> Result<impl Responder, AppError> {
     match &dto.validate() {
         Ok(_) => {
-            let password = build_md5_with_key(&state.config.get_sys().md5_key.unwrap(), &dto.password.as_ref().unwrap());
-            UserService::get().dao.up_property(&dto.user_id, "status", password).await?;
+            let md5_key=AppConfig::get().sys.clone().unwrap().md5_key.unwrap();
+            let password = build_md5_with_key(
+                &md5_key,
+                &dto.password.as_ref().unwrap(),
+            );
+            UserService::get()
+                .dao
+                .up_property(&dto.user_id, "status", password)
+                .await?;
             Ok(result())
         }
         Err(e) => return Ok(result_error(e.to_string())),
@@ -174,10 +192,7 @@ pub struct UserPassChange {
     pub new_password: Option<String>,
 }
 #[post("/user/change/pass")]
-pub async fn user_change_pass(
-    state: web::Data<AppState>,
-    dto: Json<UserPassChange>,
-) -> Result<impl Responder, AppError> {
+pub async fn user_change_pass(dto: Json<UserPassChange>) -> Result<impl Responder, AppError> {
     // Step 1: 校验字段合法性
     dto.validate().map_err(|e| anyhow!(e.to_string()))?;
 
@@ -197,7 +212,13 @@ pub async fn user_change_pass(
     if user.is_none() {
         return Ok(result_error("用户不存在"));
     }
-    let md5_key = AppConfig::get().clone().sys.clone().unwrap().md5_key.unwrap();
+    let md5_key = AppConfig::get()
+        .clone()
+        .sys
+        .clone()
+        .unwrap()
+        .md5_key
+        .unwrap();
     let user = user.unwrap();
 
     // Step 3: 验证原密码

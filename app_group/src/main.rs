@@ -1,5 +1,4 @@
 use crate::manager::shard_job::ArbManagerJob;
-use crate::service::rpc::group_rpc_service_impl::GroupRpcServiceImpl;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer};
 use log::warn;
@@ -8,6 +7,7 @@ use common::config::AppConfig;
 mod manager;
 mod protocol;
 mod service;
+mod kafka;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -27,10 +27,6 @@ async fn main() -> std::io::Result<()> {
     let mut job = ArbManagerJob::new();
     // 启动任务
     job.start().await;
-
-    // 启动 grpc 服务
-    let group_rpc_service = GroupRpcServiceImpl::new();
-    group_rpc_service.start().await;
 
     HttpServer::new(move || {
         App::new()

@@ -116,5 +116,31 @@ pub mod arb_socket_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn flush_socket_list(
+            &mut self,
+            request: impl tonic::IntoRequest<()>,
+        ) -> std::result::Result<
+            tonic::Response<super::super::common::CommonResp>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rpc_arb_socket.ArbSocketService/flushSocketList",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("rpc_arb_socket.ArbSocketService", "flushSocketList"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }

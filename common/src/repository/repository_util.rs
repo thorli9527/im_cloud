@@ -1,4 +1,3 @@
-use crate::util::common_utils::as_ref_to_string;
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
@@ -145,11 +144,11 @@ where
     }
 
     async fn un_set(&self, id: &str, property: &str) -> Result<()> {
-        let object_id = ObjectId::parse_str(as_ref_to_string(id))?;
+        let object_id = ObjectId::parse_str(id)?;
         let filter = doc! {"_id":object_id};
         let update = doc! {
             "$unset": {
-                as_ref_to_string(property): ""
+                property: ""
             }
         };
         self.collection.update_one(filter, update).await?;
@@ -162,11 +161,11 @@ where
     }
 
     async fn up_property<E: Send + Sync + Serialize>(&self, id: &str, property: &str, value: E) -> Result<()> {
-        let object_id = ObjectId::parse_str(as_ref_to_string(id))?;
+        let object_id = ObjectId::parse_str(id.clone())?;
         let filter = doc! {"_id":object_id};
         let update = doc! {
             "$set": {
-                as_ref_to_string(property): bson::to_bson(&value)?
+                property: bson::to_bson(&value)?
             }
         };
 

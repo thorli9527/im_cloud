@@ -4,4 +4,5 @@ import "google/protobuf/empty.proto";
 package rpc_arb_socket;
 service ArbSocketService {
   rpc flushShardList(google.protobuf.Empty) returns (common.CommonResp);
+  rpc flushSocketList(google.protobuf.Empty) returns (common.CommonResp);
 }

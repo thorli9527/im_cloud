@@ -1,193 +1,185 @@
 syntax = "proto3";
-package rpc_group_models;
-import "common/common.proto"; // 引入全局定义
-// ==============================
-// 群组操作请求结构
-// ==============================
+import "common/common.proto"; // 引入通用类型（如 GroupRoleType）
+
+package group_models;
+
+// =======================================
+// 群组操作消息结构定义
+// =======================================
+
+/**
+ * 群组节点支持的消息类型枚举（用于 MQ 路由 / 类型标识）
+ */
+enum GroupNodeMsgType {
+  UNKNOWN_MSG_TYPE = 0;               // 未知消息类型（默认）
+
+  CREATE_GROUP_MSG_TYPE = 1;          // 创建群组
+  CHANGE_GROUP_MSG_TYPE = 2;          // 修改群组信息
+  DESTROY_GROUP_MSG_TYPE = 3;         // 解散群组
+
+  MEMBER_ONLINE_MSG_TYPE = 4;         // 成员上线（连接建立或进入群）
+  MEMBER_OFFLINE_MSG_TYPE = 5;        // 成员下线（断开连接或离开群）
+
+  REQUEST_JOIN_GROUP_MSG_TYPE = 6;    // 用户申请加入群组
+  HANDLE_JOIN_REQUEST_MSG_TYPE = 7;   // 管理员处理入群申请
+
+  INVITE_MEMBERS_MSG_TYPE = 8;        // 邀请成员加入群组
+  REMOVE_MEMBERS_MSG_TYPE = 9;        // 移除群成员（管理员操作）
+  EXIT_GROUP_MSG_TYPE = 10;           // 成员主动退出群组
+
+  CHANGE_MEMBER_ROLE_MSG_TYPE = 11;   // 修改成员角色（如设为管理员）
+  MUTE_MEMBER_MSG_TYPE = 12;          // 设置或取消成员禁言
+  UPDATE_MEMBER_PROFILE_MSG_TYPE = 13;// 修改成员资料（昵称、头像）
+
+  TRANSFER_OWNERSHIP_MSG_TYPE = 14;   // 转让群主身份
+  HANDLE_INVITE_MSG_TYPE = 15;        // 被邀请人处理邀请
+}
+
+// =======================================
+// 消息结构体定义
+// =======================================
 
 /**
  * 创建群组请求
  */
-message CreateGroupReq {
-  string id = 1;               // 可选自定义群ID
-  string name = 2;                   // 群名称
-  string avatar = 3;                 // 群头像URL
-  string description = 4;            // 群简介
-  string creator_id = 5;             // 创建者用户ID
-  repeated string member_ids = 6;    // 初始成员用户ID列表
-  string owner_id = 7;               // 指定群主ID（可与创建者不同）
-  bool need_approval = 8;            // 是否需要审核加入
-  bool allow_search = 9;             // 是否允许通过搜索加入
+message CreateGroupMsg {
+  string id = 1;                      // 消息唯一标识（用于追踪或幂等）
+  string group_id = 2;               // 新群组 ID
+  repeated string member_ids = 3;    // 初始成员列表（包含创建者）
+  string name = 4;                   // 群名称
+  string avatar = 5;                 // 群头像 URL
+  string creator_id = 6;             // 群创建者 ID
 }
 
 /**
  * 解散群组请求
  */
-message DestroyGroupReq {
-  string group_id = 1; // 群组ID
+message DestroyGroupMsg {
+  string id = 1;                      // 消息唯一标识
+  string group_id = 2;               // 被解散的群组 ID
+  string operator_id = 3;            // 操作者 ID（必须为群主）
 }
 
 /**
- * 更新群组信息请求
+ * 修改群组信息（可用于名称、头像、公告等更新）
  */
-message UpdateGroupInfoReq {
-  string id = 1;              // 群组ID
-  string name = 2;                  // 群名称
-  string avatar = 3;                // 群头像
-  string description = 4;           // 群简介
-  string notice = 5;                // 群公告
-  string tags = 6;                  // 群标签（英文逗号分隔）
-  common.JoinPermission join_permission = 7;        // 加群权限
-  bool allow_search = 8;                     // 是否可被搜索
-  common.GroupType group_type = 9;    // 群组类型
-
-}
-
-
-// ==============================
-// 群组信息获取
-// ==============================
-
-/**
- * 获取群组信息请求
- */
-message GetGroupInfoReq {
-  string group_id = 1; // 群组ID
+message ChangeGroupMsg {
+  string id = 1;
+  string group_id = 2;               // 群组 ID
+  string name = 3;                   // 群名称（可选变更）
+  string avatar = 4;                 // 群头像 URL
+  string description = 5;            // 群简介
+  string notice = 6;                 // 群公告内容
+  string tags = 7;                   // 群标签（英文逗号分隔）
+  string operator_id = 8;            // 修改发起人（群主或管理员）
 }
 
 /**
- * 获取群组信息响应
+ * 用户申请加入群组（通常由客户端发起）
  */
-message GetGroupInfoRep {
-  string group_id = 1;              // 群ID
-  string name = 2;                  // 名称
-  string avatar = 3;                // 头像URL
-  string description = 4;           // 简介
-  string owner_id = 5;            //owner_id
-  repeated common.GroupMemberEntity members = 6; // 群成员信息列表
-}
-
-// ==============================
-// 群成员操作结构
-// ==============================
-
-/**
- * 添加成员请求
- */
-message AddMemberReq {
-  string group_id = 1;                  // 群ID
-  repeated common.GroupMemberEntity members = 2;    // 成员信息
+message RequestJoinGroupMsg {
+  string id = 1;
+  string group_id = 2;               // 目标群组 ID
+  repeated string member_ids = 3;    // 发起加入请求的用户 ID（支持批量申请）
 }
 
 /**
- * 移除成员请求
+ * 管理员处理入群申请
  */
-message RemoveMemberReq {
-  string group_id = 1;         // 群ID
-  repeated string uids = 2;    // 用户UID列表
+message HandleJoinRequestMsg {
+  string id = 1;
+  string group_id = 2;               // 群组 ID
+  string member_id = 3;              // 被处理的申请用户 ID
+  bool accept = 4;                   // 是否同意加入（true = 接受）
+  string reason = 5;                 // 处理说明或拒绝理由
+  string operator_id = 6;            // 管理员 ID
 }
 
 /**
- * 用户主动退出群组请求
+ * 邀请成员加入群组（管理员或群主）
  */
-message ExitGroupReq {
-  string group_id = 1; // 群ID
-  string uid = 2;      // 当前用户UID
-}
-
-/**
- * 更改群成员角色请求
- */
-message ChangeMemberRoleReq {
-  string group_id = 1;
-  string uid = 2;
-  common.GroupRoleType role = 3; // 新角色
-}
-
-/**
- * 禁言/取消禁言成员
- */
-message MuteMemberReq {
-  string group_id = 1;
-  string uid = 2;
-  bool status = 3; // true=禁言，false=取消禁言
-}
-
-/**
- * 修改成员别名请求
- */
-message ChangeMemberAliasReq {
-  string group_id = 1;
-  string uid = 2;
-  string alias = 3;
-}
-
-/**
- * 转让群主请求
- */
-message TransferGroupOwnershipReq {
-  string group_id = 1;
-  string new_owner_uid = 2;
-}
-
-// ==============================
-// 在线状态管理结构
-// ==============================
-
-/**
- * 用户上线请求
- */
-message OnlineReq {
-  string uid = 1;       // 用户ID
-  string group_id = 2;  // 所属群组ID
-}
-
-/**
- * 用户离线请求
- */
-message OfflineReq {
-  string uid = 1;
+message InviteMembersMsg {
+  string id = 1;
   string group_id = 2;
-}
-
-// ==============================
-// 群成员分页查询结构
-// ==============================
-
-/**
- * 获取在线成员请求（分页）
- */
-message GetOnlineMembersReq {
-  string group_id = 1; // 群ID
-  int32 page = 2;      // 页码（从1开始）
-  int32 page_size = 3; // 每页条数
+  repeated string member_ids = 3;    // 被邀请成员 ID 列表
+  string reason = 4;                 // 邀请理由（可选）
+  string inviter_id = 5;             // 发起邀请者 ID
 }
 
 /**
- * 获取在线成员响应
+ * 被邀请成员处理邀请
  */
-message GetOnlineMembersResp {
-  repeated string uids = 1;     // 在线UID列表
-  int32 total_count = 2;        // 在线总人数
-  bool success = 3;             // 是否成功
-  string message = 4;     // 错误提示
+message HandleInviteMsg {
+  string id = 1;
+  string group_id = 2;
+  string member_id = 3;              // 被邀请者 ID
+  bool accept = 4;                   // 是否接受邀请
+  string reason = 5;                 // 拒绝理由（如拒绝）
 }
 
 /**
- * 获取所有成员请求（分页）
+ * 移除成员（管理员操作）
  */
-message GetMembersReq {
-  string group_id = 1;
-  int32 page = 2;
-  int32 page_size = 3;
+message RemoveMembersMsg {
+  string id = 1;
+  string group_id = 2;
+  repeated string member_ids = 3;    // 被移除成员列表
+  string reason = 4;                 // 踢出原因（可选）
+  string operator_id = 5;            // 操作者 ID（管理员/群主）
 }
 
 /**
- * 获取所有成员响应
+ * 成员主动退出群组
  */
-message GetMembersRep {
-  repeated string uids = 1;    // 成员UID列表
-  int32 total_count = 2;       // 总人数
-  bool success = 3;
-  string message = 4;
+message ExitGroupMsg {
+  string id = 1;
+  string group_id = 2;
+  string member_id = 3;              // 退出用户 ID
+  string reason = 4;                 // 退出原因（可选）
+}
+
+/**
+ * 修改成员角色（设为管理员、降权等）
+ */
+message ChangeMemberRoleMsg {
+  string id = 1;
+  string group_id = 2;
+  string member_id = 3;              // 目标成员 ID
+  common.GroupRoleType role = 4;     // 新角色（如 ADMIN、MEMBER）
+  string operator_id = 5;            // 操作者 ID
+  string reason = 6;                 // 操作说明
+}
+
+/**
+ * 设置或取消成员禁言
+ */
+message MuteMemberMsg {
+  string id = 1;
+  string group_id = 2;
+  repeated string member_ids = 3;    // 被操作成员（支持多人）
+  bool mute = 4;                     // true = 禁言，false = 取消禁言
+  string reason = 5;                 // 操作理由
+  string operator_id = 6;            // 执行者 ID
+}
+
+/**
+ * 修改成员资料（如群昵称、头像等）
+ */
+message UpdateMemberProfileMsg {
+  string id = 1;
+  string group_id = 2;
+  string member_id = 3;
+  string alias = 4;                  // 群昵称
+  string avatar = 5;                 // 群头像
+}
+
+/**
+ * 转让群主权限
+ */
+message TransferOwnershipMsg {
+  string id = 1;
+  string group_id = 2;
+  string new_owner_id = 3;           // 新群主 ID
+  string reason = 4;                 // 转让说明
+  string operator_id = 5;            // 当前群主 ID
 }

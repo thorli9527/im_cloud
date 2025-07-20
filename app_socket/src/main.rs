@@ -2,7 +2,7 @@ use app_socket::manager;
 use app_socket::manager::socket_manager::{get_socket_manager, SocketManager};
 use app_socket::service::rpc::arb_socket_server_impl::ArbSocketRpcServiceImpl;
 use app_socket::socket::socket_server::start_server;
-use biz_service::biz_service::kafka_service::KafkaService;
+use biz_service::biz_service::kafka_socket_service::KafkaService;
 use common::config::AppConfig;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -24,8 +24,7 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(manager::job_manager::start_heartbeat_cleaner(manager.clone(), 30));
 
     //启动 group rpc 服务
-    let arb_socket_service=ArbSocketRpcServiceImpl::new();
-    arb_socket_service.start().await;
+    ArbSocketRpcServiceImpl::start().await;
 
     //socket-web-server
     let bind_cfg = format!("{}:{}", &config.get_server().host, &config.get_server().port);

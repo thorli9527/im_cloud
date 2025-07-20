@@ -26,14 +26,26 @@ pub struct FriendEventMsg {
     #[prost(enumeration = "EventStatus", tag = "6")]
     pub status: i32,
     /// 事件创建时间（毫秒时间戳）：事件首次创建的时间
-    #[prost(int64, tag = "7")]
-    pub created_at: i64,
+    #[prost(uint64, tag = "7")]
+    pub created_at: u64,
     /// 最近更新时间（如处理、撤销时间）：事件最后修改的时间
-    #[prost(int64, tag = "8")]
-    pub updated_at: i64,
+    #[prost(uint64, tag = "8")]
+    pub updated_at: u64,
     /// 添加来源类型（扫码/手机号/后台等）：好友关系的来源渠道
     #[prost(enumeration = "FriendSourceType", tag = "9")]
     pub source_type: i32,
+    /// 来源用户名称（如扫码时的昵称）：添加好友时的用户名称
+    #[prost(string, tag = "10")]
+    pub from_a_name: ::prost::alloc::string::String,
+    /// 目标用户名称（如被添加时的昵称）：被添加用户的名称
+    #[prost(string, tag = "11")]
+    pub to_a_name: ::prost::alloc::string::String,
+    /// 来源用户备注（如添加时设置的备注）：添加好友时的备注
+    #[prost(string, optional, tag = "12")]
+    pub from_remark: ::core::option::Option<::prost::alloc::string::String>,
+    /// 目标用户备注（如被添加时设置的备注）：被添加用户的备注
+    #[prost(string, optional, tag = "13")]
+    pub to_remark: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// ================================
 /// 🤝 好友事件类型枚举

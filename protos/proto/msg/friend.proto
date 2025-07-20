@@ -68,8 +68,13 @@ message FriendEventMsg {
 
   EventStatus status = 6;        // 当前事件的状态（待处理 / 已完成 / 已撤销）：事件处理状态
 
-  int64 created_at = 7;         // 事件创建时间（毫秒时间戳）：事件首次创建的时间
-  int64 updated_at = 8;         // 最近更新时间（如处理、撤销时间）：事件最后修改的时间
+  uint64 created_at = 7;         // 事件创建时间（毫秒时间戳）：事件首次创建的时间
+  uint64 updated_at = 8;         // 最近更新时间（如处理、撤销时间）：事件最后修改的时间
 
   FriendSourceType source_type = 9; // 添加来源类型（扫码/手机号/后台等）：好友关系的来源渠道
+  string from_a_name = 10; // 来源用户名称（如扫码时的昵称）：添加好友时的用户名称
+  string to_a_name = 11;   // 目标用户名称（如被添加时的昵称）：被添加用户的名称
+
+  optional string from_remark = 12; // 来源用户备注（如添加时设置的备注）：添加好友时的备注
+  optional string to_remark = 13;   // 目标用户备注（如被添加时设置的备注）：被添加用户的备注
 }

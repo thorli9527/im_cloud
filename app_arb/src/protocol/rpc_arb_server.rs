@@ -12,14 +12,6 @@ pub mod arb_server_rpc_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with ArbServerRpcServiceServer.
     #[async_trait]
     pub trait ArbServerRpcService: std::marker::Send + std::marker::Sync + 'static {
-        /// === 分片管理 ===
-        async fn get_shard_node(
-            &self,
-            request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
-            tonic::Status,
-        >;
         async fn update_shard_state(
             &self,
             request: tonic::Request<
@@ -34,7 +26,7 @@ pub mod arb_server_rpc_service_server {
             &self,
             request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
+            tonic::Response<super::super::rpc_arb_models::NodeInfo>,
             tonic::Status,
         >;
         async fn list_all_nodes(
@@ -139,55 +131,6 @@ pub mod arb_server_rpc_service_server {
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             match req.uri().path() {
-                "/rpc_arb_server.ArbServerRpcService/GetShardNode" => {
-                    #[allow(non_camel_case_types)]
-                    struct GetShardNodeSvc<T: ArbServerRpcService>(pub Arc<T>);
-                    impl<
-                        T: ArbServerRpcService,
-                    > tonic::server::UnaryService<
-                        super::super::rpc_arb_models::BaseRequest,
-                    > for GetShardNodeSvc<T> {
-                        type Response = super::super::rpc_arb_models::ShardNodeInfo;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<
-                                super::super::rpc_arb_models::BaseRequest,
-                            >,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                <T as ArbServerRpcService>::get_shard_node(&inner, request)
-                                    .await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let method = GetShardNodeSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
                 "/rpc_arb_server.ArbServerRpcService/UpdateShardState" => {
                     #[allow(non_camel_case_types)]
                     struct UpdateShardStateSvc<T: ArbServerRpcService>(pub Arc<T>);
@@ -248,7 +191,7 @@ pub mod arb_server_rpc_service_server {
                     > tonic::server::UnaryService<
                         super::super::rpc_arb_models::BaseRequest,
                     > for RegisterNodeSvc<T> {
-                        type Response = super::super::rpc_arb_models::ShardNodeInfo;
+                        type Response = super::super::rpc_arb_models::NodeInfo;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,

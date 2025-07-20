@@ -13,9 +13,10 @@ actix-service.workspace = true
 validator.workspace = true
 config = { workspace = true }
 serde.workspace = true
+rdkafka.workspace = true
 serde_json.workspace = true
 deadpool-redis.workspace = true
-
+dashmap.workspace = true
 log.workspace = true
 mongodb.workspace = true
 env_logger.workspace = true

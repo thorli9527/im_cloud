@@ -19,6 +19,7 @@ impl UserFriendService {
         let collection = db.collection("user_friend");
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
+    
 
     /// 拉黑好友（将 is_blocked 设置为 true）
     pub async fn friend_block(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<()> {
@@ -55,49 +56,6 @@ impl UserFriendService {
         Ok(())
     }
 
-    /// 添加好友（可配置昵称/来源等）
-    pub async fn add_friend(&self,  uid: &UserId, friend_id: &UserId, nickname: Option<&str>, source_type: &FriendSourceType, remark: Option<&str>) -> Result<String> {
-        // 校验对方存在
-        let client_opt = UserManager::get().get_user_info( friend_id).await?;
-        if client_opt.is_none() {
-            return Err(anyhow::anyhow!("用户不存在"));
-        }
-
-        // 检查是否已存在好友记录
-        let filter = doc! {
-            "uid": uid,
-            "friend_id": friend_id
-        };
-        let exists = self.dao.find_one(filter).await?;
-        if let Some(friend) = exists {
-            return Ok(friend.id); // 已存在，忽略重复添加
-        }
-
-        let friend = FriendEntity {
-            id: "".to_string(),
-            uid: uid.to_string(),
-            friend_id: friend_id.to_string(),
-            nickname: nickname.map(|s| s.to_string()),
-            remark: None,
-            is_blocked: false,
-            source_type: source_type.clone(),
-            created_at: common::util::date_util::now(),
-        };
-
-        let id = self.dao.insert(&friend).await?;
-        Ok(id)
-    }
-
-    /// 删除好友
-    pub async fn remove_friend(&self,  uid: &UserId, friend_id: &UserId) -> Result<()> {
-        let filter = doc! {
-            "uid": uid,
-            "friend_id": friend_id
-        };
-
-        self.dao.delete(filter).await?;
-        Ok(())
-    }
 
     /// 是否是好友（Mongo 或缓存判断）
     pub async fn is_friend(&self,uid: &UserId, friend_id: &UserId) -> Result<bool> {

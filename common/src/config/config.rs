@@ -17,6 +17,7 @@ pub struct AppConfig {
     pub cache: Option<CacheConfig>,
     pub kafka: Option<KafkaConfig>,
     pub shard: Option<ShardConfig>,
+    pub socket: Option<SocketConfig>,
 }
 #[derive(Debug, Deserialize, Clone,Default)]
 pub struct ShardConfig {
@@ -125,4 +126,8 @@ pub struct KafkaConfig {
     pub brokers: String,
     pub topic_single: String,
     pub topic_group: String,
+}
+#[derive(Debug, Deserialize, Clone,Default)]
+pub struct SocketConfig {
+    pub node_addr: String,
 }

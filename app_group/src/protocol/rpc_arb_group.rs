@@ -110,32 +110,7 @@ pub mod arb_group_service_client {
             self
         }
         /// 获取指定节点所属分片信息
-        pub async fn get_shard_node(
-            &mut self,
-            request: impl tonic::IntoRequest<super::super::rpc_arb_models::BaseRequest>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::unknown(
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/rpc_arb_group.ArbGroupService/getShardNode",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("rpc_arb_group.ArbGroupService", "getShardNode"),
-                );
-            self.inner.unary(req, path, codec).await
-        }
+        ///  rpc getShardNode(rpc_arb_models.BaseRequest) returns (rpc_arb_models.NodeInfo);
         /// 更新版本号
         pub async fn update_version(
             &mut self,
@@ -204,13 +179,7 @@ pub mod arb_group_service_server {
     #[async_trait]
     pub trait ArbGroupService: std::marker::Send + std::marker::Sync + 'static {
         /// 获取指定节点所属分片信息
-        async fn get_shard_node(
-            &self,
-            request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
-            tonic::Status,
-        >;
+        ///  rpc getShardNode(rpc_arb_models.BaseRequest) returns (rpc_arb_models.NodeInfo);
         /// 更新版本号
         async fn update_version(
             &self,
@@ -304,55 +273,6 @@ pub mod arb_group_service_server {
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             match req.uri().path() {
-                "/rpc_arb_group.ArbGroupService/getShardNode" => {
-                    #[allow(non_camel_case_types)]
-                    struct getShardNodeSvc<T: ArbGroupService>(pub Arc<T>);
-                    impl<
-                        T: ArbGroupService,
-                    > tonic::server::UnaryService<
-                        super::super::rpc_arb_models::BaseRequest,
-                    > for getShardNodeSvc<T> {
-                        type Response = super::super::rpc_arb_models::ShardNodeInfo;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<
-                                super::super::rpc_arb_models::BaseRequest,
-                            >,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                <T as ArbGroupService>::get_shard_node(&inner, request)
-                                    .await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let method = getShardNodeSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
                 "/rpc_arb_group.ArbGroupService/updateVersion" => {
                     #[allow(non_camel_case_types)]
                     struct updateVersionSvc<T: ArbGroupService>(pub Arc<T>);

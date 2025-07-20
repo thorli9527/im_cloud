@@ -1,4 +1,4 @@
-use crate::manager::group_manager_core::GroupManager;
+// use crate::manager::group_manager_core::GroupManager;
 use crate::manager::user_manager_core::UserManager;
 
 pub mod common;
@@ -9,5 +9,5 @@ pub mod user_manager_opt;
 
 pub fn init() {
     UserManager::new();
-    GroupManager::init();
+    // GroupManager::init();
 }

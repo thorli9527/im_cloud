@@ -29,6 +29,7 @@ chrono = "0.4.40"
 rdkafka.workspace = true
 time.workspace = true
 lazy_static.workspace=true
+twox-hash = "2.1.1"
 [build-dependencies]
 regex = "1.11.1"
 prost-build.version = "0.13.1"

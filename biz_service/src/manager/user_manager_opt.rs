@@ -1,6 +1,6 @@
 use crate::biz_service::client_service::ClientService;
 use crate::biz_service::friend_service::UserFriendService;
-use crate::biz_service::kafka_service::KafkaService;
+use crate::biz_service::kafka_socket_service::KafkaService;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
 
 use crate::protocol::common::{ByteMessageType, ClientEntity};
@@ -47,7 +47,6 @@ impl UserManagerOpt for UserManager {
         let token = self.build_token( &user_id, device_type).await?;
 
         let kafka_service = KafkaService::get();
-        let node_index: &u8 = &0;
         // 发送登录响应消息
         let login_msg = &LoginRespMsg {
             message_id: message_id.clone(),
@@ -57,7 +56,6 @@ impl UserManagerOpt for UserManager {
         kafka_service
             .send_proto(
                 &ByteMessageType::LoginRespMsgType,
-                &node_index,
                 login_msg,
                 &login_msg.message_id,
                 &AppConfig::get().get_kafka().topic_group,
@@ -73,7 +71,6 @@ impl UserManagerOpt for UserManager {
         device_type: &DeviceType,
     ) -> Result<()> {
         self.offline( uid, device_type).await?;
-        let node_index: &u8 = &0;
         let kafka_service = KafkaService::get();
         let token = self
             .get_token_by_uid_device(uid, device_type)
@@ -88,7 +85,6 @@ impl UserManagerOpt for UserManager {
         kafka_service
             .send_proto(
                 &ByteMessageType::LogoutRespMsgType,
-                &node_index,
                 &log_out_msg,
                 &log_out_msg.message_id,
                 &AppConfig::get().get_kafka().topic_group,
@@ -126,7 +122,6 @@ impl UserManagerOpt for UserManager {
             };
             kafka.send_proto(
                 &ByteMessageType::LogoutRespMsgType,
-                &0,
                 &online_msg,
                 &online_msg.message_id,
                 &AppConfig::get().get_kafka().topic_group,
@@ -189,7 +184,6 @@ impl UserManagerOpt for UserManager {
             };
             kafka.send_proto(
                 &ByteMessageType::LogoutRespMsgType,
-                &0,
                 &offline_msg,
                 &offline_msg.message_id,
                 &AppConfig::get().get_kafka().topic_group,
@@ -370,159 +364,6 @@ impl UserManagerOpt for UserManager {
             .ok_or_else(|| AppError::BizError("用户不存在".to_string()))?;
         Ok(Some(user))
     }
-
-    async fn add_friend(
-        &self,
-        user_id: &UserId,
-        friend_id: &UserId,
-        nickname: Option<String>,
-        source_type: &FriendSourceType,
-        remark: Option<String>,
-    ) -> Result<()> {
-        // ---------- 1. 验证用户和好友存在 ----------
-        let user_manager = UserManager::get();
-        let (client_opt, friend_opt) = try_join!(
-            user_manager.get_user_info( user_id),
-            user_manager.get_user_info(friend_id)
-        )?;
-
-        let client_info = client_opt.ok_or_else(|| anyhow!("用户 {} 不存在", user_id))?;
-        let friend_info = friend_opt.ok_or_else(|| anyhow!("好友 {} 不存在", friend_id))?;
-
-        let nickname_to_friend = if nickname.is_some() {
-            nickname
-        } else {
-            Some(friend_info.name)
-        };
-        let nickname_to_user = Some(client_info.name.as_str());
-
-        // ---------- 3. Redis 写入 ----------
-        let redis_key = |uid: &UserId| format!("friend:user:{}",  uid);
-        let mut conn = self.pool.get().await?;
-        let _: () = conn.sadd(redis_key(user_id), friend_id).await?;
-        let _: () = conn.sadd(redis_key(friend_id), user_id).await?;
-
-        // ---------- 5. 数据库持久化 ----------
-        let friend_service = UserFriendService::get();
-        friend_service
-            .add_friend(
-                user_id,
-                friend_id,
-                nickname_to_friend.as_deref(),
-                source_type,
-                remark.as_deref(),
-            )
-            .await?;
-        friend_service
-            .add_friend(
-                friend_id,
-                user_id,
-                nickname_to_user,
-                source_type,
-                remark.as_deref(),
-            )
-            .await?;
-
-        // ---------- 6. Kafka 消息通知 ----------
-        let kafka_service = KafkaService::get();
-        let app_config = AppConfig::get();
-        let topic = &app_config.get_kafka().topic_single;
-        let time = now();
-
-        // 构造好友事件
-        let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
-            message_id: build_snow_id(),
-            from_uid: from_uid.to_string(),
-            to_uid: to_uid.to_string(),
-            event_type: FriendEventType::FriendAddForce as i32,
-            message: String::new(),
-            status: EventStatus::Done as i32,
-            source_type: FriendSourceType::FriendSourceSystem as i32,
-            created_at: time,
-            updated_at: time,
-        };
-
-        // 同步通知双方
-        for (form_uid, to_uid) in [(&user_id, &friend_id), (&friend_id, &user_id)] {
-            let event = make_event(form_uid, to_uid);
-            let node_index = 0 as u8;
-            let message_id = &event.message_id.clone();
-            if let Err(e) = kafka_service
-                .send_proto(
-                    &ByteMessageType::FriendEventMsgType,
-                    &node_index,
-                    &event,
-                    &message_id,
-                    topic,
-                )
-                .await
-            {
-                //发送失败时把记录插入数据库
-            }
-        }
-        Ok(())
-    }
-
-    async fn remove_friend(
-        &self,
-        user_id: &UserId,
-        friend_id: &UserId,
-    ) -> Result<()> {
-        // ---------- 1. 删除 Redis 中的双向关系 ----------
-        let redis_key = |uid: &UserId| format!("friend:user:{}", uid);
-        let mut conn = self.pool.get().await?;
-
-        let _: () = conn.srem(redis_key(user_id), friend_id).await?;
-        let _: () = conn.srem(redis_key(friend_id), user_id).await?;
-
-        // ---------- 2. 删除数据库中的双向记录 ----------
-        let friend_service = UserFriendService::get();
-        friend_service
-            .remove_friend( user_id, friend_id)
-            .await?;
-        friend_service
-            .remove_friend(friend_id, user_id)
-            .await?;
-
-        // ---------- 3. 发送 Kafka 通知（可选） ----------
-        let kafka_service = KafkaService::get();
-        let app_config = AppConfig::get();
-        let topic = &app_config.get_kafka().topic_single;
-        let time = now();
-
-        let make_event = |from_uid: &UserId, to_uid: &UserId| FriendEventMsg {
-            message_id: build_snow_id(), // 为删除事件生成唯一 ID
-            from_uid: from_uid.to_string(),
-            to_uid: to_uid.to_string(),
-            event_type: FriendEventType::FriendRemove as i32,
-            source_type: FriendSourceType::FriendSourceSystem as i32,
-            message: String::new(),
-            status: EventStatus::Done as i32,
-            created_at: time,
-            updated_at: time,
-        };
-
-        for (from, to) in [(user_id, friend_id), (friend_id, user_id)] {
-            let event = make_event(from, to);
-            let node_index = 0 as u8;
-            let message_id = &event.message_id.clone();
-            if let Err(e) = kafka_service
-                .send_proto(
-                    &ByteMessageType::FriendEventMsgType,
-                    &node_index,
-                    &event,
-                    &message_id,
-                    topic,
-                )
-                .await
-            {
-                log::warn!("Kafka 消息发送失败 [{}]: {:?}", message_id, e);
-            }
-        }
-
-        Ok(())
-    }
-
     async fn is_friend(&self,uid: &UserId, friend_id: &UserId) -> Result<bool> {
 
         // 1. Redis 查询
@@ -655,7 +496,7 @@ impl UserManagerOpt for UserManager {
         let kafka_service = KafkaService::get();
         let app_config = AppConfig::get();
         let topic = &app_config.get_kafka().topic_single;
-        let time = now();
+        let time = now() as u64;
 
         // 构造好友事件
         let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
@@ -666,19 +507,21 @@ impl UserManagerOpt for UserManager {
             message: String::new(),
             status: EventStatus::Done as i32,
             source_type: FriendSourceType::FriendSourceSystem as i32,
+            from_a_name: "".to_string(),
+            to_a_name: "".to_string(),
+            from_remark: None,
             created_at: time,
             updated_at: time,
+            to_remark: None,
         };
 
         // 同步通知
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);
-            let node_index = 0 as u8;
             let message_id = &event.message_id.clone();
             if let Err(e) = kafka_service
                 .send_proto(
                     &ByteMessageType::FriendEventMsgType,
-                    &node_index,
                     &event,
                     &message_id,
                     topic,
@@ -748,7 +591,7 @@ impl UserManagerOpt for UserManager {
         let redis_block_key = format!("block:user:{}", user_id);
         let _: () = conn.srem(&redis_block_key, friend_id).await?;
         // ---------- 4. 可选：发送 Kafka 取消拉黑事件 ----------
-        let time = now();
+        let time = now() as u64;
         let message_id = build_snow_id();
         // 构造好友事件
         let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
@@ -759,8 +602,12 @@ impl UserManagerOpt for UserManager {
             message: String::new(),
             status: EventStatus::Done as i32,
             source_type: FriendSourceType::FriendSourceSystem as i32,
+            from_a_name: "".to_string(),
+            to_a_name: "".to_string(),
+            from_remark: None,
             created_at: time,
             updated_at: time,
+            to_remark: None,
         };
         // ---------- 6. Kafka 消息通知 ----------
         let kafka_service = KafkaService::get();
@@ -769,11 +616,9 @@ impl UserManagerOpt for UserManager {
         // 同步通知双方
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);
-            let node_index = 0 as u8;
             if let Err(e) = kafka_service
                 .send_proto(
                     &ByteMessageType::FriendEventMsgType,
-                    &node_index,
                     &event,
                     &message_id,
                     topic,

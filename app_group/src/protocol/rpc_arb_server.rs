@@ -93,33 +93,6 @@ pub mod arb_server_rpc_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        /// === 分片管理 ===
-        pub async fn get_shard_node(
-            &mut self,
-            request: impl tonic::IntoRequest<super::super::rpc_arb_models::BaseRequest>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::unknown(
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/rpc_arb_server.ArbServerRpcService/GetShardNode",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("rpc_arb_server.ArbServerRpcService", "GetShardNode"),
-                );
-            self.inner.unary(req, path, codec).await
-        }
         pub async fn update_shard_state(
             &mut self,
             request: impl tonic::IntoRequest<
@@ -156,7 +129,7 @@ pub mod arb_server_rpc_service_client {
             &mut self,
             request: impl tonic::IntoRequest<super::super::rpc_arb_models::BaseRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::super::rpc_arb_models::ShardNodeInfo>,
+            tonic::Response<super::super::rpc_arb_models::NodeInfo>,
             tonic::Status,
         > {
             self.inner

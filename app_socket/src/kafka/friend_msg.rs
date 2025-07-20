@@ -1,7 +1,7 @@
 use crate::kafka::kafka_consumer::{get_pending_acks, PendingMeta};
 use crate::manager::socket_manager::SocketManager;
 use anyhow::Result;
-use biz_service::biz_service::kafka_service::KafkaService;
+use biz_service::biz_service::kafka_socket_service::KafkaService;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::friend::FriendEventMsg;
 use bytes::Buf;
@@ -26,13 +26,16 @@ pub async fn friend_msg_to_socket(mut body: impl Buf, msg: &OwnedMessage, socket
         created_at: 0,
         updated_at: 0,
         source_type: 0,
+        from_a_name: "".to_string(),
+        to_a_name: "".to_string(),
+        from_remark: None,
+        to_remark: None,
     };
 
     // ---------- 6. Kafka 消息通知 ----------
     let kafka_service = KafkaService::get();
     let app_config = AppConfig::get();
-    let node_index=0 as u8;
     let topic = &app_config.get_kafka().topic_single;
-    kafka_service.send_proto(&ByteMessageType::FriendEventMsgType, &node_index, &friend_event, &friend_event.message_id, topic).await?;
+    kafka_service.send_proto(&ByteMessageType::FriendEventMsgType,  &friend_event, &friend_event.message_id, topic).await?;
     Ok(())
 }

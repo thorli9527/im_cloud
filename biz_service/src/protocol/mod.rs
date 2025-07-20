@@ -24,6 +24,12 @@ pub mod msg {
     pub mod status {
         include!("status.rs");
     }
+    pub mod common {
+        include!("common.rs");
+    }
+    pub mod group_models {
+        include!("group_models.rs");
+    }
 }
 pub mod common {
     include!("common.rs");

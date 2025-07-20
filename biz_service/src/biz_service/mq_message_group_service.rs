@@ -1,4 +1,4 @@
-use crate::biz_service::kafka_service::KafkaService;
+use crate::biz_service::kafka_socket_service::KafkaService;
 use crate::protocol::common::ByteMessageType;
 use crate::protocol::msg::entity::GroupMsgEntity;
 use crate::protocol::msg::message::Segment;
@@ -68,8 +68,7 @@ impl GroupMessageService {
         // 发送到 Kafka
         let app_config = AppConfig::get();
         let message_type= ByteMessageType::GroupMsgType;
-        let node_index=0 as u8;
-        kafka_service.send_proto(&message_type, &node_index,&message,&message.message_id, &app_config.get_kafka().topic_group).await?;
+        kafka_service.send_proto(&message_type,&message,&message.message_id, &app_config.get_kafka().topic_group).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

@@ -13,6 +13,10 @@ use once_cell::sync::OnceCell;
 use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
+use anyhow::Result;
+use common::config::AppConfig;
+use common::util::common_utils::hash_index;
+use crate::protocol::rpc_arb_models::NodeInfo;
 
 /// 客户端连接唯一标识
 #[derive(Clone, Eq, PartialEq, Hash,Debug)]
@@ -50,6 +54,7 @@ pub struct SocketManager {
     /// - 用于进行群组广播消息派发
     /// - 格式: group_id → {user_id1, user_id2, ...}
     pub group_members: DashMap<String, HashSet<String>>,
+
 }
 
 impl SocketManager {
@@ -85,6 +90,9 @@ impl SocketManager {
     /// 获取连接
     pub fn get(&self, id: &ConnectionId) -> Option<Arc<ConnectionInfo>> {
         self.connections.get(id).map(|v| Arc::new(v.clone()))
+    }
+    pub fn get_manager() -> Arc<SocketManager> {
+        get_socket_manager()
     }
 
     /// 心跳续期
@@ -172,6 +180,51 @@ impl SocketManager {
             warn!("📭 群组无在线用户: {}", group_id);
             Ok(())
         }
+    }
+    /// 返回所有连接快照 (conn_id, conn_info)
+    pub fn all_connections(&self) -> Vec<(ConnectionId, ConnectionInfo)> {
+        self.connections
+            .iter()
+            .map(|entry| (entry.key().clone(), entry.value().clone()))
+            .collect()
+    }
+    /// 检查所有连接是否需要迁移，若不属于当前节点，则发送断开通知
+    pub async fn dispatch_mislocated_connections(socket_list: Vec<NodeInfo>) -> Result<()>{
+        let manager = get_socket_manager();
+        let connections = manager.all_connections(); // snapshot
+
+        let node_count = socket_list.len();
+        if node_count == 0 {
+            log::warn!("⚠️ socket_list 为空，跳过连接迁移检查");
+            return Ok(());
+        }
+        let socket_addr = AppConfig::get().get_shard().server_host.unwrap_or_default();
+        for (conn_id, conn_info) in connections {
+            let idx = hash_index(&conn_id.0, node_count as i32) ;
+            
+            match socket_list.get(idx as usize) {
+                Some(target_node) 
+                if target_node.socket_addr.as_ref().unwrap() != &socket_addr => {
+                    log::info!(
+                        "🚧 连接不属于本节点，迁移中: conn_id={:?}, 分配节点={}",
+                        conn_id.0,
+                        target_node.socket_addr.as_ref().unwrap(),
+                    );
+
+                    // 可使用 RECONNECT 消息结构替代裸字符串
+                    let _ = conn_info.sender.send(Bytes::from("RECONNECT"));
+
+                    // 移除本地连接（客户端将自动重连）
+                    manager.remove(&conn_id);
+                }
+                _ => {
+                    // 属于当前节点，无需处理
+                }
+            }
+        }
+
+        log::info!("✅ 连接迁移检查完成，连接总数：{}", manager.connections.len());
+        return Ok(());
     }
 
 }

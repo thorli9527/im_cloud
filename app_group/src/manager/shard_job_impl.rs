@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::thread::current;
 use tokio::sync::RwLock;
 use tonic::async_trait;
+use common::config::AppConfig;
 
 pub struct RPCSyncData {
     // 群组信息
@@ -25,18 +26,21 @@ pub struct RPCSyncData {
 impl ManagerJobOpt for ArbManagerJob {
     async fn init(&mut self) -> anyhow::Result<()> {
         self.init_arb_client().await?;
+
         Ok(())
     }
 
     async fn register_node(&mut self) -> anyhow::Result<()> {
         let shard_manager = ShardManager::get();
         let shard_address = shard_manager.shard_address.clone();
+        let kafka_addr = &self.kafka_addr.clone();
         let client = self.init_arb_client().await?;
-
         let response = client
             .register_node(BaseRequest {
                 node_addr: shard_address,
                 node_type: NodeType::GroupNode as i32,
+                kafka_addr:Some(kafka_addr.clone()),
+                socket_addr:None
             })
             .await?;
 
@@ -439,12 +443,15 @@ impl ManagerJobOpt for ArbManagerJob {
     }
 
     async fn heartbeat(&mut self) -> anyhow::Result<()> {
+        let kafka_addr = &self.kafka_addr.clone();
         let shard_address = self.server_host.clone();
         let client = self.init_arb_client().await?;
         client
             .heartbeat(BaseRequest {
                 node_addr: shard_address,
                 node_type: NodeType::GroupNode as i32,
+                kafka_addr:Some(kafka_addr.clone()),
+                socket_addr:None,
             })
             .await?;
         Ok(())

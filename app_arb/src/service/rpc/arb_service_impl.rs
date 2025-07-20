@@ -1,7 +1,7 @@
 use crate::protocol::common::CommonResp;
 use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
 use crate::protocol::rpc_arb_group::UpdateVersionReq;
-use crate::protocol::rpc_arb_models::{BaseRequest, ListAllNodesResponse, NodeType, QueryNodeReq, ShardNodeInfo, ShardState, UpdateShardStateRequest};
+use crate::protocol::rpc_arb_models::{BaseRequest, ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, ShardState, UpdateShardStateRequest};
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcService;
 use crate::protocol::rpc_arb_socket::arb_socket_service_client::ArbSocketServiceClient;
 use common::util::date_util::now;
@@ -20,8 +20,8 @@ use tracing::log;
 /// ArbiterService 实现体，持有共享状态引用
 #[derive(Clone, Default)]
 pub struct ArbiterServiceImpl {
-    pub shard_nodes: Arc<DashMap<String, ShardNodeInfo>>,
-    pub socket_nodes: Arc<DashMap<String, ShardNodeInfo>>,
+    pub shard_nodes: Arc<DashMap<String, NodeInfo>>,
+    pub socket_nodes: Arc<DashMap<String, NodeInfo>>,
     pub arb_version: Arc<AtomicU64>,
 }
 
@@ -62,17 +62,6 @@ impl ArbiterServiceImpl {
 #[tonic::async_trait]
 impl ArbServerRpcService for ArbiterServiceImpl {
     // === 分片管理 ===
-    async fn get_shard_node(
-        &self,
-        req: Request<BaseRequest>,
-    ) -> Result<Response<ShardNodeInfo>, Status> {
-        let node_addr = req.into_inner().node_addr;
-
-        match self.shard_nodes.get(&node_addr) {
-            Some(entry) => Ok(Response::new(entry.value().clone())),
-            None => Err(Status::not_found(format!("Node {} not found.", node_addr))),
-        }
-    }
 
     async fn update_shard_state(
         &self,
@@ -149,20 +138,22 @@ impl ArbServerRpcService for ArbiterServiceImpl {
     async fn register_node(
         &self,
         request: Request<BaseRequest>,
-    ) -> Result<Response<ShardNodeInfo>, Status> {
+    ) -> Result<Response<NodeInfo>, Status> {
         let req = request.into_inner();
         let node_addr = req.node_addr;
         if req.node_type == NodeType::GroupNode as i32 {
             // 如果已存在，返回已有信息
             if let Some(node_info) = self.shard_nodes.get(&node_addr) {
                 return Ok(Response::new(
-                    crate::protocol::rpc_arb_models::ShardNodeInfo {
+                    crate::protocol::rpc_arb_models::NodeInfo {
                         node_addr: node_info.node_addr.clone(),
                         total: self.shard_nodes.len() as i32,
                         version: node_info.version,
                         state: node_info.state,
                         node_type: req.node_type,
                         last_update_time: node_info.last_update_time,
+                        kafka_addr: req.kafka_addr,
+                        socket_addr:None
                     },
                 ));
             }
@@ -170,13 +161,15 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             // 当前时间戳（毫秒）
             let now = now() as u64;
             // 构建新 entry
-            let mut entry = ShardNodeInfo {
+            let mut entry = NodeInfo {
                 node_addr: node_addr.clone(),
                 total: current_total,
                 version: 0,
                 node_type: req.node_type,
                 state: ShardState::Preparing as i32,
                 last_update_time: now,
+                kafka_addr: req.kafka_addr,
+                socket_addr:None
             };
            
             for (mut item) in self.shard_nodes.iter_mut() {
@@ -204,13 +197,15 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             // 如果已存在，返回已有信息
             if let Some(node_info) = self.socket_nodes.get(&node_addr) {
                 return Ok(Response::new(
-                    crate::protocol::rpc_arb_models::ShardNodeInfo {
+                    crate::protocol::rpc_arb_models::NodeInfo {
                         node_addr: node_info.node_addr.clone(),
                         total: self.socket_nodes.len() as i32,
                         version: node_info.version,
                         state: node_info.state,
                         node_type: req.node_type,
                         last_update_time: node_info.last_update_time,
+                        kafka_addr: req.kafka_addr,
+                        socket_addr:None
                     },
                 ));
             }
@@ -218,13 +213,15 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             // 当前时间戳（毫秒）
             let now = now() as u64;
             // 构建新 entry
-            let mut entry = ShardNodeInfo {
+            let mut entry = NodeInfo {
                 node_addr: node_addr.clone(),
                 total: self.shard_nodes.len() as i32,
                 version: 0,
                 node_type: req.node_type,
                 state: ShardState::Preparing as i32,
                 last_update_time: now,
+                kafka_addr: req.kafka_addr,
+                socket_addr:None
             };
 
             // 插入
@@ -241,7 +238,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
     ) -> Result<Response<ListAllNodesResponse>, Status> {
         let req = request.into_inner();
         if req.node_type == NodeType::GroupNode as i32 {
-            let nodes: Vec<ShardNodeInfo> = self
+            let nodes: Vec<NodeInfo> = self
                 .shard_nodes
                 .iter()
                 .map(|entry| entry.value().clone())
@@ -251,7 +248,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             let response = ListAllNodesResponse { nodes };
             return Ok(Response::new(response));
         }
-        let nodes: Vec<ShardNodeInfo> = self
+        let nodes: Vec<NodeInfo> = self
             .socket_nodes
             .iter()
             .map(|entry| entry.value().clone())
@@ -299,7 +296,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
     ) -> Result<Response<CommonResp>, Status> {
         match self.shard_nodes.get_mut(&request.get_ref().node_addr) {
             Some(mut entry) => {
-                let value: &mut ShardNodeInfo = entry.value_mut();
+                let value: &mut NodeInfo = entry.value_mut();
                 // 更新心跳时间
                 value.last_update_time = now() as u64;
                 //打印日志

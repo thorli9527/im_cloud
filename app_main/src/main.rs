@@ -1,9 +1,10 @@
 use actix_web::middleware::Logger;
 use actix_web::{ web, App, HttpServer};
 use app_main::handlers;
-use biz_service::biz_service::kafka_service::KafkaService;
+use biz_service::biz_service::kafka_socket_service::KafkaService;
 
 use log::warn;
+use app_main::protocol::client_util::ArbServerClient;
 use common::config::AppConfig;
 
 #[actix_web::main]
@@ -14,6 +15,7 @@ async fn main() -> std::io::Result<()> {
     let address_and_port = format!("{}:{}", &app_cfg.get_server().host, &app_cfg.get_server().port);
     warn!("Starting server on {}", address_and_port);
     KafkaService::init(&app_cfg.get_kafka()).await;
+    ArbServerClient::init_grpc_client().await.expect("Failed to initialize gRPC clients");
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())

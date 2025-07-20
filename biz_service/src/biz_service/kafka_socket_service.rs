@@ -61,7 +61,7 @@ impl KafkaService {
     }
 
     /// 带类型标识的 Protobuf 消息发送（首字节 + Protobuf）
-    pub async fn send_proto<M: Message>(&self, msg_type: &ByteMessageType, node_index: &u8, message: &M, message_id: &u64, topic: &str) -> Result<()> {
+    pub async fn send_proto<M: Message>(&self, msg_type: &ByteMessageType,  message: &M, message_id: &u64, topic: &str) -> Result<()> {
         let mut payload = Vec::with_capacity(1 + message.encoded_len());
         let message_id_str = &message_id.to_string();
         // 1️⃣ 插入类型码为首字节

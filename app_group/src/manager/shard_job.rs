@@ -12,13 +12,15 @@ use tonic::transport::Channel;
 pub struct ArbManagerJob {
     pub arb_client: Option<ArbServerRpcServiceClient<Channel>>,
     pub server_host: String,
+    pub kafka_addr:String,
 }
 impl ArbManagerJob {
     pub fn new() -> Self {
-        let config = AppConfig::get().clone().shard.clone().unwrap();
+        let config = &AppConfig::get().clone();
         Self {
             arb_client: None,
-            server_host: config.server_host.unwrap(),
+            server_host: config.shard.clone().unwrap().shard_address.unwrap().clone(),
+            kafka_addr: config.kafka.clone().unwrap().brokers.clone(),
         }
     }
 
@@ -101,6 +103,7 @@ impl ArbManagerJob {
             arb_client: None, // 避免 tonic 客户端跨线程问题
             // shard_address: self.shard_address.clone(),
             server_host: self.server_host.clone(),
+            kafka_addr: self.kafka_addr.clone(),
             // cancel_token: self.cancel_token.clone(),
             // heartbeat_handle: None,
         }

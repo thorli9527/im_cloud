@@ -5,7 +5,7 @@ fn main() {
     build_arb_service();
     build_biz_service();
     build_arb_group_service();
-    build_group_service();
+    // build_group_service();
     build_app_main_client();
 }
 
@@ -23,8 +23,10 @@ fn build_app_main_client() {
             &[
                 "proto/common/common.proto",
                 "proto/arb/arb_models.proto",
-                "proto/arb/arb_socket.proto",
                 "proto/arb/arb_group.proto",
+                "proto/arb/arb_server.proto",
+                "proto/group/group_models.proto",
+                // "proto/group/group_service.proto",
             ],
             &["proto"], // ✅ 设置 proto 根为 "protos"，对应 import "arb/xxx.proto"
         )
@@ -45,7 +47,7 @@ fn build_group_service() {
             &[
                 "proto/common/common.proto",
                 "proto/group/group_models.proto",
-                "proto/group/group_service.proto",
+                // "proto/group/group_service.proto",
             ],
             &["proto"], // proto 根目录
         )
@@ -234,6 +236,7 @@ fn build_biz_service() {
                 "proto/msg/system.proto",
                 "proto/msg/user.proto",
                 "proto/msg/entity.proto",
+                "proto/group/group_models.proto",
             ],
             &["proto"], // proto 根目录
         )

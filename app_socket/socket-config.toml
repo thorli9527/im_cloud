@@ -19,5 +19,7 @@ upload_path = "./upload"
 md5_key = "0000000000000000000000000000000"
 [kafka]
 brokers = "localhost:9092"
-topic_single = "im-p2p-messages"
-topic_group = "im-group-messages"
+topic_single = "im-p2p-msg"
+topic_group = "im-group-msg"
+[socket]
+node_addr=

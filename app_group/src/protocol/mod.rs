@@ -8,9 +8,4 @@ pub mod rpc_arb_server {
 pub mod rpc_arb_group {
     include!("rpc_arb_group.rs");
 }
-pub mod rpc_group_models {
-    include!("rpc_group_models.rs");
-}
-pub mod rpc_group_server {
-    include!("rpc_group_service.rs");
-}
+use biz_service::protocol::msg::group_models as group_models ;

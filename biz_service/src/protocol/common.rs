@@ -115,48 +115,50 @@ pub struct GroupMemberEntity {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ClientEntity {
-    /// 用户 ID
+    /// 用户 ID（全局唯一，用于主键或索引）
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
-    /// 姓名
+    /// 用户名（可用于登录名或展示名，需唯一或具唯一性约束）
     #[prost(string, tag = "2")]
     pub name: ::prost::alloc::string::String,
-    /// 用户名
+    /// 用户密码（建议加密存储，仅服务器端处理）
     #[prost(string, tag = "3")]
-    pub username: ::prost::alloc::string::String,
-    /// 密码
-    #[prost(string, tag = "4")]
     pub password: ::prost::alloc::string::String,
-    /// 客户端用户 ID
-    #[prost(string, tag = "5")]
+    /// 客户端用户 ID（可与设备、App 安装等绑定）
+    #[prost(string, tag = "4")]
     pub uid: ::prost::alloc::string::String,
-    /// 是否启用（封号）
-    #[prost(bool, tag = "6")]
-    pub enable: bool,
-    /// 是否锁定（禁止登录）
-    #[prost(bool, tag = "7")]
-    pub lock: bool,
-    /// 头像 URL（可选，空字符串表示无）
+    /// 邮箱地址（可选，用于验证、找回密码、通知等）
+    #[prost(string, optional, tag = "5")]
+    pub email: ::core::option::Option<::prost::alloc::string::String>,
+    /// 手机号码（可选，可用于登录、验证、通知等）
+    #[prost(string, optional, tag = "6")]
+    pub phone: ::core::option::Option<::prost::alloc::string::String>,
+    /// 用户首选语言（如 "zh-CN", "en-US" 等）
+    #[prost(string, optional, tag = "7")]
+    pub language: ::core::option::Option<::prost::alloc::string::String>,
+    /// 用户头像 URL（可为空字符串表示无头像；建议提供默认头像逻辑）
     #[prost(string, tag = "8")]
     pub avatar: ::prost::alloc::string::String,
-    /// 加好友策略
+    /// 加好友策略（如允许任何人、仅限手机号、需要验证等）
     #[prost(enumeration = "FriendPolicy", tag = "9")]
     pub allow_add_friend: i32,
+    /// 性别枚举（如男、女、保密等）
     #[prost(enumeration = "Gender", tag = "10")]
     pub gender: i32,
+    /// 用户类型（如普通用户、机器人、游客、测试账户等）
     #[prost(enumeration = "ClientUserType", tag = "11")]
     pub user_type: i32,
-    /// 用户基本信息字段（KV）
+    /// 扩展信息字段（如学校、职业、自定义标签等，键值对形式）
     #[prost(map = "string, string", tag = "12")]
     pub profile_fields: ::std::collections::HashMap<
         ::prost::alloc::string::String,
         ::prost::alloc::string::String,
     >,
-    /// 创建时间（Unix 秒）
-    #[prost(uint64, tag = "99")]
+    /// 创建时间（Unix 秒时间戳，用于记录账号创建时间）
+    #[prost(uint64, tag = "13")]
     pub create_time: u64,
-    /// 最后更新时间（Unix 秒）
-    #[prost(uint64, tag = "100")]
+    /// 最后更新时间（Unix 秒时间戳，用于缓存刷新或数据同步）
+    #[prost(uint64, tag = "14")]
     pub update_time: u64,
 }
 /// *

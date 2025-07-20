@@ -4,7 +4,7 @@ use crate::protocol::msg::auth::DeviceType;
 use anyhow::Result;
 use common::config::AppConfig;
 use common::repository_util::{BaseRepository, Repository};
-use common::util::common_utils::build_md5_with_key;
+use common::util::common_utils::{build_md5_with_key, build_uid};
 use common::UserId;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
@@ -27,21 +27,16 @@ impl ClientService {
         user_id: &UserId,
         name: String,
         avatar: String,
-        username: String,
         password: String,
     ) -> Result<ClientEntity> {
         let mut user = ClientEntity::default();
 
         user.name = name;
         user.avatar = avatar;
-        user.enable = true;
-        user.uid = user_id.to_string();
+        user.uid = build_uid();
         let md5_key = &AppConfig::get().get_sys().md5_key;
         if !password.is_empty() {
             user.password = build_md5_with_key(&password, &md5_key.clone().unwrap());
-        }
-        if !username.is_empty() {
-            user.username = username;
         }
         self.dao.insert(&user).await?;
         Ok(user)

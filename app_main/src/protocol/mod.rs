@@ -1,3 +1,5 @@
+pub mod client_util;
+
 use biz_service::protocol::common as common;
 pub mod rpc_arb_models {
     include!("rpc_arb_models.rs");
@@ -6,7 +8,10 @@ pub mod rpc_arb_models {
 pub mod rpc_arb_group {
     include!("rpc_arb_group.rs");
 }
+pub mod rpc_arb_server {
+    include!("rpc_arb_server.rs");
+}
 
-pub mod rpc_arb_socket{
-    include!("rpc_arb_socket.rs");
+pub mod rpc_group_models{
+    include!("rpc_group_models.rs");
 }
