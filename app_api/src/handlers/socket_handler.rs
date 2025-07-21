@@ -19,7 +19,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 }
 
 
-#[get("/socket/address")]
+#[get("/address")]
 pub async fn get_socket_address(req: HttpRequest) -> Result<impl Responder, AppError> {
     // Step 1: 获取客户端 IP
     let ip = req.peer_addr().unwrap().ip().to_string(); // fallback
