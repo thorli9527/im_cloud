@@ -13,16 +13,17 @@ pub struct ArbManagerJob {
     pub arb_client: Option<ArbServerRpcServiceClient<Channel>>,
     pub server_host: String,
     pub kafka_addr:String,
-    pub shard_count: usize,
+    pub shard_address: String,
 }
 impl ArbManagerJob {
     pub fn new() -> Self {
         let config = &AppConfig::get().clone();
+        let config1 = config.shard.clone().unwrap();
         Self {
             arb_client: None,
-            server_host: config.shard.clone().unwrap().shard_address.unwrap().clone(),
+            server_host: config1.server_host.clone().unwrap().clone(),
             kafka_addr: config.kafka.clone().unwrap().brokers.clone(),
-            shard_count:0
+            shard_address: config1.shard_address.clone().unwrap().clone(),
         }
     }
 
@@ -106,7 +107,7 @@ impl ArbManagerJob {
             // shard_address: self.shard_address.clone(),
             server_host: self.server_host.clone(),
             kafka_addr: self.kafka_addr.clone(),
-            shard_count:0
+            shard_address:self.shard_address.clone(),
             // cancel_token: self.cancel_token.clone(),
             // heartbeat_handle: None,
         }

@@ -446,13 +446,13 @@ impl ManagerJobOpt for ArbManagerJob {
         let kafka_addr = &self.kafka_addr.clone();
         let shard_address = self.server_host.clone();
         let client = self.init_arb_client().await?;
-        client
-            .heartbeat(BaseRequest {
-                node_addr: shard_address,
-                node_type: NodeType::GroupNode as i32,
-                kafka_addr:Some(kafka_addr.clone()),
-                socket_addr:None,
-            })
+        let request = BaseRequest {
+            node_addr: shard_address,
+            node_type: NodeType::GroupNode as i32,
+            kafka_addr: Some(kafka_addr.clone()),
+            socket_addr: None,
+        };
+        client.heartbeat(request)
             .await?;
         Ok(())
     }
