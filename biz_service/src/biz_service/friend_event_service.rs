@@ -99,7 +99,7 @@ impl FriendEventService {
             };
             user_friend_coll.insert_one(to_entity).session(&mut session).await?;
 
-            friend_event_coll.update_many(
+            friend_event_coll.update_one(
                 doc! { "_id": event_id },
                 doc! {
                 "$set": {
