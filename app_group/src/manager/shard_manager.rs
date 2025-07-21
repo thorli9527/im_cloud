@@ -1,6 +1,4 @@
-use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
 use crate::protocol::rpc_arb_models::ShardState;
-use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use anyhow::Result;
 use arc_swap::ArcSwap;
 use biz_service::protocol::msg::group_models::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
@@ -8,18 +6,16 @@ use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::hash_index;
 use common::{GroupId, UserId};
 use dashmap::{DashMap, DashSet};
-use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::format;
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tonic::codegen::http::status;
 use tonic::transport::Channel;
 use tonic::{Status, async_trait};
-use tracing::log;
 use twox_hash::XxHash64;
+use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
 
 pub const GROUP_SHARD_SIZE: usize = 16;
 pub const MEMBER_SHARD_SIZE: usize = 8;
@@ -60,6 +56,7 @@ pub struct ShardManager {
 }
 #[async_trait]
 pub trait ShardManagerOpt: Send + Sync {
+    async fn load_from(&self)  -> anyhow::Result<()>;
     /// 添加用户到指定群组（自动根据 group_id 映射分片）
     fn add_user_to_group(&self, group_id: &GroupId, uid: &UserId);
     /// 移除用户从指定群组（自动根据 group_id 映射分片）
@@ -88,6 +85,7 @@ pub trait ShardManagerOpt: Send + Sync {
 
 #[async_trait]
 pub trait ShardManagerMqOpt: Send + Sync {
+
     /// 创建群组
     async fn create_group(&self, group_id: &GroupId) -> anyhow::Result<()>;
 

@@ -22,4 +22,4 @@ brokers = "localhost:9092"
 topic_single = "im-p2p-msg"
 topic_group = "im-group-msg"
 [socket]
-node_addr=
+node_addr="localhost:80001"

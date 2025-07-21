@@ -222,7 +222,7 @@ impl ManagerJobOpt for ArbManagerJob {
         let nodes = response.into_inner().nodes;
 
         let endpoints: Vec<String> = nodes.iter().map(|node| node.clone().node_addr).collect();
-        let mut group_rpc_clients = shard_manager
+        let  group_rpc_clients = shard_manager
             .init_grpc_clients(endpoints)
             .await
             .expect("init grpc clients error");
@@ -296,7 +296,7 @@ impl ManagerJobOpt for ArbManagerJob {
             }
         }
 
-        for (shard_index, (_i, client)) in group_rpc_clients.iter_mut().enumerate() {
+        for (shard_index, (_i, client)) in group_rpc_clients.iter().enumerate() {
             let shard_index = shard_index as i32;
             if shard_index == current_index {
                 continue;

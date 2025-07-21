@@ -1,16 +1,12 @@
+use crate::result::{result, result_error};
 use actix_web::{post, web, Responder};
-use common::errors::AppError;
-use utoipa::ToSchema;
-use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::protocol::common::{GroupEntity, GroupType, JoinPermission};
-use biz_service::protocol::msg::auth::OnlineStatusMsg;
-use biz_service::protocol::msg::group_models::{CreateGroupMsg, MemberOfflineMsg, MemberOnlineMsg};
-use common::errors::AppError::Json;
+use biz_service::protocol::msg::group::GroupDismissMsg;
+use biz_service::protocol::msg::group_models::{ChangeGroupMsg, CreateGroupMsg, MemberOfflineMsg, MemberOnlineMsg};
+use common::errors::AppError;
 use common::repository_util::{OrderType, Repository};
-use crate::protocol::client_util::ArbServerClient;
-use crate::protocol::rpc_group_models::ChangeGroupMsg;
-use crate::result::{result, result_data, result_error};
+use mongodb::bson::oid::ObjectId;
 
 /// 包装器类型（解决 Orphan Rule 限制）
 pub struct CreateGroupMsgWrapper(pub CreateGroupMsg);
@@ -48,11 +44,11 @@ impl From<CreateGroupMsgWrapper> for GroupEntity {
 pub async fn group_add(req: web::Json<CreateGroupMsg>) -> Result<impl Responder, AppError> {
     let group_service = GroupService::get();
     let msg=CreateGroupMsgWrapper(req.clone());
-    let group_entity=msg.into();
+    let mut group_entity: GroupEntity = msg.into();
+    group_entity.id = ObjectId::new().to_hex();
     let rs= group_service.create_group(&group_entity, &req.uids).await;
     return match rs {
         Ok(_) => {
-            //创建 mq 消息
             Ok(result())
         },
         Err(e) => {
@@ -63,7 +59,6 @@ pub async fn group_add(req: web::Json<CreateGroupMsg>) -> Result<impl Responder,
 }
 
 
-
 #[utoipa::path(
     post,
     path = "/group/update",
@@ -72,58 +67,30 @@ pub async fn group_add(req: web::Json<CreateGroupMsg>) -> Result<impl Responder,
 )]
 #[post("/group/update")]
 pub async fn group_update(req: web::Json<ChangeGroupMsg>) -> Result<impl Responder, AppError> {
-
     let group_service = GroupService::get();
-    let group=group_service.find_by_group_id(&req.id).await?;
-
+    let mut group = group_service.find_by_group_id(&req.id).await?;
+    let mut change_data = false;
+    if !req.name.eq(&group.name) {
+        change_data = true;
+        group.name = req.name.clone();
+    }
+    if !req.description.eq(&group.description) {
+        change_data = true;
+        group.description = req.description.clone();
+    }
+    if !req.avatar.eq(&group.avatar) {
+        change_data = true;
+        group.avatar = req.avatar.clone();
+    }
+    if !req.notice.eq(&group.notice) {
+        change_data = true;
+        group.notice = req.notice.clone();
+    }
+    if change_data {
+        group_service.dao.save(&group).await?;
+    }
     Ok(result())
 }
-
-#[utoipa::path(
-    post,
-    path = "/group/online",
-    request_body = MemberOnlineMsg,
-    responses((status = 200, description = "群成员上线成功"))
-)]
-#[post("/group/online")]
-pub async fn group_online(req: web::Json<MemberOnlineMsg>) -> Result<impl Responder, AppError> {
-    Ok(result())
-}
-
-#[utoipa::path(
-        post,
-        path = "/group/offline",
-        request_body = MemberOfflineMsg,
-        responses((status = 200, description = "用户下线成功"))
-    )]
-    #[post("/group/offline")]
-    pub async fn group_offline(req: web::Json<MemberOfflineMsg>) -> Result<impl Responder, AppError> {
-        Ok(result())
-    }
-
-    struct MemberQuery {
-        group_id: String,
-        page_size: i64,
-        order_type: OrderType,
-    }
-    pub async fn group_get_members(req: web::Json<MemberQuery>) -> Result<impl Responder, AppError> {
-        Ok(result())
-    }
-
-    struct DestroyGroupReq {
-        group_id: String,
-        operator_id: String,
-    }
-    pub async fn group_destroy(req: web::Json<DestroyGroupReq>) -> Result<impl Responder, AppError> {
-        let group_service = GroupService::get();
-        group_service.dismiss_group(&req.group_id, &req.operator_id).await?;
-        Ok(result())
-    }
-
-
-    pub async fn group_info(group_id: web::Path< String>) -> Result<impl Responder, AppError> {
-        Ok(result())
-    }
 
 
 

@@ -2,11 +2,12 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
+    build_app_main_client();
     build_arb_service();
     build_biz_service();
     build_arb_group_service();
     build_group_service();
-    build_app_main_client();
+
 }
 
 fn build_app_main_client() {

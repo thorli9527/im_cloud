@@ -18,7 +18,7 @@ use common::util::common_utils::build_uuid;
 #[derive(Debug)]
 pub struct GroupService {
     pub dao: BaseRepository<GroupEntity>,
-    db: Database,
+    pub db: Database,
 }
 
 impl GroupService {

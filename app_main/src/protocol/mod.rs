@@ -11,7 +11,3 @@ pub mod rpc_arb_group {
 pub mod rpc_arb_server {
     include!("rpc_arb_server.rs");
 }
-
-pub mod rpc_group_models{
-    include!("rpc_group_models.rs");
-}

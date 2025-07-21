@@ -153,11 +153,7 @@ impl ArbServerClient {
 
             // 统一的 Kafka 用户与密码构建方式
             let broker = format!("{}:9092", ip);
-            let user_name = "group_server";
-            let password = build_md5(&broker);
-
-            let kafka_client = KafkaGroupService::new(&broker, user_name, &password)
-                .map_err(|e| anyhow!("Failed to create KafkaGroupService for {}: {}", broker, e))?;
+            let kafka_client = KafkaGroupService::new(&broker).await?;
 
             client_map.insert(index, Arc::new(kafka_client));
         }

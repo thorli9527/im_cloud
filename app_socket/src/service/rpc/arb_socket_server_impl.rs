@@ -13,10 +13,9 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tonic::{Request, Response, Status, async_trait};
+use tonic::{async_trait, Request, Response, Status};
 
 pub struct ArbSocketRpcServiceImpl {
-    pub shard_list: Arc<RwLock<Vec<NodeInfo>>>,
     pub socket_list: Arc<RwLock<Vec<NodeInfo>>>,
 }
 impl ArbSocketRpcServiceImpl {
@@ -27,7 +26,6 @@ impl ArbSocketRpcServiceImpl {
         let addr = SocketAddr::from_str(&app_cfg.get_shard().server_host.unwrap())
             .expect("Invalid address");
         let svc = ArbSocketRpcServiceImpl {
-            shard_list: Arc::new(RwLock::new(Vec::new())),
             socket_list: Arc::new(RwLock::new(Vec::new())),
         };
 
@@ -47,27 +45,16 @@ impl ArbSocketService for ArbSocketRpcServiceImpl {
         let request = QueryNodeReq {
             node_type: NodeType::SocketNode as i32,
         };
-        match client.arb_client.list_all_nodes(request).await {
-            Ok(data) => {
-                let nodes = data.into_inner().nodes;
-                // 写入 self.shard_list
-                let mut list_guard = self.shard_list.write().await;
-                list_guard.clear();
-                list_guard.extend(nodes);
+        let result = client.init_shard_kafka_list().await;
+        match result {
+            Ok(_) => {
                 Ok(Response::new(CommonResp {
                     success: true,
                     message: "Shard client list refreshed".to_string(),
                 }))
             }
-            Err(err) => {
-                log::error!(
-                    "[ArbSocketRpcServiceImpl] Failed to refresh socket list: {}",
-                    err
-                );
-                Err(Status::internal(format!(
-                    "Failed to refresh socket list: {}",
-                    err
-                )))
+            Err(e) => {
+                Err(Status::internal( "Failed to refresh socket list "    ))
             }
         }
     }

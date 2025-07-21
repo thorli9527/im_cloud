@@ -1,7 +1,7 @@
 use app_socket::manager;
 use app_socket::manager::socket_manager::{get_socket_manager, SocketManager};
 use app_socket::service::rpc::arb_socket_server_impl::ArbSocketRpcServiceImpl;
-use app_socket::socket::socket_server::start_server;
+use app_socket::manager::socket_server::start_server;
 use biz_service::biz_service::kafka_socket_service::KafkaService;
 use common::config::AppConfig;
 use std::sync::Arc;

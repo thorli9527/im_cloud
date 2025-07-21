@@ -14,6 +14,8 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 use utoipa::openapi::security::Password;
+use common::util::common_utils::build_md5;
+use crate::manager::init;
 use crate::protocol::msg::group_models::GroupNodeMsgType;
 
 pub const GROUP_NODE_MSG_TOPIC : &str= "group-node-msg";
@@ -21,14 +23,22 @@ pub const GROUP_NODE_MSG_TOPIC : &str= "group-node-msg";
 pub struct KafkaGroupService {
     pub producer: Arc<FutureProducer>,
 }
+impl fmt::Debug for KafkaGroupService {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("KafkaGroupService")
+            .field("producer", &"FutureProducer(...)")
+            .finish()
+    }
+}
 impl KafkaGroupService {
-    pub fn new(broker_addr: &str, username: &str, password: &str) -> Result<Self> {
+    pub async fn new(broker_addr: &str) -> Result<Self> {
+        KafkaGroupService::init(broker_addr).await;
         let producer: FutureProducer = ClientConfig::new()
             .set("bootstrap.servers", broker_addr)
             .set("security.protocol", "SASL_SSL")
             .set("sasl.mechanism", "PLAIN")
-            .set("sasl.username", username)
-            .set("sasl.password", password)
+            .set("sasl.username", "admin")
+            .set("sasl.password", build_md5(&broker_addr))
             // ✅ 性能相关配置
             .set("queue.buffering.max.kbytes", "10240")     // 默认4000，提升内存 buffer
             .set("queue.buffering.max.ms", "5")              // 延迟聚合
@@ -87,11 +97,10 @@ impl KafkaGroupService {
     }
 
     /// 初始化所有 group 相关 topics（幂等）
-    pub async fn init(cfg: &KafkaConfig) {
+    async fn init(brokers: &str) {
         let mut dynamic_topics = Vec::new();
         dynamic_topics.push(("group-node-msg".to_string(), 3, 1));
-
-        if let Err(e) = Self::create_topics(&cfg.brokers, &dynamic_topics).await {
+        if let Err(e) = Self::create_topics(&brokers, &dynamic_topics).await {
             log::error!("❌ Kafka topic 创建失败: {e}");
         } else {
             log::info!("✅ KafkaGroupService 初始化完成，topic 数量 = {}", dynamic_topics.len());
@@ -105,6 +114,10 @@ impl KafkaGroupService {
     ) -> Result<()> {
         let admin: AdminClient<_> = ClientConfig::new()
             .set("bootstrap.servers", brokers)
+            .set("security.protocol", "SASL_SSL") // 或 "SASL_PLAINTEXT" 视你的集群配置而定
+            .set("sasl.mechanism", "PLAIN")       // 也可以是 SCRAM-SHA-256 / SCRAM-SHA-512 等
+            .set("sasl.username", "admin")
+            .set("sasl.password", build_md5(brokers))
             .create()
             .map_err(|e| anyhow!("Failed to create Kafka AdminClient: {e}"))?;
 

@@ -1,12 +1,16 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 use dashmap::{DashMap, DashSet};
+use futures_util::StreamExt;
+use mongodb::bson::doc;
+use mongodb::bson::oid::ObjectId;
+use mongodb::options::FindOptions;
 use biz_service::biz_service::group_member_service::GroupMemberService;
+use biz_service::biz_service::group_service::GroupService;
 use biz_service::protocol::msg::group_models::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
 use common::GroupId;
 use crate::manager::shard_manager::{ShardManager, ShardManagerMqOpt, ShardManagerOpt};
 use crate::protocol::rpc_arb_models::ShardState;
-
 #[async_trait]
 impl ShardManagerMqOpt for ShardManager {
     async fn create_group(&self, group_id: &GroupId) -> anyhow::Result<()> {
