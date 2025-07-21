@@ -196,6 +196,10 @@ enum ByteMessageType {
   FriendEventMsgType              = 30;   // 好友事件：申请、同意、删除等
   GroupCreateMsgType              = 31;   // 群创建通知
   GroupDismissMsgType             = 32;   // 群解散通知
+
+  ReConnectMsgType = 99;   // 重连消息：客户端重连时发送，包含上次未处理的消息 ID
+
+  ACKMsgType = 200;  // ACK 确认消息：用于确认消息接收状态
 }
 enum Gender{
     Unknown=0;// 未知

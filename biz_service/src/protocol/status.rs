@@ -63,3 +63,17 @@ pub struct AckMsg {
     #[prost(enumeration = "super::super::common::ByteMessageType", tag = "2")]
     pub ack_type: i32,
 }
+/// =======================================
+/// 🔗 重连消息（ReConnectMsg）
+/// =================
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ReConnectMsg {
+    /// 被确认接收的消息 ID
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
+    /// 重连的 Socket 地址
+    #[prost(string, tag = "2")]
+    pub socket_addr: ::prost::alloc::string::String,
+}

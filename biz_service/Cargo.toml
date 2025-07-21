@@ -6,34 +6,65 @@ edition = "2024"
 [dependencies]
 common = { path = "../common" }
 mongo_macro = { path = "../mongo_macro" }
-bson = "2.15.0"
-actix-web.workspace = true
-serde.workspace = true
-mongodb.workspace = true
-utoipa.workspace = true
-strum.workspace = true
-strum_macros.workspace = true
-chrono.workspace = true
-validator.workspace = true
-log.workspace = true
-async-trait = "0.1.88"
-anyhow.workspace = true
-once_cell.workspace = true
-deadpool-redis.workspace = true
-moka.workspace = true
-sha1.workspace = true
-dashmap.workspace = true
-tokio.workspace = true
-num_enum.workspace = true
-rdkafka.workspace = true
-futures-util.workspace = true
-prost.workspace = true
-serde_json.workspace = true
-prost-types = "0.12"
-twox-hash.workspace = true
-bytes = "1.10.1"
-rand = "0.9.1"
-tracing = "0.1.41"
+# ========================
+# 🌐 Web 框架
+# ========================
+actix-web.workspace = true                     # Web 服务框架
+
+# ========================
+# 🗄 数据库与缓存
+# ========================
+mongodb.workspace = true                       # MongoDB 客户端
+bson = "2.15.0"                                # BSON 数据结构
+deadpool-redis.workspace = true                # Redis 异步连接池
+moka.workspace = true                          # 高性能内存缓存库
+dashmap.workspace = true                       # 并发安全 HashMap
+
+# ========================
+# ⚙️ 配置、日志、时间
+# ========================
+chrono.workspace = true                        # 时间处理
+log.workspace = true                           # 日志抽象接口
+tracing = "0.1.41"                              # 链路追踪框架
+
+# ========================
+# 📦 异步 + 错误处理
+# ========================
+tokio.workspace = true                         # 异步运行时
+async-trait = "0.1.88"                         # 异步 trait 支持（指定版本）
+futures-util.workspace = true                  # Future 工具扩展
+anyhow.workspace = true                        # 错误处理工具
+once_cell.workspace = true                     # 静态懒加载
+
+# ========================
+# 🔧 序列化、验证、工具
+# ========================
+serde.workspace = true                         # 序列化框架
+serde_json.workspace = true                    # JSON 支持
+validator.workspace = true                     # 字段验证
+rand = "0.9.1"                                  # 随机数生成器
+twox-hash.workspace = true                     # 高效 HashMap 用哈希函数
+sha1.workspace = true                          # SHA-1 哈希函数
+bytes = "1.10.1"                                # 字节缓存处理
+
+# ========================
+# 📘 OpenAPI 文档生成
+# ========================
+utoipa.workspace = true                        # OpenAPI 文档自动生成
+
+# ========================
+# 📦 枚举扩展功能
+# ========================
+strum.workspace = true                         # 枚举 trait 支持
+strum_macros.workspace = true                  # 枚举宏派生
+
+# ========================
+# 🛰️ 消息队列 & Protobuf
+# ========================
+rdkafka.workspace = true                       # Kafka 消息客户端
+prost.workspace = true                         # Protobuf 编解码
+prost-types = "0.12"                            # Protobuf 类型支持（注意版本与 prost 是否兼容）
+num_enum.workspace = true                      # 数值枚举转换支持
 [build-dependencies]
 regex = "1.11.1"
 prost-build.version = "0.13.1"

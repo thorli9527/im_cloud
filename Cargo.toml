@@ -9,51 +9,93 @@ members = [
     "app_main",
     "app_socket",
     "app_group",
+    "app_api",
     "app_arb", "app_test",  ]
 [workspace.dependencies]
-actix-web = { version = "4.11.0" }
-actix-service = { version = "2.0.3" }
-actix-files = { version = "0.6.6" }
-chrono = { version = "0.4.41" }
-config = { version = "0.15.13" }
-log = { version = "0.4.27" }
-mongodb = { version = "3.2.4", features = ["sync"] }
-mongo_indexed_derive = { version = "2.0.0" }
-serde_json = { version = "1.0.140" }
-futures = { version = "0.3.31" }
-serde = { version = "1.0.219", features = ["derive"] }
-twox-hash = { version = "2.1.1" }
-num_enum={version = "0.7.4",features = ["default"]}
-deadpool-redis = { version = "0.21.1", features = ["tokio-comp"] }
-tokio = { version = "1.13.1", features = ["full"] }
-async-trait = { version = "0.1.88" }
-quote = { version = "1.0.40" }
-syn = { version = "2.0.104" }
-anyhow = { version = "1.0.98" }
-futures-util = { version = "0.3.31" }
-thiserror = { version = "2.0.12" }
-env_logger = { version = "0.11.8" }
-utoipa = { version = "5.3.1" }
-uuid = { version = "1.17.0" }
-strum = { version = "0.27.1" }
-strum_macros = { version = "0.27.1" }
-hex = "0.4.3"
-validator = { version = "0.20.0", features = ["derive"] }
-lazy_static = { version = "1.5.0" }
-rustflake = { version = "0.1.1" }
-walkdir = { version = "2.5.0" }
-arc-swap = { version = "1.7.1" }
-tempfile = { version = "3.20.0" }
-md-5 = "0.10.6"
-tokio-util = { version = "0.7.14" }
-prost = { version = "0.13.1" }
-tonic = { version = "0.13.1" }
-once_cell = { version = "1.21.3" }
-time = { version = "0.3.41" }
-bytes = { version = "1.10.1" }
-moka = { version = "0.12.10", default-features = false, features = ["sync"] }
-sha1 = { version = "0.10.6" }
-dashmap = { version = "6.1.0" }
-prost-types = { version = "0.13.1" }
-tracing = { version = "0.1.41" }
-rdkafka = { version = "0.38.0", features = ["tokio", "cmake-build"] }
+# ========================
+# 🌐 Web 框架
+# ========================
+actix-web = { version = "4.11.0" }             # Web 服务主框架
+actix-service = { version = "2.0.3" }          # 中间件支持
+actix-files = { version = "0.6.6" }            # 静态资源服务
+
+# ========================
+# 🗄 数据库相关
+# ========================
+mongodb = { version = "3.2.4", features = ["sync"] }       # MongoDB 客户端（同步版）
+mongo_indexed_derive = { version = "2.0.0" }               # Mongo 索引宏派生
+deadpool-redis = { version = "0.21.1", features = ["tokio-comp"] }  # Redis 异步连接池（tokio）
+
+# ========================
+# ⚙️ 配置、日志、时间
+# ========================
+config = { version = "0.15.13" }             # 多源配置文件加载
+log = { version = "0.4.27" }                 # 日志抽象接口
+env_logger = { version = "0.11.8" }          # 日志环境控制输出
+chrono = { version = "0.4.41" }              # 时间处理（传统）
+time = { version = "0.3.41" }                # 更现代的时间库
+tracing = { version = "0.1.41" }             # 分布式链路追踪
+
+# ========================
+# 📦 核心异步 + 错误处理
+# ========================
+tokio = { version = "1.13.1", features = ["full"] }     # 异步运行时
+tokio-util = { version = "0.7.14" }                     # tokio 工具扩展
+async-trait = { version = "0.1.88" }                    # 支持异步 trait
+futures = { version = "0.3.31" }                        # 异步工具库
+futures-util = { version = "0.3.31" }                   # 异步辅助扩展
+anyhow = { version = "1.0.98" }                         # 通用错误封装
+thiserror = { version = "2.0.12" }                      # 错误定义宏
+
+# ========================
+# 🔧 序列化与验证
+# ========================
+serde = { version = "1.0.219", features = ["derive"] }  # 序列化框架
+serde_json = { version = "1.0.140" }                    # JSON 支持
+validator = { version = "0.20.0", features = ["derive"] } # 参数验证宏
+
+# ========================
+# 📘 Protobuf & gRPC
+# ========================
+prost = { version = "0.13.1" }              # Protobuf 编解码
+prost-types = { version = "0.13.1" }        # Protobuf 常用类型支持
+tonic = { version = "0.13.1" }              # gRPC 框架
+
+# ========================
+# 📡 Kafka 消息队列
+# ========================
+rdkafka = { version = "0.38.0", features = ["tokio", "cmake-build"] }  # Kafka 客户端
+
+# ========================
+# 🧩 宏、代码生成与工具
+# ========================
+quote = { version = "1.0.40" }              # 宏生成工具
+syn = { version = "2.0.104" }               # 语法解析器
+strum = { version = "0.27.1" }              # 枚举工具 trait
+strum_macros = { version = "0.27.1" }       # 枚举派生宏
+utoipa = { version = "5.3.1" }              # OpenAPI 文档生成
+
+# ========================
+# 🧠 实用工具/数据结构
+# ========================
+uuid = { version = "1.17.0" }               # UUID 唯一标识
+twox-hash = { version = "2.1.1" }           # 快速哈希函数（用于 hashmap 优化）
+num_enum = { version = "0.7.4", features = ["default"] } # 枚举值与整数转换
+hex = "0.4.3"                               # 十六进制工具
+sha1 = { version = "0.10.6" }               # SHA-1 哈希
+md-5 = "0.10.6"                             # MD5 哈希
+bytes = { version = "1.10.1" }              # 高性能字节缓存
+walkdir = { version = "2.5.0" }             # 文件系统递归遍历
+tempfile = { version = "3.20.0" }           # 临时文件支持
+rustflake = { version = "0.1.1" }           # Twitter 雪花 ID 生成器
+maxminddb = { version = "0.26.0", features = ["serde"] }  # IP 地理位置解析
+
+# ========================
+# 🧊 静态数据/缓存结构
+# ========================
+once_cell = { version = "1.21.3" }          # 延迟初始化静态变量
+lazy_static = { version = "1.5.0" }         # 宏版懒加载
+dashmap = { version = "6.1.0" }             # 并发哈希表
+moka = { version = "0.12.10", default-features = false, features = ["sync"] } # 高性能本地缓存
+arc-swap = { version = "1.7.1" }            # Arc 原子交换，常用于读多写少
+

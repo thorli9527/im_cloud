@@ -10,7 +10,6 @@ use biz_service::protocol::msg::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, Of
 use biz_service::protocol::msg::entity::{GroupMsgEntity, UserMsgEntity};
 use biz_service::protocol::msg::friend::FriendEventMsg;
 use biz_service::protocol::msg::group::{GroupCreateMsg, GroupDismissMsg};
-use biz_service::protocol::msg::status::HeartbeatMsg;
 use biz_service::protocol::msg::system::SystemNotificationMsg;
 use biz_service::protocol::msg::user::UserFlushMsg;
 use bytes::Buf;
@@ -18,13 +17,12 @@ use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
 use futures::{SinkExt, StreamExt};
 use prost::Message;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-use common::config::AppConfig;
-use crate::protocol::rpc_arb_models::NodeInfo;
+use biz_service::protocol::msg::status::{AckMsg, HeartbeatMsg};
 
 /// 客户端连接处理入口
 pub async fn handle_connection(stream: TcpStream) -> Result<()> {
@@ -166,6 +164,10 @@ async fn read_loop(
                 let _ = HeartbeatMsg::decode(bytes)?;
                 last_heartbeat.store(now() as u64, Ordering::Relaxed);
                 log::debug!("🫀 收到客户端心跳");
+            }
+            ByteMessageType::AckMsgType => {
+                let ack_msg = AckMsg::decode(bytes)?;
+                log::debug!("ACK 消息处理");
             }
             _ => {
                 log::warn!("⚠️ 未知消息类型: {type_code}");

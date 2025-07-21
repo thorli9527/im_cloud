@@ -50,3 +50,11 @@ message AckMsg {
   uint64 message_id = 1;       // 被确认接收的消息 ID
   common.ByteMessageType ack_type = 2;  // 确认类型
 }
+
+// =======================================
+// 🔗 重连消息（ReConnectMsg）
+// =================
+message ReConnectMsg {
+  uint64 message_id = 1;       // 被确认接收的消息 ID
+  string socket_addr = 2;       // 重连的 Socket 地址
+}

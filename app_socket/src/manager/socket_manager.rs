@@ -4,8 +4,12 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::manager::socket_error::SendError;
+use crate::protocol::rpc_arb_models::NodeInfo;
+use anyhow::Result;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::DeviceType;
+use common::config::AppConfig;
+use common::util::common_utils::hash_index;
 use common::UserId;
 use dashmap::DashMap;
 use log::{info, warn};
@@ -13,10 +17,6 @@ use once_cell::sync::OnceCell;
 use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
-use anyhow::Result;
-use common::config::AppConfig;
-use common::util::common_utils::hash_index;
-use crate::protocol::rpc_arb_models::NodeInfo;
 
 /// 客户端连接唯一标识
 #[derive(Clone, Eq, PartialEq, Hash,Debug)]
@@ -198,6 +198,7 @@ impl SocketManager {
             log::warn!("⚠️ socket_list 为空，跳过连接迁移检查");
             return Ok(());
         }
+        let socket_list = sort_nodes(socket_list);
         let socket_addr = AppConfig::get().get_shard().server_host.unwrap_or_default();
         for (conn_id, conn_info) in connections {
             let idx = hash_index(&conn_id.0, node_count as i32) ;
@@ -234,4 +235,13 @@ static SOCKET_MANAGER: OnceCell<Arc<SocketManager>> = OnceCell::new();
 /// 获取全局 SocketManager 实例
 pub fn get_socket_manager() -> Arc<SocketManager> {
     SOCKET_MANAGER.get_or_init(|| Arc::new(SocketManager::new())).clone()
+}
+
+
+// 对节点列表进行排序 按照地址
+fn sort_nodes(mut nodes: Vec<NodeInfo>) -> Vec<NodeInfo> {
+    nodes.sort_by(|a, b| {
+        a.socket_addr.as_ref().cmp(&b.socket_addr.as_ref())
+    });
+    nodes
 }

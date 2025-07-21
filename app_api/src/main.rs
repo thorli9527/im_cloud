@@ -1,21 +1,9 @@
 use actix_web::middleware::Logger;
-use actix_web::rt::Runtime;
-use actix_web::{cookie, web, App, HttpServer};
 use app_api::handlers;
-use biz_service::biz_service::kafka_service::KafkaService;
-use biz_service::manager;
 use common::config::AppConfig;
-use common::errors::AppError;
-use common::redis::redis_template::RedisTemplate;
-use deadpool_redis::{
-    redis::{cmd, FromRedisValue}, Connection, Manager, Pool, PoolConfig,
-    Runtime as RedisRuntime,
-};
-use env_logger::Builder;
-use log::{info, warn, LevelFilter};
-use mongodb::options::ClientOptions;
-use mongodb::{Client, Database};
-use std::str::FromStr;
+
+use actix_web::{App, HttpServer};
+use tracing::log::warn;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -23,15 +11,8 @@ async fn main() -> std::io::Result<()> {
     AppConfig::init(&"api-config.toml".to_string());
     let app_cfg = AppConfig::get();
     //初始化日志
-    init_log(&app_cfg);
     let address_and_port = format!("{}:{}", &app_cfg.get_server().host, &app_cfg.get_server().port);
     warn!("Starting server on {}", address_and_port);
-    let db = init_mongo_db(&app_cfg).await;
-    let pool = build_redis_pool(&app_cfg);
-    RedisTemplate::init(pool.clone());
-    KafkaService::init(&app_cfg.get_kafka()).await;
-    biz_service::init_service(db);
-    manager::init(pool, false);
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
@@ -44,34 +25,4 @@ async fn main() -> std::io::Result<()> {
     .bind(address_and_port)?
     .run()
     .await
-}
-
-pub fn init_log(config: &AppConfig) -> Result<(), AppError> {
-    let mut builder = env_logger::Builder::new();
-    let log_level = &config.get_sys().log_leve;
-    let mut filter = builder.filter(None, LevelFilter::from_str(log_level).unwrap());
-    filter.init();
-    Ok(())
-}
-
-pub fn build_redis_pool(config: &AppConfig) -> Pool {
-    // 从应用配置中获取 Redis URL
-    let mut cfg = deadpool_redis::Config::from_url(config.get_redis().url.clone());
-
-    // 设置连接池的配置参数
-    cfg.pool = Some(PoolConfig {
-        max_size: 16,                   // 最大连接数
-        timeouts: Default::default(),   // 使用默认的超时时间
-        queue_mode: Default::default(), // 使用默认的队列模式
-    });
-    // 创建并返回连接池
-    cfg.create_pool(Some(deadpool_redis::Runtime::Tokio1)).expect("Failed to create Redis connection pool")
-}
-
-pub async fn init_mongo_db(config: &AppConfig) -> Database {
-    let client_options = ClientOptions::parse(config.get_database().url.clone()).await.expect("MongoDB URI ERROR");
-    // 创建 MongoDB 客户端
-    let client = Client::with_options(client_options).expect("CLIENT MongoDB ERROR");
-    // 获取数据库句柄（例如，名为 "mydb" 的数据库）
-    client.database(&config.get_database().db_name)
 }

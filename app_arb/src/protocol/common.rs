@@ -527,6 +527,10 @@ pub enum ByteMessageType {
     GroupCreateMsgType = 31,
     /// 群解散通知
     GroupDismissMsgType = 32,
+    /// 重连消息：客户端重连时发送，包含上次未处理的消息 ID
+    ReConnectMsgType = 99,
+    /// ACK 确认消息：用于确认消息接收状态
+    AckMsgType = 200,
 }
 impl ByteMessageType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -552,6 +556,8 @@ impl ByteMessageType {
             Self::FriendEventMsgType => "FriendEventMsgType",
             Self::GroupCreateMsgType => "GroupCreateMsgType",
             Self::GroupDismissMsgType => "GroupDismissMsgType",
+            Self::ReConnectMsgType => "ReConnectMsgType",
+            Self::AckMsgType => "ACKMsgType",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -578,6 +584,8 @@ impl ByteMessageType {
             "FriendEventMsgType" => Some(Self::FriendEventMsgType),
             "GroupCreateMsgType" => Some(Self::GroupCreateMsgType),
             "GroupDismissMsgType" => Some(Self::GroupDismissMsgType),
+            "ReConnectMsgType" => Some(Self::ReConnectMsgType),
+            "ACKMsgType" => Some(Self::AckMsgType),
             _ => None,
         }
     }
