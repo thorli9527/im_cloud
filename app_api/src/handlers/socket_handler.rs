@@ -26,7 +26,7 @@ pub async fn get_socket_address(req: HttpRequest) -> Result<impl Responder, AppE
 
     let mut arb_client= ArbClient::new().await;
     let query = QueryNodeReq { node_type: NodeType::SocketNode as i32};
-    let list = arb_client.client.list_all_nodes(query).await?.into_inner();
+    let list = arb_client.client.list_all_nodes(query).await.unwrap().into_inner();
     let i = list.nodes.len() as i32;
     let index=hash_index(&ip, i);
     let address=list.nodes[index as usize].socket_addr.clone();
