@@ -104,12 +104,9 @@ impl ArbManagerJob {
     pub fn clone_light(&self) -> ArbManagerJob {
         ArbManagerJob {
             arb_client: None, // 避免 tonic 客户端跨线程问题
-            // shard_address: self.shard_address.clone(),
             server_host: self.server_host.clone(),
             kafka_addr: self.kafka_addr.clone(),
             shard_address:self.shard_address.clone(),
-            // cancel_token: self.cancel_token.clone(),
-            // heartbeat_handle: None,
         }
     }
 }
