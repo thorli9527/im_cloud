@@ -1,3 +1,5 @@
+pub mod arb;
+
 pub mod msg {
     pub mod auth{
         include!("auth.rs");

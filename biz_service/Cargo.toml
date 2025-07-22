@@ -6,10 +6,6 @@ edition = "2024"
 [dependencies]
 common = { path = "../common" }
 mongo_macro = { path = "../mongo_macro" }
-# ========================
-# 🌐 Web 框架
-# ========================
-actix-web.workspace = true                     # Web 服务框架
 
 # ========================
 # 🗄 数据库与缓存
@@ -25,8 +21,6 @@ dashmap.workspace = true                       # 并发安全 HashMap
 # ========================
 chrono.workspace = true                        # 时间处理
 log.workspace = true                           # 日志抽象接口
-tracing = "0.1.41"                              # 链路追踪框架
-
 # ========================
 # 📦 异步 + 错误处理
 # ========================
@@ -63,11 +57,16 @@ strum_macros.workspace = true                  # 枚举宏派生
 # ========================
 rdkafka.workspace = true                       # Kafka 消息客户端
 prost.workspace = true                         # Protobuf 编解码
-prost-types = "0.12"                            # Protobuf 类型支持（注意版本与 prost 是否兼容）
 num_enum.workspace = true                      # 数值枚举转换支持
+tonic.workspace = true
+prost-types.workspace = true
+tracing.workspace = true
+actix-service.workspace = true
+config = { workspace = true }
+env_logger.workspace = true
 [build-dependencies]
-regex = "1.11.1"
-prost-build.version = "0.13.1"
-tonic-build.version = "0.13.1"
 protobuf-src = { version = "^2.1.0", optional = true }
 tonic = "0.13.1"
+tonic-build = "0.13.1"
+prost = "0.13.1"
+prost-build = "0.14.1"

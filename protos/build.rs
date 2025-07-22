@@ -290,5 +290,38 @@ fn build_biz_service() {
             }
         }
     }
+
+
+
     println!("cargo:warning=✅ proto biz_service 编译完成！");
+
+
+
+
+
+    tonic_build::configure()
+        .build_server(true) // 如无需生成 gRPC Server 代码
+        .build_client(true) // 如无需生成 gRPC Client 代码
+        .type_attribute(
+            ".",
+            "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
+        )
+        .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
+        .out_dir("../biz_service/src/protocol/arb") // 输出 Rust 模块到该目录
+        .compile_protos(
+            &[
+                "proto/common/common.proto",
+                "proto/arb/arb_models.proto",
+                "proto/arb/arb_group.proto",
+                "proto/arb/arb_server.proto",
+                "proto/arb/arb_socket.proto",
+            ],
+            &["proto"], // proto 根目录
+        )
+        .expect("💥 Proto 编译失败，请检查路径和语法！");
+
+    //删除 ../biz_service/src/protocol/arb/common.rs
+    if let Err(e) = fs::remove_file("../biz_service/src/protocol/arb/common.rs") {}
+
+    println!("cargo:warning=✅ proto biz_service rpc 编译完成！");
 }
