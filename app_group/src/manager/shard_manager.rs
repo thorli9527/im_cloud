@@ -58,7 +58,7 @@ pub struct ShardManager {
 pub trait ShardManagerOpt: Send + Sync {
     async fn load_from(&self)  -> anyhow::Result<()>;
     /// 添加用户到指定群组（自动根据 group_id 映射分片）
-    fn add_user_to_group(&self, group_id: &GroupId, uid: &UserId);
+    fn add_user_to_group(&self, group_id: &GroupId, uid: &UserId)->anyhow::Result<()>;
     /// 移除用户从指定群组（自动根据 group_id 映射分片）
     fn remove_user_from_group(&self, group_id: &GroupId, uid: &UserId);
     /// 获取某个群组的所有成员 ID 列表

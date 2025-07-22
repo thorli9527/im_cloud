@@ -13,6 +13,7 @@ use mongodb::bson::doc;
 use mongodb::options::FindOptions;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+use anyhow::Result;
 use tonic::transport::Channel;
 use twox_hash::XxHash64;
 use biz_service::protocol::arb::rpc_arb_models::{NodeType, QueryNodeReq};
@@ -83,7 +84,7 @@ impl ShardManagerOpt for ShardManager {
         Ok(())
     }
     /// 计算群组分片索引（用于分配 group → shard）
-    fn add_user_to_group(&self, group_id: &GroupId, uid: &UserId) {
+    fn add_user_to_group(&self, group_id: &GroupId, uid: &UserId) ->anyhow::Result<()>{
         let shard_index = self.hash_group_id(group_id) as i32;
         let member_index = self.hash_group_member_id(group_id, uid);
         let shard_key = format!("shard_{}", shard_index);
@@ -113,6 +114,7 @@ impl ShardManagerOpt for ShardManager {
             shard_index,
             member_index
         );
+        return Ok(());
     }
     
     /// 从指定群组中移除某个用户（自动计算分片）

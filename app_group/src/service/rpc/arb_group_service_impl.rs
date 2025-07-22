@@ -7,7 +7,6 @@ use common::util::date_util::now;
 use log::info;
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::thread::current;
 use tonic::{Request, Response, Status};
 use biz_service::protocol::arb::rpc_arb_group;
 use biz_service::protocol::arb::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
@@ -61,21 +60,39 @@ impl rpc_arb_group::arb_group_service_server::ArbGroupService for ArbGroupServic
     }
 
     async fn sync_data(&self, request: Request<SyncListGroup>) -> Result<Response<CommonResp>, Status> {
-        let  shard_manager = ShardManager::get();
-        let list=request.into_inner();
-        if !list.groups.is_empty() {
-            for group in list.groups.iter() {
-                shard_manager.create_group(group).await;;
+        let shard_manager = ShardManager::get();
+        let list = request.into_inner();
+        let mut group_errors = Vec::new();
+        let mut member_errors = Vec::new();
+
+        // 处理群组同步
+        for group in &list.groups {
+            if let Err(e) = shard_manager.create_group(group).await {
+                group_errors.push(format!("group_id={}: {}", group, e));
             }
         }
-        if !list.members.is_empty() {
-            for member in list.members.iter() {
-                shard_manager.add_user_to_group(&member.group_id, &member.uid);
+
+        // 处理成员同步
+        for member in &list.members {
+            if let Err(e) = shard_manager.add_user_to_group(&member.group_id, &member.uid) {
+                member_errors.push(format!("group_id={}, uid={}: {}", member.group_id, member.uid, e));
             }
         }
-        return Ok(Response::new(CommonResp {
-            success: true,
-            message: format!("Sync {} groups", list.groups.len()),
-        }));
+
+        // 构造响应
+        if group_errors.is_empty() && member_errors.is_empty() {
+            Ok(Response::new(CommonResp {
+                success: true,
+                message: format!("Sync success: {} groups, {} members", list.groups.len(), list.members.len()),
+            }))
+        } else {
+            let mut all_errors = group_errors;
+            all_errors.extend(member_errors);
+            Ok(Response::new(CommonResp {
+                success: false,
+                message: format!("Sync failed:\n{}", all_errors.join("\n")),
+            }))
+        }
     }
+
 }
