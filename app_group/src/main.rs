@@ -22,7 +22,8 @@ async fn main() -> std::io::Result<()> {
     );
     warn!("Starting server on {}", address_and_port);
     biz_service::init_service();
-    manager::init_manager();
+    manager::init().await;
+
     // 2. 构建 ShardManager 实例
     let mut job = ArbManagerJob::new();
     // 启动任务

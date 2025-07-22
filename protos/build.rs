@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
-    build_app_main_client();
+    build_app_main();
     build_arb_service();
     build_biz_service();
     build_arb_group_service();
@@ -10,7 +10,7 @@ fn main() {
 
 }
 
-fn build_app_main_client() {
+fn build_app_main() {
     tonic_build::configure()
         .build_server(false)
         .build_client(true)

@@ -4,6 +4,6 @@ mod shard_job_impl;
 mod shard_manager_mq_impl;
 mod shard_manager_opt_impl;
 
-pub fn init_manager() {
-    shard_manager::ShardManager::init();
+pub async  fn init() {
+    shard_manager::ShardManager::init().await;
 }

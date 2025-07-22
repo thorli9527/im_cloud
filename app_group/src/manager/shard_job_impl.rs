@@ -26,7 +26,6 @@ pub struct RPCSyncData {
 impl ManagerJobOpt for ArbManagerJob {
     async fn init(&mut self) -> anyhow::Result<()> {
         self.init_arb_client().await?;
-
         Ok(())
     }
 

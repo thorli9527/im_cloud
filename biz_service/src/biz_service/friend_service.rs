@@ -1,6 +1,5 @@
 use crate::entitys::friend::FriendEntity;
 use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
-use crate::protocol::msg::friend::FriendSourceType;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use common::UserId;
@@ -8,6 +7,7 @@ use mongodb::bson::Bson;
 use mongodb::{bson::doc, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use common::index_trait::MongoIndexModelProvider;
 
 #[derive(Debug)]
 pub struct UserFriendService {
@@ -17,6 +17,14 @@ pub struct UserFriendService {
 impl UserFriendService {
     pub fn new(db: Database) -> Self {
         let collection = db.collection("user_friend");
+        let vec = FriendEntity::index_models();
+        for model in vec {
+            let collection1 = collection.clone();
+            //启用新线程
+            tokio::spawn(async move {
+                collection1.create_index(model).await.unwrap();
+            });
+        }
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
     

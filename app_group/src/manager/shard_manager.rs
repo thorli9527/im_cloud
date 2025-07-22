@@ -8,7 +8,7 @@ use common::{GroupId, UserId};
 use dashmap::{DashMap, DashSet};
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
-use std::format;
+use std::{clone, format};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -135,7 +135,7 @@ impl ShardManager {
         let shard_info = shard_config.clone();
         let mut info = ShardInfo::default();
         info.state = ShardState::Registered;
-        Self {
+        let  manager=Self {
             snapshot: ArcSwap::new(Arc::new(MemData {
                 group_shard_map: Default::default(),
                 group_member_map: Default::default(),
@@ -150,7 +150,8 @@ impl ShardManager {
                 shard_info: RwLock::new(info.clone()),
             })),
             shard_address: shard_config.shard_address.clone().unwrap_or_default(),
-        }
+        };
+        return manager
     }
     pub fn hash_group_id(&self, group_id: &str) -> usize {
         use std::hash::{Hash, Hasher};
@@ -216,9 +217,10 @@ impl ShardManager {
         }));
     }
 
-    pub fn init() {
+    pub async fn init() {
         let app_cfg = AppConfig::get();
         let instance = Self::new(app_cfg.shard.clone().unwrap());
+        instance.load_from().await.expect("Failed to load shard data");
         INSTANCE_COUNTRY
             .set(Arc::new(instance))
             .expect("INSTANCE already initialized");
