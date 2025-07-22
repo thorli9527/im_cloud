@@ -1,9 +1,4 @@
 use crate::manager::socket_manager;
-use crate::manager::socket_manager::SocketManager;
-use crate::protocol::rpc_arb_models::{NodeInfo, NodeType, QueryNodeReq};
-use crate::protocol::rpc_arb_socket::arb_socket_service_server::{
-    ArbSocketService, ArbSocketServiceServer,
-};
 use crate::service::rpc::arb_service_rpc_client::ArbClient;
 use biz_service::protocol::common::CommonResp;
 use common::config::AppConfig;
@@ -14,6 +9,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tonic::{async_trait, Request, Response, Status};
+use biz_service::protocol::arb::rpc_arb_models::{NodeInfo, NodeType, QueryNodeReq};
+use biz_service::protocol::arb::rpc_arb_socket::arb_socket_service_server::{ArbSocketService, ArbSocketServiceServer};
+use crate::manager::socket_manager::SocketManager;
 
 pub struct ArbSocketRpcServiceImpl {
     pub socket_list: Arc<RwLock<Vec<NodeInfo>>>,

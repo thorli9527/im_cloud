@@ -4,7 +4,6 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::manager::socket_error::SendError;
-use crate::protocol::rpc_arb_models::NodeInfo;
 use anyhow::Result;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::DeviceType;
@@ -17,6 +16,7 @@ use once_cell::sync::OnceCell;
 use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
+use biz_service::protocol::arb::rpc_arb_models::NodeInfo;
 
 /// 客户端连接唯一标识
 #[derive(Clone, Eq, PartialEq, Hash,Debug)]

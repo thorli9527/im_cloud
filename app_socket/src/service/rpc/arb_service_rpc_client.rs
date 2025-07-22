@@ -1,6 +1,5 @@
 // 在 app_socket 中添加节点注册与心跳逻辑到 app_arb 服务
 
-use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::{build_md5, hash_index};
 use config::Config;
@@ -12,9 +11,9 @@ use tokio::sync::RwLock;
 use tokio::time::{interval, Duration};
 use tonic::transport::Channel;
 use biz_service::biz_service::kafka_group_service::KafkaGroupService;
+use biz_service::protocol::arb::rpc_arb_models::{BaseRequest, NodeInfo, NodeType, QueryNodeReq};
+use biz_service::protocol::arb::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use crate::kafka;
-use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use crate::protocol::rpc_arb_models::{BaseRequest, NodeInfo, NodeType, QueryNodeReq};
 
 #[derive(Debug, Clone)]
 pub struct ArbClient {

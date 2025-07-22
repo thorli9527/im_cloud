@@ -16,7 +16,7 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 use utoipa::openapi::security::Password;
 use common::util::common_utils::build_md5;
 use crate::manager::init;
-use crate::protocol::msg::group_models::GroupNodeMsgType;
+use crate::protocol::msg::group::GroupNodeMsgType;
 
 pub const GROUP_NODE_MSG_TOPIC : &str= "group-node-msg";
 #[derive(Clone)]

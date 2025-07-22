@@ -4,7 +4,7 @@ use app_main::handlers;
 use biz_service::biz_service::kafka_socket_service::KafkaService;
 
 use log::warn;
-use app_main::protocol::client_util::ArbServerClient;
+use biz_service::rpc_client::client_util::ArbServerClient;
 use common::config::AppConfig;
 
 #[actix_web::main]

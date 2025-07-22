@@ -5,7 +5,6 @@ use log::warn;
 use common::config::AppConfig;
 
 mod manager;
-mod protocol;
 mod service;
 mod kafka;
 

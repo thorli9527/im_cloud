@@ -1,13 +1,11 @@
 use crate::manager::shard_manager::ShardManager;
-use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use crate::protocol::rpc_arb_models::ShardState;
-use crate::protocol::rpc_arb_models::ShardState::{Migrating, Normal, Preparing, Ready, Registered};
-use crate::protocol::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::AppConfig;
 use std::time::Duration;
 use tokio::time::sleep;
 use tonic::async_trait;
 use tonic::transport::Channel;
+use biz_service::protocol::arb::rpc_arb_models::ShardState::{Migrating, Normal, Preparing, Ready, Registered};
+use biz_service::protocol::arb::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 
 pub struct ArbManagerJob {
     pub arb_client: Option<ArbServerRpcServiceClient<Channel>>,

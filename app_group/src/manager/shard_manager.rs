@@ -1,7 +1,5 @@
-use crate::protocol::rpc_arb_models::ShardState;
 use anyhow::Result;
 use arc_swap::ArcSwap;
-use biz_service::protocol::msg::group_models::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::hash_index;
 use common::{GroupId, UserId};
@@ -15,7 +13,9 @@ use tokio::sync::RwLock;
 use tonic::transport::Channel;
 use tonic::{Status, async_trait};
 use twox_hash::XxHash64;
-use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
+use biz_service::protocol::arb::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
+use biz_service::protocol::arb::rpc_arb_models::ShardState;
+use biz_service::protocol::msg::group::{ChangeGroupMsg, ChangeMemberRoleMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
 
 pub const GROUP_SHARD_SIZE: usize = 16;
 pub const MEMBER_SHARD_SIZE: usize = 8;

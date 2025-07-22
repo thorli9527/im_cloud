@@ -9,7 +9,6 @@ use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeReqMsg};
 use biz_service::protocol::msg::entity::{GroupMsgEntity, UserMsgEntity};
 use biz_service::protocol::msg::friend::FriendEventMsg;
-use biz_service::protocol::msg::group::{GroupCreateMsg, GroupDismissMsg};
 use biz_service::protocol::msg::system::SystemNotificationMsg;
 use biz_service::protocol::msg::user::UserFlushMsg;
 use bytes::Buf;
@@ -22,6 +21,7 @@ use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
+use biz_service::protocol::msg::group::{CreateGroupMsg, DestroyGroupMsg};
 use biz_service::protocol::msg::status::{AckMsg, HeartbeatMsg};
 
 /// 客户端连接处理入口
@@ -153,11 +153,11 @@ async fn read_loop(
                 log::debug!("👥 好友事件处理");
             }
             ByteMessageType::GroupCreateMsgType => {
-                let _ = GroupCreateMsg::decode(bytes)?;
+                let _ = CreateGroupMsg::decode(bytes)?;
                 log::info!("👥 创建群组事件处理");
             }
             ByteMessageType::GroupDismissMsgType => {
-                let _ = GroupDismissMsg::decode(bytes)?;
+                let _ = DestroyGroupMsg::decode(bytes)?;
                 log::info!("👋 群组解散事件处理");
             }
             ByteMessageType::HeartbeatMsgType => {

@@ -2,11 +2,10 @@ use crate::result::{result, result_error};
 use actix_web::{post, web, Responder};
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::protocol::common::{GroupEntity, GroupType, JoinPermission};
-use biz_service::protocol::msg::group::GroupDismissMsg;
-use biz_service::protocol::msg::group_models::{ChangeGroupMsg, CreateGroupMsg, MemberOfflineMsg, MemberOnlineMsg};
 use common::errors::AppError;
 use common::repository_util::{OrderType, Repository};
 use mongodb::bson::oid::ObjectId;
+use biz_service::protocol::msg::group::{ChangeGroupMsg, CreateGroupMsg};
 
 /// 包装器类型（解决 Orphan Rule 限制）
 pub struct CreateGroupMsgWrapper(pub CreateGroupMsg);
@@ -68,7 +67,7 @@ pub async fn group_add(req: web::Json<CreateGroupMsg>) -> Result<impl Responder,
 #[post("/group/update")]
 pub async fn group_update(req: web::Json<ChangeGroupMsg>) -> Result<impl Responder, AppError> {
     let group_service = GroupService::get();
-    let mut group = group_service.find_by_group_id(&req.id).await?;
+    let mut group = group_service.find_by_group_id(&req.id.to_string()).await?;
     let mut change_data = false;
     if !req.name.eq(&group.name) {
         change_data = true;

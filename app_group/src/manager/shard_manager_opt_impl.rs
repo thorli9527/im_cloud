@@ -1,7 +1,5 @@
 use crate::manager::shard_job::ArbManagerJob;
 use crate::manager::shard_manager::{GroupMembersPage, ShardManager, ShardManagerOpt, GROUP_SHARD_SIZE, MEMBER_SHARD_SIZE};
-use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use crate::protocol::rpc_arb_models::{NodeType, QueryNodeReq};
 use async_trait::async_trait;
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
@@ -17,6 +15,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use tonic::transport::Channel;
 use twox_hash::XxHash64;
+use biz_service::protocol::arb::rpc_arb_models::{NodeType, QueryNodeReq};
 
 #[async_trait]
 impl ShardManagerOpt for ShardManager {

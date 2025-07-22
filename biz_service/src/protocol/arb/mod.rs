@@ -1,6 +1,6 @@
-mod rpc_arb_group;
-mod rpc_arb_models;
-mod rpc_arb_server;
-mod rpc_arb_socket;
+pub mod rpc_arb_group;
+pub mod rpc_arb_models;
+pub mod rpc_arb_server;
+pub mod rpc_arb_socket;
 
-use crate::protocol::common as common;
+pub use crate::protocol::common as common;

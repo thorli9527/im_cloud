@@ -15,8 +15,7 @@ use common::util::date_util::now;
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
 use biz_service::biz_service::kafka_group_service::{GROUP_NODE_MSG_TOPIC};
-use biz_service::protocol::msg::group::GroupCreateMsg;
-use biz_service::protocol::msg::group_models::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, GroupNodeMsgType, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
+use biz_service::protocol::msg::group::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, GroupNodeMsgType, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
 use crate::manager::shard_manager::{ShardManager, ShardManagerMqOpt};
 
 type MessageId = u64;

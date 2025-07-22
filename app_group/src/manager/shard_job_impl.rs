@@ -1,6 +1,5 @@
 use crate::manager::shard_job::{ArbManagerJob, ManagerJobOpt};
 use crate::manager::shard_manager::{MemData, ShardInfo, ShardManager, MEMBER_SHARD_SIZE};
-use crate::protocol::rpc_arb_models::{BaseRequest, MemberRef, NodeType, QueryNodeReq, ShardState, SyncDataType, SyncListGroup, UpdateShardStateRequest};
 use actix_web::web::get;
 use biz_service::manager::common::shard_index;
 use biz_service::protocol::common::GroupMemberEntity;
@@ -14,6 +13,7 @@ use std::sync::Arc;
 use std::thread::current;
 use tokio::sync::RwLock;
 use tonic::async_trait;
+use biz_service::protocol::arb::rpc_arb_models::{BaseRequest, MemberRef, NodeType, QueryNodeReq, ShardState, SyncListGroup, UpdateShardStateRequest};
 use common::config::AppConfig;
 
 pub struct RPCSyncData {
