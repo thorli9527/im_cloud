@@ -1,15 +1,10 @@
 use crate::manager::socket::auth::login_handler::handle_login;
 use crate::manager::socket::auth::logout_handler::handle_logout;
 use crate::manager::socket::heartbeat_handler::start_global_heartbeat_checker;
-use crate::manager::socket_manager::{
-    get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta,
-};
+use crate::manager::socket_manager::{get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta};
 use anyhow::{anyhow, Result};
 use biz_service::protocol::common::ByteMessageType;
-use biz_service::protocol::msg::auth::{
-    DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg,
-    SendVerificationCodeReqMsg,
-};
+use biz_service::protocol::msg::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeReqMsg};
 use biz_service::protocol::msg::entity::{GroupMsgEntity, UserMsgEntity};
 use biz_service::protocol::msg::friend::FriendEventMsg;
 use biz_service::protocol::msg::group::{CreateGroupMsg, DestroyGroupMsg};
@@ -38,11 +33,7 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
     let last_heartbeat = Arc::new(AtomicU64::new(now() as u64));
     let conn_key = ConnectionId(conn_id.clone());
 
-    let connection = ConnectionInfo {
-        meta: ConnectionMeta { uid: None, device_type: None },
-        sender: tx.clone(),
-        last_heartbeat: last_heartbeat.clone(),
-    };
+    let connection = ConnectionInfo { meta: ConnectionMeta { uid: None, device_type: None }, sender: tx.clone(), last_heartbeat: last_heartbeat.clone() };
 
     let manager = get_socket_manager();
     manager.insert(conn_key.clone(), connection);
@@ -69,11 +60,7 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
 }
 
 /// 读取客户端数据 & 处理消息
-async fn read_loop(
-    reader: &mut FramedRead<tokio::net::tcp::OwnedReadHalf, LengthDelimitedCodec>,
-    conn_id: &ConnectionId,
-    last_heartbeat: Arc<AtomicU64>,
-) -> Result<()> {
+async fn read_loop(reader: &mut FramedRead<tokio::net::tcp::OwnedReadHalf, LengthDelimitedCodec>, conn_id: &ConnectionId, last_heartbeat: Arc<AtomicU64>) -> Result<()> {
     while let Some(frame) = reader.next().await {
         let mut bytes = frame?;
 
@@ -82,31 +69,22 @@ async fn read_loop(
         }
 
         let type_code = bytes.get_u8();
-        let message_type = ByteMessageType::from_i32(type_code as i32)
-            .unwrap_or(ByteMessageType::UnknownByteMessageType);
+        let message_type = ByteMessageType::from_i32(type_code as i32).unwrap_or(ByteMessageType::UnknownByteMessageType);
 
         match message_type {
             ByteMessageType::LoginReqMsgType => {
                 log::info!("🛂 收到w登录请求");
                 let login_req = LoginReqMsg::decode(bytes)?;
                 let i = login_req.device_type as i32;
-                let device_type = DeviceType::from_i32(i).unwrap();
+                let device_type = DeviceType::try_from(i)?;
                 let message_id = login_req.message_id;
-                handle_login(
-                    conn_id,
-                    &message_id,
-                    &login_req.username,
-                    &login_req.password,
-                    &device_type,
-                )
-                .await;
+                handle_login(conn_id, &message_id, &login_req.username, &login_req.password, &device_type).await;
             }
             ByteMessageType::LogoutReqMsgType => {
                 let logout_req = LogoutReqMsg::decode(bytes)?;
                 log::info!("🛂 收到w登录请求");
                 if let Some(conn) = get_socket_manager().get_by_id(conn_id) {
-                    if let (Some(uid), Some(device_type)) = (&conn.meta.uid, &conn.meta.device_type)
-                    {
+                    if let (Some(uid), Some(device_type)) = (&conn.meta.uid, &conn.meta.device_type) {
                         let message_id = logout_req.message_id;
                         handle_logout(&message_id, uid, device_type).await?;
                     } else {

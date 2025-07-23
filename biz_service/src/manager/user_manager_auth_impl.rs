@@ -42,11 +42,6 @@ impl UserManagerAuthOpt for UserManagerAuth {
         user_manager.online(&user_id, device_type).await?;
 
         let token = user_manager.build_token(&user_id, device_type).await?;
-
-        let kafka_service = KafkaService::get();
-        // 发送登录响应消息
-        let login_msg = &LoginRespMsg { message_id: message_id.clone(), token: token.clone(), expires_at: now() as u64 };
-        kafka_service.send_proto(&ByteMessageType::LoginRespMsgType, login_msg, &login_msg.message_id, &AppConfig::get().get_kafka().topic_group).await?;
         Ok(token)
     }
 

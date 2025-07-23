@@ -1,5 +1,5 @@
 use actix_web::middleware::Logger;
-use actix_web::{App, HttpServer, web};
+use actix_web::{web, App, HttpServer};
 use app_main::handlers;
 use biz_service::biz_service::kafka_socket_service::KafkaService;
 
@@ -9,7 +9,7 @@ use log::warn;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    AppConfig::init(&"main-config.toml".to_string()).await;
+    AppConfig::init(&"./app_main/main-config.toml".to_string()).await;
     // 读取配置文件
     let app_cfg = AppConfig::get();
     let address_and_port = format!("{}:{}", &app_cfg.get_server().host, &app_cfg.get_server().port);

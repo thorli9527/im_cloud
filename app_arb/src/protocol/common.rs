@@ -150,8 +150,10 @@ pub struct ClientEntity {
     pub user_type: i32,
     /// 扩展信息字段（如学校、职业、自定义标签等，键值对形式）
     #[prost(map = "string, string", tag = "12")]
-    pub profile_fields:
-        ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
+    pub profile_fields: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
     /// 创建时间（Unix 秒时间戳，用于记录账号创建时间）
     #[prost(uint64, tag = "13")]
     pub create_time: u64,
@@ -567,8 +569,12 @@ impl ByteMessageType {
             "LoginRespMsgType" => Some(Self::LoginRespMsgType),
             "LogoutReqMsgType" => Some(Self::LogoutReqMsgType),
             "LogoutRespMsgType" => Some(Self::LogoutRespMsgType),
-            "SendVerificationCodeReqMsgType" => Some(Self::SendVerificationCodeReqMsgType),
-            "SendVerificationCodeRepMsgType" => Some(Self::SendVerificationCodeRepMsgType),
+            "SendVerificationCodeReqMsgType" => {
+                Some(Self::SendVerificationCodeReqMsgType)
+            }
+            "SendVerificationCodeRepMsgType" => {
+                Some(Self::SendVerificationCodeRepMsgType)
+            }
             "SystemNotificationMsgType" => Some(Self::SystemNotificationMsgType),
             "UserFlushMsgType" => Some(Self::UserFlushMsgType),
             "OnlineStatusMsgType" => Some(Self::OnlineStatusMsgType),

@@ -10,7 +10,7 @@ mod service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    AppConfig::init(&"group-config.toml".to_string()).await;
+    AppConfig::init(&"./app_group/group-config.toml".to_string()).await;
     // 读取配置文件
     let app_cfg = AppConfig::get();
 

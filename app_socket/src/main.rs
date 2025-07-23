@@ -1,5 +1,5 @@
 use app_socket::manager;
-use app_socket::manager::socket_manager::{SocketManager, get_socket_manager};
+use app_socket::manager::socket_manager::{get_socket_manager, SocketManager};
 use app_socket::manager::socket_server::start_server;
 use app_socket::service::rpc::arb_socket_server_impl::ArbSocketRpcServiceImpl;
 use biz_service::biz_service::kafka_socket_service::KafkaService;
@@ -13,7 +13,7 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    AppConfig::init(&"socket-config.toml".to_string()).await;
+    AppConfig::init(&"./app_socket/socket-config.toml".to_string()).await;
     let config = AppConfig::get();
     //初始化 kafka
     KafkaService::init(&config.get_kafka()).await;

@@ -40,6 +40,9 @@ pub struct LoginRespMsg {
     /// 过期时间
     #[prost(uint64, tag = "3")]
     pub expires_at: u64,
+    /// 是否成功
+    #[prost(bool, tag = "4")]
+    pub success: bool,
 }
 /// ========================================
 ///   退出请求

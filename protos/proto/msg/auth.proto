@@ -46,6 +46,7 @@ message LoginRespMsg {
   uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string token = 2; // 刷新凭证
   uint64 expires_at = 3;  // 过期时间
+  bool success = 4;       // 是否成功
 }
 
 // ========================================
