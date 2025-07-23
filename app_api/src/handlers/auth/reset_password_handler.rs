@@ -1,14 +1,19 @@
 use crate::handlers::auth::reset_password_handler_dto::{
     ResetPasswordResponse, ResetPasswordSendRequest, ResetPasswordVerifyRequest,
 };
-use crate::result::result;
+use crate::result::{result, result_error, result_error_code};
 use actix_web::web::ServiceConfig;
 use actix_web::{post, web, HttpResponse, Responder};
 use biz_service::manager::user_manager_auth::{
     ResetPasswordType, UserManagerAuth, UserManagerAuthOpt,
 };
+use common::errors::AppError;
 use tracing::log;
 use validator::Validate;
+pub fn configure(cfg: &mut ServiceConfig) {
+    cfg.service(auth_reset_password_send_code);
+    cfg.service(auth_reset_password_verify_code);
+}
 
 #[utoipa::path(
     post,
@@ -54,15 +59,15 @@ pub async fn auth_reset_password_send_code(
 #[post("/auth/reset_password/verify_code")]
 pub async fn auth_reset_password_verify_code(
     req: web::Json<ResetPasswordVerifyRequest>,
-) -> impl Responder {
+) -> Result<impl Responder, AppError> {
     if let Err(e) = req.validate() {
-        return HttpResponse::BadRequest().body(format!("参数校验失败: {}", e));
+        return Ok(result_error_code("validate.error", 400));
     }
 
     let reset_type = match req.reset_type {
         1 => ResetPasswordType::Phone,
         2 => ResetPasswordType::Email,
-        _ => return HttpResponse::BadRequest().body("invalid.data"),
+        _ => return Ok(result_error_code("validate.error", 400)),
     };
 
     let user_manager = UserManagerAuth::get();
@@ -70,15 +75,10 @@ pub async fn auth_reset_password_verify_code(
         .reset_password_verify_code(&reset_type, &req.user_name, &req.code, &req.new_password)
         .await
     {
-        Ok(_) => Ok(result()),
+        Ok(_) => return Ok(result()),
         Err(e) => {
             log::error!("重置密码验证码失败: {}", e);
-            HttpResponse::BadRequest().body("system.error")
+            return Ok(result_error_code("system.error", 500));
         }
     }
-}
-
-pub(crate) fn configure(cfg: &mut ServiceConfig) {
-    cfg.service(auth_reset_password_send_code);
-    cfg.service(auth_reset_password_verify_code);
 }

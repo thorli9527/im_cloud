@@ -18,14 +18,14 @@ pub fn result_error_msg(msg: &str) -> Value {
 pub fn result_warn_msg(msg: &str) -> Value {
     serde_json::json!({"success":true,"msg":msg})
 }
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct ApiResponse<T> {
     code: i32,
     message: String,
     data: Option<T>,
 }
 
-impl<T> ApiResponse<T> {
+impl<T: Serialize> ApiResponse<T> {
     pub fn success(data: T) -> Self {
         ApiResponse { code: 0, message: "success".to_string(), data: Some(data) }
     }
@@ -37,13 +37,16 @@ impl<T> ApiResponse<T> {
 
 impl ApiResponse<Value> {
     pub fn json(data: Value) -> Self {
-        ApiResponse { code: 0, message: "success".to_string(), data: Some(data) }
+        ApiResponse { code: 200, message: "success".to_string(), data: Some(data) }
+    }
+    pub fn json_error(code: i32, msg: impl AsRef<str> + ToString) -> Self {
+        ApiResponse { code, message: msg.to_string(), data: None }
     }
 }
 
 impl ApiResponse<String> {
     pub fn success_ok() -> Self {
-        ApiResponse { code: 0, message: "success".to_string(), data: Option::None }
+        ApiResponse { code: 200, message: "success".to_string(), data: Option::None }
     }
 }
 
@@ -71,8 +74,18 @@ pub fn result_page(json: Value) -> ApiResponse<Value> {
     ApiResponse::<Value>::json(json)
 }
 
-pub fn result_error(message: impl AsRef<str> + ToString) -> ApiResponse<String> {
+pub fn result_json(json: Value) -> ApiResponse<Value> {
+    ApiResponse::<Value>::json(json)
+}
+pub fn result_json_error(message: &str, code: i32) -> ApiResponse<Value> {
+    ApiResponse::<Value>::json_error(code, message)
+}
+
+pub fn result_error(message: &str) -> ApiResponse<String> {
     ApiResponse::<String>::error(500, message)
+}
+pub fn result_error_code(message: &str, code: i32) -> ApiResponse<String> {
+    ApiResponse::<String>::error(code, message)
 }
 impl<T: Serialize> Responder for ApiResponse<T> {
     type Body = BoxBody;

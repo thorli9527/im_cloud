@@ -1,12 +1,16 @@
-use crate::handlers::auth::register_handler_dto::{
-    RegisterRequest, RegisterResponse, RegisterVerifyRequest,
-};
-use actix_web::web::{Json, ServiceConfig};
-use actix_web::{post, web, HttpResponse, Responder};
+use crate::handlers::auth::register_handler_dto::{RegisterRequest, RegisterResponse};
+use crate::result::ApiResponse;
+use actix_web::web::ServiceConfig;
+use actix_web::{post, web, Responder};
 use biz_service::manager::user_manager_auth::{UserManagerAuth, UserManagerAuthOpt, UserRegType};
-use utoipa::ToSchema;
+use common::errors::AppError;
+use serde_json::json;
 use validator::Validate;
 
+pub fn configure(cfg: &mut ServiceConfig) {
+    cfg.service(auth_register);
+    // cfg.service(auth_register_verify);
+}
 #[utoipa::path(
     post,
     path = "/auth/register",
@@ -18,19 +22,20 @@ use validator::Validate;
         (status = 500, description = "服务内部错误")
     )
 )]
+#[post("/auth/register")]
 pub async fn auth_register(
-    Json(payload): Json<RegisterRequest>,
-) -> Result<Json<RegisterResponse>, (axum::http::StatusCode, String)> {
+    payload: web::Json<RegisterRequest>,
+) -> Result<impl Responder, AppError> {
     // 参数校验
     if let Err(errs) = payload.validate() {
-        return Err((axum::http::StatusCode::BAD_REQUEST, format!("❌ 参数校验失败: {}", errs)));
+        return Ok(ApiResponse::json_error(400, "system.error"));
     }
 
     let reg_type = match payload.reg_type {
         1 => UserRegType::Phone,
         2 => UserRegType::Email,
         3 => UserRegType::Nft,
-        _ => return Err((axum::http::StatusCode::BAD_REQUEST, "invalid.data".to_string())),
+        _ => return Ok(ApiResponse::json_error(400, "system.error")),
     };
 
     let user_manager = UserManagerAuth::get();
@@ -39,46 +44,53 @@ pub async fn auth_register(
         .register(&payload.username, &payload.password, &reg_type, &payload.target)
         .await
     {
-        Ok(uid) => Ok(Json(RegisterResponse { user_id: uid })),
-        Err(e) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("注册失败: {}", e))),
+        Ok(uid) => {
+            let body = json!({
+                "uid": uid.to_string(),
+            });
+            return Ok(ApiResponse::json(body));
+        }
+        Err(e) => Ok(ApiResponse::json_error(400, "system.error")),
     }
 }
-
-#[utoipa::path(
-    post,
-    path = "/auth/register/verify_code",
-    tag = "Auth",
-    request_body = RegisterVerifyRequest,
-    responses(
-        (status = 200, description = "注册成功", body = RegisterResponse),
-        (status = 400, description = "参数错误或验证码无效"),
-        (status = 500, description = "服务内部错误")
-    )
-)]
-#[post("/auth/register/verify_code")]
-pub async fn auth_register_verify(req: web::Json<RegisterVerifyRequest>) -> impl Responder {
-    if let Err(errs) = req.validate() {
-        return HttpResponse::BadRequest().body(format!("❌ 参数校验失败: {}", errs));
-    }
-
-    let reg_type = match req.reg_type {
-        1 => UserRegType::Phone,
-        2 => UserRegType::Email,
-        3 => UserRegType::Nft,
-        _ => return HttpResponse::BadRequest().body("❌ 注册类型不合法"),
-    };
-
-    let user_manager = UserManagerAuth::get();
-    match user_manager
-        .register_verify_code(&req.username, &req.password, &req.reg_id, &req.code, &reg_type)
-        .await
-    {
-        Ok(uid) => HttpResponse::Ok().json(RegisterResponse { user_id: uid }),
-        Err(e) => HttpResponse::BadRequest().body(format!("注册失败: {}", e)),
-    }
-}
-
-pub(crate) fn configure(cfg: &mut ServiceConfig) {
-    cfg.service(auth_register);
-    cfg.service(auth_register_verify);
-}
+// #[utoipa::path(
+//     post,
+//     path = "/auth/register/verify_code",
+//     tag = "Auth",
+//     request_body = RegisterVerifyRequest,
+//     responses(
+//         (status = 200, description = "注册成功", body = RegisterResponse),
+//         (status = 400, description = "参数错误或验证码无效"),
+//         (status = 500, description = "服务内部错误")
+//     )
+// )]
+// #[post("/auth/register/verify_code")]
+// pub async fn auth_register_verify(
+//     req: web::Json<RegisterVerifyRequest>,
+// ) -> Result<impl Responder, AppError> {
+//     if let Err(errs) = req.validate() {
+//         return Ok(ApiResponse::json_error(400, "system.error"));
+//     }
+//
+//     let reg_type = match req.reg_type {
+//         1 => UserRegType::Phone,
+//         2 => UserRegType::Email,
+//         3 => UserRegType::Nft,
+//         _ => return Ok(ApiResponse::json_error(400, "system.error")),
+//     };
+//
+//     let user_manager = UserManagerAuth::get();
+//
+//     return match user_manager
+//         .register_verify_code(&req.username, &req.password, &req.reg_id, &req.code, &reg_type)
+//         .await
+//     {
+//         Ok(uid) => {
+//             let body = json!({
+//                 "uid": uid.to_string(),
+//             });
+//             Ok(ApiResponse::json(body))
+//         }
+//         Err(e) => Ok(ApiResponse::json_error(500, "system.error")),
+//     };
+// }

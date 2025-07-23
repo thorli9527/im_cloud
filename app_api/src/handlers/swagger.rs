@@ -1,16 +1,17 @@
+use crate::handlers::auth::register_handler::*;
+use crate::handlers::auth::reset_password_handler::*;
 use actix_web::{get, web, HttpResponse, Responder};
 use utoipa::OpenApi;
-
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        #注册
+        //注册
         auth_register,
-        auth_register_verify,
+        // auth_register_verify,
 
-        #重置密码
-        auth_reset_password_send_code
-        auth_reset_password_verify_code
+        //重置密码
+        auth_reset_password_send_code,
+        auth_reset_password_verify_code,
     ),
     components(schemas(
     )),

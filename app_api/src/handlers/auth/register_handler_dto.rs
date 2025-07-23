@@ -24,7 +24,7 @@ pub struct RegisterRequest {
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct RegisterResponse {
-    pub user_id: String,
+    pub uid: String,
 }
 
 // 邮箱和手机号校验

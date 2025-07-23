@@ -8,7 +8,7 @@ use tracing::log::warn;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // 读取配置文件
-    AppConfig::init(&"api-config.toml".to_string());
+    AppConfig::init(&"api-config.toml".to_string()).await;
     let app_cfg = AppConfig::get();
     //初始化日志
     let address_and_port = format!("{}:{}", &app_cfg.get_server().host, &app_cfg.get_server().port);

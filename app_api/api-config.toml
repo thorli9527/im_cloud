@@ -5,6 +5,8 @@ url = "mongodb://localhost:27017"
 db_name = "group"
 [redis]
 url = "redis://127.0.0.1:6379/"
+[log]
+level = "warn"
 [server]
 host = "127.0.0.1"
 port = 8093
