@@ -5,6 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::manager::socket_error::SendError;
 use anyhow::Result;
+use biz_service::protocol::arb::rpc_arb_models::NodeInfo;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::DeviceType;
 use common::config::AppConfig;
@@ -16,10 +17,9 @@ use once_cell::sync::OnceCell;
 use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
-use biz_service::protocol::arb::rpc_arb_models::NodeInfo;
 
 /// 客户端连接唯一标识
-#[derive(Clone, Eq, PartialEq, Hash,Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct ConnectionId(pub String);
 
 /// 连接元信息（用户、设备、客户端等）
@@ -54,12 +54,15 @@ pub struct SocketManager {
     /// - 用于进行群组广播消息派发
     /// - 格式: group_id → {user_id1, user_id2, ...}
     pub group_members: DashMap<String, HashSet<String>>,
-
 }
 
 impl SocketManager {
     pub fn new() -> Self {
-        Self { connections: DashMap::new(), user_index: DashMap::new(), group_members: DashMap::new() }
+        Self {
+            connections: DashMap::new(),
+            user_index: DashMap::new(),
+            group_members: DashMap::new(),
+        }
     }
 
     /// 新增连接
@@ -86,12 +89,11 @@ impl SocketManager {
             info!("🔌 连接断开: {:?}", id.0);
         }
     }
-
     /// 获取连接
-    pub fn get(&self, id: &ConnectionId) -> Option<Arc<ConnectionInfo>> {
-        self.connections.get(id).map(|v| Arc::new(v.clone()))
+    pub fn get_by_id(&self, conn_id: &ConnectionId) -> Option<Arc<ConnectionInfo>> {
+        self.connections.get(conn_id).map(|v| Arc::new(v.clone()))
     }
-    pub fn get_manager() -> Arc<SocketManager> {
+    pub fn get() -> Arc<SocketManager> {
         get_socket_manager()
     }
 
@@ -135,12 +137,19 @@ impl SocketManager {
     pub fn get_connections_by_user(&self, user_id: &str) -> Vec<ConnectionInfo> {
         self.user_index
             .get(user_id)
-            .map(|set| set.iter().filter_map(|id| self.connections.get(id).map(|c| c.clone())).collect())
+            .map(|set| {
+                set.iter().filter_map(|id| self.connections.get(id).map(|c| c.clone())).collect()
+            })
             .unwrap_or_default()
     }
 
     /// 向用户发送消息（支持设备类型过滤）
-    pub fn send_to_user(&self, user_id: &str, bytes: Bytes, device_filter: Option<DeviceType>) -> Result<(), SendError> {
+    pub fn send_to_user(
+        &self,
+        user_id: &str,
+        bytes: Bytes,
+        device_filter: Option<DeviceType>,
+    ) -> Result<(), SendError> {
         let mut sent = false;
 
         if let Some(conn_ids) = self.user_index.get(user_id) {
@@ -183,13 +192,10 @@ impl SocketManager {
     }
     /// 返回所有连接快照 (conn_id, conn_info)
     pub fn all_connections(&self) -> Vec<(ConnectionId, ConnectionInfo)> {
-        self.connections
-            .iter()
-            .map(|entry| (entry.key().clone(), entry.value().clone()))
-            .collect()
+        self.connections.iter().map(|entry| (entry.key().clone(), entry.value().clone())).collect()
     }
     /// 检查所有连接是否需要迁移，若不属于当前节点，则发送断开通知
-    pub async fn dispatch_mislocated_connections(socket_list: Vec<NodeInfo>) -> Result<()>{
+    pub async fn dispatch_mislocated_connections(socket_list: Vec<NodeInfo>) -> Result<()> {
         let manager = get_socket_manager();
         let connections = manager.all_connections(); // snapshot
 
@@ -201,11 +207,10 @@ impl SocketManager {
         let socket_list = sort_nodes(socket_list);
         let socket_addr = AppConfig::get().get_shard().server_host.unwrap_or_default();
         for (conn_id, conn_info) in connections {
-            let idx = hash_index(&conn_id.0, node_count as i32) ;
-            
+            let idx = hash_index(&conn_id.0, node_count as i32);
+
             match socket_list.get(idx as usize) {
-                Some(target_node) 
-                if target_node.socket_addr.as_ref().unwrap() != &socket_addr => {
+                Some(target_node) if target_node.socket_addr.as_ref().unwrap() != &socket_addr => {
                     log::info!(
                         "🚧 连接不属于本节点，迁移中: conn_id={:?}, 分配节点={}",
                         conn_id.0,
@@ -227,7 +232,6 @@ impl SocketManager {
         log::info!("✅ 连接迁移检查完成，连接总数：{}", manager.connections.len());
         return Ok(());
     }
-
 }
 
 static SOCKET_MANAGER: OnceCell<Arc<SocketManager>> = OnceCell::new();
@@ -237,11 +241,8 @@ pub fn get_socket_manager() -> Arc<SocketManager> {
     SOCKET_MANAGER.get_or_init(|| Arc::new(SocketManager::new())).clone()
 }
 
-
 // 对节点列表进行排序 按照地址
 fn sort_nodes(mut nodes: Vec<NodeInfo>) -> Vec<NodeInfo> {
-    nodes.sort_by(|a, b| {
-        a.socket_addr.as_ref().cmp(&b.socket_addr.as_ref())
-    });
+    nodes.sort_by(|a, b| a.socket_addr.as_ref().cmp(&b.socket_addr.as_ref()));
     nodes
 }

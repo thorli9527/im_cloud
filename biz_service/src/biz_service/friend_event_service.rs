@@ -1,20 +1,20 @@
 use crate::biz_service::friend_service::UserFriendService;
 use crate::biz_service::user_service::UserService;
+use crate::entitys::friend::FriendEntity;
 use crate::protocol::common::ByteMessageType::FriendEventMsgType;
 use crate::protocol::msg::friend::{EventStatus, FriendEventMsg, FriendEventType};
 use anyhow::Result;
 use bson::doc;
+use bson::oid::ObjectId;
 use common::UserId;
 use common::repository_util::{BaseRepository, Repository};
+use common::util::common_utils::build_snow_id;
+use common::util::date_util::now;
 use log::warn;
+use mongodb::sync::{Client, ClientSession};
 use mongodb::{Collection, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use bson::oid::ObjectId;
-use mongodb::sync::{Client, ClientSession};
-use common::util::common_utils::build_snow_id;
-use common::util::date_util::now;
-use crate::entitys::friend::FriendEntity;
 
 /// 好友事件服务
 #[derive(Debug)]
@@ -27,10 +27,7 @@ impl FriendEventService {
     /// 创建服务实例
     pub fn new(db: Database) -> Self {
         let collection = db.collection("friend_event");
-        Self {
-            db: db.clone(),
-            dao: BaseRepository::new(db, collection.clone()),
-        }
+        Self { db: db.clone(), dao: BaseRepository::new(db, collection.clone()) }
     }
 
     /// 申请好友
@@ -53,10 +50,7 @@ impl FriendEventService {
         }
         let event = info.unwrap();
         if event.event_type != FriendEventType::FriendRequest as i32 {
-            warn!(
-                "事件类型错误: event_id:{} type :{}",
-                event_id, event.event_type
-            );
+            warn!("事件类型错误: event_id:{} type :{}", event_id, event.event_type);
             return Err(anyhow::anyhow!("事件类型错误"));
         }
 
@@ -99,18 +93,23 @@ impl FriendEventService {
             };
             user_friend_coll.insert_one(to_entity).session(&mut session).await?;
 
-            friend_event_coll.update_one(
-                doc! { "_id": event_id },
-                doc! {
-                "$set": {
-                    "event_type": FriendEventType::FriendAccept as i32 ,
-                    "status": EventStatus::Done as i32,
-                    "to_a_name":a_name.to_string(),
-                    "to_remark": remark.clone()
-                }
-        }).session(&mut session).await?;
+            friend_event_coll
+                .update_one(
+                    doc! { "_id": event_id },
+                    doc! {
+                            "$set": {
+                                "event_type": FriendEventType::FriendAccept as i32 ,
+                                "status": EventStatus::Done as i32,
+                                "to_a_name":a_name.to_string(),
+                                "to_remark": remark.clone()
+                            }
+                    },
+                )
+                .session(&mut session)
+                .await?;
             Ok::<(), anyhow::Error>(())
-        }.await;
+        }
+        .await;
         match result {
             Ok(_) => {
                 session.commit_transaction().await?;
@@ -137,14 +136,12 @@ impl FriendEventService {
         let result = async {
             // 删除双方好友关系
             user_friend_coll
-                .delete_many(
-                    doc! {
-                        "$or": [
-                            { "uid": uid, "friend_id": friend_id },
-                            { "uid": friend_id, "friend_id": uid },
-                        ]
-                    },
-                )
+                .delete_many(doc! {
+                    "$or": [
+                        { "uid": uid, "friend_id": friend_id },
+                        { "uid": friend_id, "friend_id": uid },
+                    ]
+                })
                 .session(&mut session)
                 .await?;
 
@@ -164,14 +161,11 @@ impl FriendEventService {
                 to_a_name: "".to_string(),
                 to_remark: None,
             };
-            friend_event_coll
-                .insert_one(event)
-                .session(&mut session)
-                .await?;
+            friend_event_coll.insert_one(event).session(&mut session).await?;
 
             Ok::<(), anyhow::Error>(())
         }
-            .await;
+        .await;
 
         match result {
             Ok(_) => session.commit_transaction().await?,
@@ -194,10 +188,7 @@ impl FriendEventService {
 
     /// 获取服务单例
     pub fn get() -> Arc<Self> {
-        INSTANCE_FRIEND_EVENT
-            .get()
-            .expect("INSTANCE_FRIEND_EVENT is not initialized")
-            .clone()
+        INSTANCE_FRIEND_EVENT.get().expect("INSTANCE_FRIEND_EVENT is not initialized").clone()
     }
 }
 

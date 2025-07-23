@@ -1,5 +1,6 @@
 use crate::protocol::common::{GroupMemberEntity, GroupRoleType};
 use anyhow::{Result, anyhow};
+use bson::Document;
 use common::UserId;
 use common::errors::AppError;
 use common::redis::redis_pool::RedisPoolTools;
@@ -7,11 +8,10 @@ use common::repository_util::{BaseRepository, OrderType, PageResult, Repository}
 use common::util::date_util::now;
 use deadpool_redis::redis;
 use deadpool_redis::redis::AsyncCommands;
-use mongodb::{Collection, Database};
 use mongodb::bson::doc;
+use mongodb::{Collection, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use bson::Document;
 
 #[derive(Debug)]
 pub struct GroupMemberService {
@@ -22,17 +22,12 @@ pub struct GroupMemberService {
 impl GroupMemberService {
     pub fn new(db: Database) -> Self {
         let collection = db.collection("group_member");
-        Self {
-            dao: BaseRepository::new(db.clone(), collection.clone()),
-            db: db,
-        }
+        Self { dao: BaseRepository::new(db.clone(), collection.clone()), db: db }
     }
 
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        INSTANCE
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     pub fn key_group_members(group_id: &str) -> String {
@@ -111,10 +106,7 @@ impl GroupMemberService {
                     conn.set_ex::<_, _, ()>(&detail_key, json, 3600).await?;
                 }
 
-                tracing::info!(
-                    "✅ 批量添加群成员成功：新增 {} 条，TTL = 3600s",
-                    added_count
-                );
+                tracing::info!("✅ 批量添加群成员成功：新增 {} 条，TTL = 3600s", added_count);
                 Ok(())
             }
             Err(e) => {
@@ -221,20 +213,13 @@ impl GroupMemberService {
                     entities.truncate(page_size as usize);
                 }
 
-                return Ok(PageResult {
-                    items: entities,
-                    has_next: has_more,
-                    has_prev: false,
-                });
+                return Ok(PageResult { items: entities, has_next: has_more, has_prev: false });
             }
         }
 
         // Step 3: Redis 未命中 → MongoDB 查询 + 回写缓存
         let filter = doc! { "group_id": group_id };
-        let page = self
-            .dao
-            .query_by_page(filter, page_size, order_type, sort_field)
-            .await?;
+        let page = self.dao.query_by_page(filter, page_size, order_type, sort_field).await?;
 
         if !page.items.is_empty() {
             // Step 4: 写入 Redis（Set + Hash）
@@ -311,8 +296,7 @@ impl GroupMemberService {
     /// 删除某个群组下所有成员（MongoDB + Redis）
     /// - MongoDB 批量删除群成员
     /// - Redis 清除成员 UID 集合及详情缓存
-    pub async fn delete_by_group_id(&self, group_id:&str) -> Result<()> {
-
+    pub async fn delete_by_group_id(&self, group_id: &str) -> Result<()> {
         // Step 1: 删除 MongoDB 中该群的所有成员记录
         let filter = doc! { "group_id":group_id };
         self.dao.delete(filter).await?;
@@ -327,10 +311,8 @@ impl GroupMemberService {
 
         // 删除详情缓存 key：group:member:{group_id}:{uid}
         if !uids.is_empty() {
-            let detail_keys: Vec<String> = uids
-                .iter()
-                .map(|uid| group_member_key(group_id, uid))
-                .collect();
+            let detail_keys: Vec<String> =
+                uids.iter().map(|uid| group_member_key(group_id, uid)).collect();
             let _: () = conn.del(detail_keys).await?;
         }
 
@@ -367,10 +349,7 @@ impl GroupMemberService {
             Some(owner) => {
                 // Step 3: 写入缓存（默认 1 小时）
                 let json = serde_json::to_string(&owner).unwrap_or_default();
-                let _: () = conn
-                    .set_ex(&redis_key, json, 3600)
-                    .await
-                    .unwrap_or_default();
+                let _: () = conn.set_ex(&redis_key, json, 3600).await.unwrap_or_default();
 
                 Ok(owner)
             }
@@ -461,11 +440,7 @@ impl GroupMemberService {
             if let Ok(entity) = serde_json::from_str::<GroupMemberEntity>(&json_str) {
                 return Ok(entity);
             } else {
-                tracing::warn!(
-                    "❗Redis命中但反序列化失败 group_id={} uid={}",
-                    group_id,
-                    uid
-                );
+                tracing::warn!("❗Redis命中但反序列化失败 group_id={} uid={}", group_id, uid);
             }
         }
 
@@ -473,10 +448,7 @@ impl GroupMemberService {
         match self.dao.find_one(filter).await? {
             Some(entity) => {
                 let cache_str = serde_json::to_string(&entity).unwrap_or_default();
-                let _: () = conn
-                    .set_ex(&redis_key, cache_str, 3600)
-                    .await
-                    .unwrap_or_default();
+                let _: () = conn.set_ex(&redis_key, cache_str, 3600).await.unwrap_or_default();
                 Ok(entity)
             }
             None => {

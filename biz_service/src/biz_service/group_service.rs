@@ -2,9 +2,11 @@ use crate::biz_service::group_member_service::GroupMemberService;
 use crate::biz_service::user_service::UserService;
 use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
 use anyhow::{Result, anyhow};
+use common::UserId;
 use common::errors::AppError;
 use common::redis::redis_pool::RedisPoolTools;
 use common::repository_util::{BaseRepository, Repository};
+use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
 use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
@@ -12,8 +14,6 @@ use mongodb::{Collection, Database};
 use once_cell::sync::OnceCell;
 use serde_json::json;
 use std::sync::Arc;
-use common::UserId;
-use common::util::common_utils::build_uuid;
 
 #[derive(Debug)]
 pub struct GroupService {
@@ -24,10 +24,7 @@ pub struct GroupService {
 impl GroupService {
     pub fn new(db: Database) -> Self {
         let collection = db.collection("group_info");
-        Self {
-            dao: BaseRepository::new(db.clone(), collection.clone()),
-            db,
-        }
+        Self { dao: BaseRepository::new(db.clone(), collection.clone()), db }
     }
 
     pub async fn find_by_group_id(
@@ -41,11 +38,7 @@ impl GroupService {
         }
     }
 
-    pub async fn create_group(
-        &self,
-        group: &GroupEntity,
-        ids: &Vec<String>,
-    ) -> anyhow::Result<()> {
+    pub async fn create_group(&self, group: &GroupEntity, ids: &Vec<String>) -> anyhow::Result<()> {
         let old_info = self
             .dao
             .find_one(doc! {"name": group.clone().name,"owner_id": group.clone().owner_id})
@@ -88,10 +81,7 @@ impl GroupService {
                 update_time: now,
                 avatar: "".to_string(),
             };
-            group_member_coll
-                .insert_one(owner)
-                .session(&mut session)
-                .await?;
+            group_member_coll.insert_one(owner).session(&mut session).await?;
 
             // 4. 插入其余初始成员
             for user_id in ids {
@@ -109,10 +99,7 @@ impl GroupService {
                     update_time: now,
                     avatar: "".to_string(),
                 };
-                group_member_coll
-                    .insert_one(member)
-                    .session(&mut session)
-                    .await?;
+                group_member_coll.insert_one(member).session(&mut session).await?;
                 // ============ Step 6: 写入 Redis 缓存 ============= //
                 let redis = RedisPoolTools::get();
                 let mut conn = redis.get().await?;
@@ -128,11 +115,8 @@ impl GroupService {
 
                 // 添加初始成员
                 if !ids.is_empty() {
-                    let other_members: Vec<String> = ids
-                        .iter()
-                        .filter(|u| *u != &group.owner_id)
-                        .cloned()
-                        .collect();
+                    let other_members: Vec<String> =
+                        ids.iter().filter(|u| *u != &group.owner_id).cloned().collect();
                     if !other_members.is_empty() {
                         conn.sadd::<_, _, ()>(&member_key, other_members).await?;
                     }
@@ -140,8 +124,7 @@ impl GroupService {
 
                 // ✨ 新增：序列化群组信息并缓存
                 let group_json = serde_json::to_string(group)?;
-                conn.set_ex::<_, _, ()>(&group_info_key, group_json, 7 * 24 * 3600)
-                    .await?; // 7 天过期
+                conn.set_ex::<_, _, ()>(&group_info_key, group_json, 7 * 24 * 3600).await?; // 7 天过期
 
                 tracing::info!("✅ Redis 缓存初始化成功: group_id={}", group_id);
             }
@@ -162,7 +145,7 @@ impl GroupService {
     }
 
     /// 解散群组（MongoDB + Redis 全清理）
-    pub async fn dismiss_group(&self, group_id: &str,operator_id: &str) -> Result<(), AppError> {
+    pub async fn dismiss_group(&self, group_id: &str, operator_id: &str) -> Result<(), AppError> {
         let group_member_service = GroupMemberService::get();
 
         // Step 1: 开启 MongoDB 事务
@@ -176,16 +159,10 @@ impl GroupService {
 
         let txn_result = async {
             // Step 2: 删除所有成员记录
-            member_coll
-                .delete_many(doc! { "group_id": group_id })
-                .session(&mut session)
-                .await?;
+            member_coll.delete_many(doc! { "group_id": group_id }).session(&mut session).await?;
 
             // Step 3: 删除群组信息
-            group_coll
-                .delete_one(doc! { "_id": group_id })
-                .session(&mut session)
-                .await?;
+            group_coll.delete_one(doc! { "_id": group_id }).session(&mut session).await?;
 
             Ok::<(), AppError>(())
         }
@@ -217,12 +194,7 @@ impl GroupService {
         }
     }
 
-    pub async fn update_group_name(
-        &self,
-        group_id: &str,
-        new_name: &str,
-    ) -> Result<(), AppError> {
-
+    pub async fn update_group_name(&self, group_id: &str, new_name: &str) -> Result<(), AppError> {
         // Step 1: 更新 MongoDB
         let filter = doc! { "group_id": &group_id };
         let update_time = now();
@@ -245,30 +217,17 @@ impl GroupService {
             "update_time": update_time,
         });
 
-        conn.set::<_, _, ()>(&redis_key, serde_json::to_string(&group_info)?)
-            .await?;
+        conn.set::<_, _, ()>(&redis_key, serde_json::to_string(&group_info)?).await?;
 
-        tracing::info!(
-            "✅ 群组名称已更新并同步 Redis: group_id={}, name={}",
-            group_id,
-            new_name
-        );
+        tracing::info!("✅ 群组名称已更新并同步 Redis: group_id={}, name={}", group_id, new_name);
 
         Ok(())
     }
     /// 转让群组（变更 creator_id）
 
-    pub async fn transfer_ownership(
-        &self,
-        group_id: &str,
-        new_owner_id: &UserId,
-    ) -> Result<()> {
-
+    pub async fn transfer_ownership(&self, group_id: &str, new_owner_id: &UserId) -> Result<()> {
         // Step 1: 获取原群信息
-        let group = self
-            .dao
-            .find_one(doc! { "_id": &group_id })
-            .await?;
+        let group = self.dao.find_one(doc! { "_id": &group_id }).await?;
         if group.is_none() {
             return Err(anyhow!("群组不存在"));
         }
@@ -292,13 +251,9 @@ impl GroupService {
         self.dao.update(doc! { "_id": &group_id }, update).await?;
 
         // Step 4: 修改群成员角色（旧群主 → Member， 新群主 → Owner）
-        member_service
-            .change_member_role(&group_id, &old_owner_id, &GroupRoleType::Member)
-            .await?;
+        member_service.change_member_role(&group_id, &old_owner_id, &GroupRoleType::Member).await?;
 
-        member_service
-            .change_member_role(&group_id, &new_owner_id, &GroupRoleType::Owner)
-            .await?;
+        member_service.change_member_role(&group_id, &new_owner_id, &GroupRoleType::Owner).await?;
 
         // Step 5: 更新 Redis 中管理员集合
         let redis = RedisPoolTools::get();
@@ -316,8 +271,7 @@ impl GroupService {
             "name": group.name,
             "update_time": now(),
         });
-        conn.set::<_, _, ()>(&info_key, serde_json::to_string(&group_info)?)
-            .await?;
+        conn.set::<_, _, ()>(&info_key, serde_json::to_string(&group_info)?).await?;
 
         tracing::info!(
             "✅ 群主转让成功: group_id={} from={} → to={}",
@@ -328,10 +282,7 @@ impl GroupService {
         Ok(())
     }
 
-    pub async fn query_admin_member_by_group_id(
-        &self,
-        group_id: &str,
-    ) -> Result<Vec<String>> {
+    pub async fn query_admin_member_by_group_id(&self, group_id: &str) -> Result<Vec<String>> {
         let redis = RedisPoolTools::get();
         let mut conn = redis.get().await?;
         let admin_key = format!("group:admin:{}", group_id);
@@ -346,9 +297,7 @@ impl GroupService {
     }
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        INSTANCE
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     /// 获取单例

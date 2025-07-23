@@ -2,24 +2,26 @@ pub mod common_entity;
 pub mod config_entity;
 pub mod friend;
 pub mod group_entity;
+pub mod mail_entity;
 pub mod read_index;
-pub mod user_entity;
 pub mod role_entity;
+pub mod user_entity;
 pub mod user_role_entity;
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub fn deserialize_object_id_as_hex_string<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
+where D: Deserializer<'de> {
     let oid = ObjectId::deserialize(deserializer)?;
     Ok(oid.to_hex())
 }
 
 // 序列化：从 String（hex） -> BSON 的 ObjectId
-pub fn serialize_hex_string_as_object_id<S>(hex: &String, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize_hex_string_as_object_id<S>(
+    hex: &String,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {

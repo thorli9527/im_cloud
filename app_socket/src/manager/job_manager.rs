@@ -1,8 +1,8 @@
 use crate::manager::socket_manager::SocketManager;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::time::{interval, Duration};
+use tokio::time::{Duration, interval};
 
 pub async fn start_heartbeat_cleaner(manager: Arc<SocketManager>, timeout_secs: u64) {
     let mut ticker = interval(Duration::from_secs(10));

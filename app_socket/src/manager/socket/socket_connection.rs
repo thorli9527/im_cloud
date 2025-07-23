@@ -1,14 +1,19 @@
+use crate::manager::socket::auth::login_handler::handle_login;
+use crate::manager::socket::auth::logout_handler::handle_logout;
+use crate::manager::socket::heartbeat_handler::start_global_heartbeat_checker;
 use crate::manager::socket_manager::{
     get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta,
 };
-use crate::manager::socket::heartbeat_handler::start_global_heartbeat_checker;
-use crate::manager::socket::login_handler::handle_login;
-use crate::manager::socket::logout_handler::handle_logout;
 use anyhow::{anyhow, Result};
 use biz_service::protocol::common::ByteMessageType;
-use biz_service::protocol::msg::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeReqMsg};
+use biz_service::protocol::msg::auth::{
+    DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg,
+    SendVerificationCodeReqMsg,
+};
 use biz_service::protocol::msg::entity::{GroupMsgEntity, UserMsgEntity};
 use biz_service::protocol::msg::friend::FriendEventMsg;
+use biz_service::protocol::msg::group::{CreateGroupMsg, DestroyGroupMsg};
+use biz_service::protocol::msg::status::{AckMsg, HeartbeatMsg};
 use biz_service::protocol::msg::system::SystemNotificationMsg;
 use biz_service::protocol::msg::user::UserFlushMsg;
 use bytes::Buf;
@@ -21,8 +26,6 @@ use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-use biz_service::protocol::msg::group::{CreateGroupMsg, DestroyGroupMsg};
-use biz_service::protocol::msg::status::{AckMsg, HeartbeatMsg};
 
 /// 客户端连接处理入口
 pub async fn handle_connection(stream: TcpStream) -> Result<()> {
@@ -36,18 +39,13 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
     let conn_key = ConnectionId(conn_id.clone());
 
     let connection = ConnectionInfo {
-        meta: ConnectionMeta {
-            uid: None,
-            device_type: None,
-        },
+        meta: ConnectionMeta { uid: None, device_type: None },
         sender: tx.clone(),
         last_heartbeat: last_heartbeat.clone(),
     };
 
     let manager = get_socket_manager();
     manager.insert(conn_key.clone(), connection);
-
-
 
     // 启动写任务
     let write_task = tokio::spawn(async move {
@@ -73,7 +71,7 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
 /// 读取客户端数据 & 处理消息
 async fn read_loop(
     reader: &mut FramedRead<tokio::net::tcp::OwnedReadHalf, LengthDelimitedCodec>,
-    conn_key: &ConnectionId,
+    conn_id: &ConnectionId,
     last_heartbeat: Arc<AtomicU64>,
 ) -> Result<()> {
     while let Some(frame) = reader.next().await {
@@ -95,29 +93,27 @@ async fn read_loop(
                 let device_type = DeviceType::from_i32(i).unwrap();
                 let message_id = login_req.message_id;
                 handle_login(
+                    conn_id,
                     &message_id,
                     &login_req.username,
                     &login_req.password,
                     &device_type,
                 )
-                .await?;
-
+                .await;
             }
             ByteMessageType::LogoutReqMsgType => {
                 let logout_req = LogoutReqMsg::decode(bytes)?;
                 log::info!("🛂 收到w登录请求");
-                if let Some(conn) = get_socket_manager().get(conn_key) {
-                    if let ( Some(uid), Some(device_type)) = (
-                        &conn.meta.uid,
-                        &conn.meta.device_type,
-                    ) {
+                if let Some(conn) = get_socket_manager().get_by_id(conn_id) {
+                    if let (Some(uid), Some(device_type)) = (&conn.meta.uid, &conn.meta.device_type)
+                    {
                         let message_id = logout_req.message_id;
-                        handle_logout(&message_id,  uid,device_type).await?;
+                        handle_logout(&message_id, uid, device_type).await?;
                     } else {
-                        log::warn!("Logout 请求未携带完整连接信息: {:?}", conn_key);
+                        log::warn!("Logout 请求未携带完整连接信息: {:?}", conn_id);
                     }
                 } else {
-                    log::warn!("找不到连接: {:?}", conn_key);
+                    log::warn!("找不到连接: {:?}", conn_id);
                 }
             }
             ByteMessageType::SendVerificationCodeReqMsgType => {
@@ -177,5 +173,3 @@ async fn read_loop(
 
     Ok(())
 }
-
-

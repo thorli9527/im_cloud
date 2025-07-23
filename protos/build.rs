@@ -7,15 +7,11 @@ fn main() {
     build_api_service();
 }
 
-
 fn build_api_service() {
     tonic_build::configure()
         .build_server(false)
         .build_client(true)
-        .type_attribute(
-            ".",
-            "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
-        )
+        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../app_api/src/protocol/")
         .compile_protos(
@@ -35,10 +31,7 @@ fn build_arb_service() {
     tonic_build::configure()
         .build_server(true)
         .build_client(true)
-        .type_attribute(
-            ".",
-            "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
-        )
+        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../app_arb/src/protocol/")
         .compile_protos(
@@ -59,10 +52,7 @@ fn build_biz_service() {
     tonic_build::configure()
         .build_server(false) // 如无需生成 gRPC Server 代码
         .build_client(false) // 如无需生成 gRPC Client 代码
-        .type_attribute(
-            ".",
-            "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
-        )
+        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../biz_service/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
@@ -97,11 +87,7 @@ fn build_biz_service() {
                 let new_name = file_name.replace("protocol.", "");
                 let new_path = out_dir.join(new_name);
 
-                println!(
-                    "cargo:warning=🔄 重命名 {} -> {}",
-                    file_name,
-                    new_path.display()
-                );
+                println!("cargo:warning=🔄 重命名 {} -> {}", file_name, new_path.display());
 
                 if let Err(e) = fs::rename(&path, &new_path) {
                     println!("cargo:warning=⚠️ 重命名失败: {}", e);
@@ -110,21 +96,12 @@ fn build_biz_service() {
         }
     }
 
-
-
     println!("cargo:warning=✅ proto biz_service 编译完成！");
-
-
-
-
 
     tonic_build::configure()
         .build_server(true) // 如无需生成 gRPC Server 代码
         .build_client(true) // 如无需生成 gRPC Client 代码
-        .type_attribute(
-            ".",
-            "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
-        )
+        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../biz_service/src/protocol/arb") // 输出 Rust 模块到该目录
         .compile_protos(

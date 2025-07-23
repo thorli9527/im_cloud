@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, ResponseError};
-use deadpool_redis::redis::RedisError;
 use deadpool_redis::PoolError;
+use deadpool_redis::redis::RedisError;
 use log::error;
 use mongodb::error::Error as MongoError;
 use serde::Serialize;
@@ -74,13 +74,21 @@ impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
         let (status, msg) = match self {
             AppError::NotFound => (actix_web::http::StatusCode::NOT_FOUND, self.to_string()),
-            AppError::ConversionError => (actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::ConversionError => {
+                (actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, self.to_string())
+            }
             AppError::Validation(_) => (actix_web::http::StatusCode::BAD_REQUEST, self.to_string()),
-            AppError::Unauthorized(msg) => (actix_web::http::StatusCode::UNAUTHORIZED, msg.to_string()),
+            AppError::Unauthorized(msg) => {
+                (actix_web::http::StatusCode::UNAUTHORIZED, msg.to_string())
+            }
             AppError::Forbidden => (actix_web::http::StatusCode::FORBIDDEN, self.to_string()),
             AppError::Conflict => (actix_web::http::StatusCode::CONFLICT, self.to_string()),
-            AppError::RateLimited => (actix_web::http::StatusCode::TOO_MANY_REQUESTS, self.to_string()),
-            AppError::FileUpload(_) | AppError::ExternalApi(_) => (actix_web::http::StatusCode::BAD_GATEWAY, self.to_string()),
+            AppError::RateLimited => {
+                (actix_web::http::StatusCode::TOO_MANY_REQUESTS, self.to_string())
+            }
+            AppError::FileUpload(_) | AppError::ExternalApi(_) => {
+                (actix_web::http::StatusCode::BAD_GATEWAY, self.to_string())
+            }
             AppError::Mongo(e) => {
                 error!("{:?}", e);
                 (actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, "Service error".to_string())

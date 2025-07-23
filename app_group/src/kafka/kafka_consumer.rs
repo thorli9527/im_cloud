@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bytes::Bytes;
 use dashmap::DashMap;
 use log::{debug, warn};
@@ -8,15 +8,20 @@ use rdkafka::message::{Message as KafkaMessageTrait, OwnedMessage};
 use serde::Deserialize;
 use std::sync::Arc;
 
-use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
+use crate::manager::shard_manager::{ShardManager, ShardManagerMqOpt};
+use biz_service::biz_service::kafka_group_service::GROUP_NODE_MSG_TOPIC;
+use biz_service::manager::user_manager::{UserManager, UserManagerOpt};
 use biz_service::protocol::common::ByteMessageType;
+use biz_service::protocol::msg::group::{
+    ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg,
+    GroupNodeMsgType, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg,
+    MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg,
+    UpdateMemberProfileMsg,
+};
 use common::config::KafkaConfig;
 use common::util::date_util::now;
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
-use biz_service::biz_service::kafka_group_service::{GROUP_NODE_MSG_TOPIC};
-use biz_service::protocol::msg::group::{ChangeGroupMsg, ChangeMemberRoleMsg, CreateGroupMsg, DestroyGroupMsg, ExitGroupMsg, GroupNodeMsgType, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
-use crate::manager::shard_manager::{ShardManager, ShardManagerMqOpt};
 
 type MessageId = u64;
 
@@ -68,9 +73,7 @@ pub async fn start_consumer(kafka_cfg: &KafkaConfig) -> Result<()> {
     Ok(())
 }
 pub async fn handle_kafka_message(msg: &OwnedMessage) -> Result<()> {
-    let payload = msg
-        .payload()
-        .ok_or_else(|| anyhow!("Kafka 消息为空"))?;
+    let payload = msg.payload().ok_or_else(|| anyhow!("Kafka 消息为空"))?;
 
     if payload.is_empty() {
         return Err(anyhow!("Kafka 消息体为空"));
@@ -163,4 +166,3 @@ pub async fn handle_kafka_message(msg: &OwnedMessage) -> Result<()> {
 
     Ok(())
 }
-

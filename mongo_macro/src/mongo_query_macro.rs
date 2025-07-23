@@ -83,7 +83,10 @@ pub fn derive_query_filter(input: TokenStream) -> TokenStream {
                         }
                     },
                     _ => {
-                        let err = syn::Error::new(Span::call_site(), format!("Unknown query type: {}", op));
+                        let err = syn::Error::new(
+                            Span::call_site(),
+                            format!("Unknown query type: {}", op),
+                        );
                         return err.to_compile_error().into();
                     }
                 };

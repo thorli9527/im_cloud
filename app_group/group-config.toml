@@ -1,11 +1,11 @@
 [database]
 url = "mongodb://localhost:27017"
 db_name = "group"
+[redis]
+url = "redis://127.0.0.1:6379/"
 [shard]
 shard_address = "127.0.0.1:51000"
 server_host = "127.0.0.1:50000"
-[redis]
-url = "redis://127.0.0.1:6379/"
 [server]
 host = "127.0.0.1"
 port = 8091

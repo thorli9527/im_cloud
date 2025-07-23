@@ -1,21 +1,25 @@
 use anyhow::Result;
 use arc_swap::ArcSwap;
+use biz_service::protocol::arb::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
+use biz_service::protocol::arb::rpc_arb_models::ShardState;
+use biz_service::protocol::msg::group::{
+    ChangeGroupMsg, ChangeMemberRoleMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg,
+    HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg,
+    RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg,
+};
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::hash_index;
 use common::{GroupId, UserId};
 use dashmap::{DashMap, DashSet};
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
-use std::{clone, format};
+use std::format;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tonic::async_trait;
 use tonic::transport::Channel;
-use tonic::{Status, async_trait};
 use twox_hash::XxHash64;
-use biz_service::protocol::arb::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use biz_service::protocol::arb::rpc_arb_models::ShardState;
-use biz_service::protocol::msg::group::{ChangeGroupMsg, ChangeMemberRoleMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg};
 
 pub const GROUP_SHARD_SIZE: usize = 16;
 pub const MEMBER_SHARD_SIZE: usize = 8;
@@ -56,9 +60,9 @@ pub struct ShardManager {
 }
 #[async_trait]
 pub trait ShardManagerOpt: Send + Sync {
-    async fn load_from(&self)  -> anyhow::Result<()>;
+    async fn load_from(&self) -> anyhow::Result<()>;
     /// 添加用户到指定群组（自动根据 group_id 映射分片）
-    fn add_user_to_group(&self, group_id: &GroupId, uid: &UserId)->anyhow::Result<()>;
+    fn add_user_to_group(&self, group_id: &GroupId, uid: &UserId) -> anyhow::Result<()>;
     /// 移除用户从指定群组（自动根据 group_id 映射分片）
     fn remove_user_from_group(&self, group_id: &GroupId, uid: &UserId);
     /// 获取某个群组的所有成员 ID 列表
@@ -85,7 +89,6 @@ pub trait ShardManagerOpt: Send + Sync {
 
 #[async_trait]
 pub trait ShardManagerMqOpt: Send + Sync {
-
     /// 创建群组
     async fn create_group(&self, group_id: &GroupId) -> anyhow::Result<()>;
 
@@ -124,10 +127,10 @@ pub trait ShardManagerMqOpt: Send + Sync {
 
     /// 转让群主身份
     async fn transfer_owner_ship(&self, msg: &TransferOwnershipMsg) -> anyhow::Result<()>;
-    
-    async fn member_online(&self, msg:&MemberOnlineMsg) -> anyhow::Result<()>;
-    
-    async fn member_offline(&self, msg:&MemberOnlineMsg) -> anyhow::Result<()>;
+
+    async fn member_online(&self, msg: &MemberOnlineMsg) -> anyhow::Result<()>;
+
+    async fn member_offline(&self, msg: &MemberOnlineMsg) -> anyhow::Result<()>;
 }
 
 impl ShardManager {
@@ -135,7 +138,7 @@ impl ShardManager {
         let shard_info = shard_config.clone();
         let mut info = ShardInfo::default();
         info.state = ShardState::Registered;
-        let  manager=Self {
+        let manager = Self {
             snapshot: ArcSwap::new(Arc::new(MemData {
                 group_shard_map: Default::default(),
                 group_member_map: Default::default(),
@@ -151,7 +154,7 @@ impl ShardManager {
             })),
             shard_address: shard_config.shard_address.clone().unwrap_or_default(),
         };
-        return manager
+        return manager;
     }
     pub fn hash_group_id(&self, group_id: &str) -> usize {
         use std::hash::{Hash, Hasher};
@@ -170,10 +173,7 @@ impl ShardManager {
         (hasher.finish() as usize) % MEMBER_SHARD_SIZE
     }
     pub fn get_node_addr(&self) -> &str {
-        self.shard_config
-            .shard_address
-            .as_deref()
-            .expect("shard_address must be set")
+        self.shard_config.shard_address.as_deref().expect("shard_address must be set")
     }
     pub async fn init_grpc_clients(
         &self,
@@ -187,9 +187,7 @@ impl ShardManager {
             if endpoint == self.shard_config.shard_address.clone().unwrap() {
                 continue;
             }
-            let channel = Channel::from_shared(format!("http://{}", endpoint))?
-                .connect()
-                .await?;
+            let channel = Channel::from_shared(format!("http://{}", endpoint))?.connect().await?;
             let client = ArbGroupServiceClient::new(channel);
             clients.insert(hash_index(&endpoint, size as i32), client);
         }
@@ -221,17 +219,12 @@ impl ShardManager {
         let app_cfg = AppConfig::get();
         let instance = Self::new(app_cfg.shard.clone().unwrap());
         instance.load_from().await.expect("Failed to load shard data");
-        INSTANCE_COUNTRY
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE_COUNTRY.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     /// 获取单例
     pub fn get() -> Arc<Self> {
-        INSTANCE_COUNTRY
-            .get()
-            .expect("INSTANCE is not initialized")
-            .clone()
+        INSTANCE_COUNTRY.get().expect("INSTANCE is not initialized").clone()
     }
 }
 static INSTANCE_COUNTRY: OnceCell<Arc<ShardManager>> = OnceCell::new();

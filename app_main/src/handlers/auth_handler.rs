@@ -1,5 +1,5 @@
 use crate::result::result;
-use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder, post, web};
 use biz_service::biz_service::user_role_service::UserRoleService;
 use biz_service::biz_service::user_service::UserService;
 use common::errors::AppError;
@@ -32,8 +32,6 @@ pub struct LoginSessionDto {
     pub user_name: String,
 }
 
-
-
 #[utoipa::path(
     post,
     path = "/auth/logout",
@@ -65,7 +63,6 @@ struct LoginResponse {
     roles: Vec<String>,
 }
 
-
 #[utoipa::path(
     post,
     path = "/auth/login",
@@ -85,17 +82,12 @@ async fn user_login(req: web::Json<LoginRequest>) -> impl Responder {
     match UserService::get().build_login(&username.clone(), password).await {
         Ok((token, user)) => {
             // 获取用户角色列表
-            let roles = UserRoleService::get()
-                .get_roles_by_user(&user.id)
-                .await
-                .unwrap_or_default();
+            let roles =
+                UserRoleService::get().get_roles_by_user(&user.id).await.unwrap_or_default();
             let role_codes: Vec<String> = roles.iter().map(|r| r.code.clone()).collect();
 
             // 构建登录响应
-            let response = LoginResponse {
-                token,
-                roles: role_codes,
-            };
+            let response = LoginResponse { token, roles: role_codes };
             HttpResponse::Ok().json(response)
         }
         Err(e) => {

@@ -1,12 +1,12 @@
 use crate::manager::shard_job::ArbManagerJob;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer};
-use log::warn;
 use common::config::AppConfig;
+use log::warn;
 
+mod kafka;
 mod manager;
 mod service;
-mod kafka;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -14,11 +14,7 @@ async fn main() -> std::io::Result<()> {
     // 读取配置文件
     let app_cfg = AppConfig::get();
 
-    let address_and_port = format!(
-        "{}:{}",
-        &app_cfg.get_server().host,
-        &app_cfg.get_server().port
-    );
+    let address_and_port = format!("{}:{}", &app_cfg.get_server().host, &app_cfg.get_server().port);
     warn!("Starting server on {}", address_and_port);
     biz_service::init_service();
     manager::init().await;
@@ -36,9 +32,7 @@ async fn main() -> std::io::Result<()> {
                 // handlers::configure(cfg);
             })
     })
-    .keep_alive(actix_web::http::KeepAlive::Timeout(
-        std::time::Duration::from_secs(600),
-    )) // 允许 10 分钟超时
+    .keep_alive(actix_web::http::KeepAlive::Timeout(std::time::Duration::from_secs(600))) // 允许 10 分钟超时
     .bind(address_and_port)?
     .run()
     .await

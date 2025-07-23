@@ -1,4 +1,4 @@
 pub mod handlers;
-pub mod result;
 pub mod protocol;
+pub mod result;
 mod service;

@@ -60,4 +60,6 @@ tempfile.workspace = true                      # 临时文件支持
 # ========================
 # 📘 OpenAPI 文档生成
 # ========================
-utoipa.workspace = true                        # 自动生成 OpenAPI 文档
+utoipa.workspace = true
+regex = "1.11.1"
+lazy_static = "1.5.0"                        # 自动生成 OpenAPI 文档

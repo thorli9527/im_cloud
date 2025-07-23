@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 common = { path = "../common" }
+biz_service = { path = "../biz_service" }
 actix-web.workspace = true
 serde_json.workspace = true
 moka.workspace = true
@@ -19,7 +20,10 @@ anyhow.workspace = true
 once_cell.workspace = true
 futures-util.workspace = true
 dashmap.workspace = true
-chrono .workspace = true
+chrono.workspace = true
+lazy_static.workspace = true
+validator.workspace = true
+regex.workspace = true
 [build-dependencies]
 tonic = "0.13.1"
 tonic-build = "0.13.1"

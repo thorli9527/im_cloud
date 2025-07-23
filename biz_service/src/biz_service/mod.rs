@@ -4,13 +4,14 @@ mod friend_event_service;
 pub mod friend_service;
 pub mod group_member_service;
 pub mod group_service;
+pub mod kafka_group_service;
 pub mod kafka_socket_service;
+pub mod mail_service;
 pub mod mq_message_group_service;
 pub mod mq_message_user_service;
-pub mod user_service;
 pub mod role_service;
 pub mod user_role_service;
-pub mod kafka_group_service;
+pub mod user_service;
 
 use crate::biz_service::friend_event_service::FriendEventService;
 use common::db::Db;

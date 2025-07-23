@@ -1,16 +1,18 @@
 use crate::manager::shard_manager::ShardManager;
+use biz_service::protocol::arb::rpc_arb_models::ShardState::{
+    Migrating, Normal, Preparing, Ready, Registered,
+};
+use biz_service::protocol::arb::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::AppConfig;
 use std::time::Duration;
 use tokio::time::sleep;
 use tonic::async_trait;
 use tonic::transport::Channel;
-use biz_service::protocol::arb::rpc_arb_models::ShardState::{Migrating, Normal, Preparing, Ready, Registered};
-use biz_service::protocol::arb::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 
 pub struct ArbManagerJob {
     pub arb_client: Option<ArbServerRpcServiceClient<Channel>>,
     pub server_host: String,
-    pub kafka_addr:String,
+    pub kafka_addr: String,
     pub shard_address: String,
 }
 impl ArbManagerJob {
@@ -29,7 +31,6 @@ impl ArbManagerJob {
     pub async fn start(&mut self) -> () {
         self.start_heartbeat_loop();
         self.check_status_task().await;
-        
     }
     /// 启动分片状态自检任务（后台常驻）
     pub async fn check_status_task(&mut self) {
@@ -81,8 +82,8 @@ impl ArbManagerJob {
     }
 
     fn start_heartbeat_loop(&mut self) {
-        let mut this = self.clone_light(); 
-         Some(tokio::spawn(async move {
+        let mut this = self.clone_light();
+        Some(tokio::spawn(async move {
             let interval = std::time::Duration::from_secs(10);
             loop {
                 tokio::select! {
@@ -104,7 +105,7 @@ impl ArbManagerJob {
             arb_client: None, // 避免 tonic 客户端跨线程问题
             server_host: self.server_host.clone(),
             kafka_addr: self.kafka_addr.clone(),
-            shard_address:self.shard_address.clone(),
+            shard_address: self.shard_address.clone(),
         }
     }
 }

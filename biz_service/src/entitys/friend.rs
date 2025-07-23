@@ -10,7 +10,7 @@ pub struct FriendEntity {
     pub id: String,                    // 用户 ID
     pub uid: String,                   // 用户 ID
     pub friend_id: String,             // 好友 ID
-    pub nickname: String,      // 好友昵称
+    pub nickname: String,              // 好友昵称
     pub remark: Option<String>,        // 好友备注
     pub source_type: FriendSourceType, // 好友来源类型
     pub created_at: u64,               // 创建时间

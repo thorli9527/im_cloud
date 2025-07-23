@@ -1,12 +1,11 @@
 use crate::protocol::common::ClientEntity;
 use crate::protocol::msg::auth::DeviceType;
-use crate::protocol::msg::friend::FriendSourceType;
 use anyhow::Result;
 use async_trait::async_trait;
 use common::{ClientTokenDto, UserId};
 use dashmap::DashMap;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use tokio::sync::Notify;
 
 /// 全局用户管理器
@@ -31,20 +30,7 @@ pub struct UserManager {
 #[async_trait]
 pub trait UserManagerOpt: Send + Sync {
     /// 登录用户，将用户标记为在线，并进行必要的缓存更新和事件通知
-    async fn login(
-        &self,
-        message_id: &u64,
-        user_name: &str,
-        password: &str,
-        device_type: &DeviceType,
-    ) -> anyhow::Result<String>;
 
-    async fn logout(
-        &self,
-        message_id: &u64,
-        user_id: &UserId,
-        device_type: &DeviceType,
-    ) -> anyhow::Result<()>;
     /// 将用户标记为在线，并进行必要的缓存更新和事件通知
     async fn online(&self, user_id: &UserId, device_type: &DeviceType) -> Result<()>;
     /// 检查用户是否在线，返回 true 或 false
@@ -71,7 +57,7 @@ pub trait UserManagerOpt: Send + Sync {
     async fn verify_token(&self, token: &str) -> Result<bool>;
     /// 清空某用户所有 token
     async fn clear_tokens_by_user(&self, user_id: &UserId) -> Result<()>;
-    ///查询用户token
+    /// 查询用户token
     async fn get_token_by_uid_device(
         &self,
         user_id: &UserId,
@@ -86,9 +72,9 @@ pub trait UserManagerOpt: Send + Sync {
     async fn is_friend(&self, user_id: &UserId, friend_id: &UserId) -> Result<bool>;
     /// 获取用户的好友列表
     async fn get_friends(&self, user_id: &UserId) -> Result<Vec<UserId>>;
-    ///拉黑好友
+    /// 拉黑好友
     async fn friend_block(&self, user_id: &UserId, friend_id: &UserId) -> Result<()>;
-    ///拉黑好友-取消
+    /// 拉黑好友-取消
     async fn friend_unblock(&self, user_id: &UserId, friend_id: &UserId) -> Result<()>;
 }
 include!("user_manager_impl.rs");

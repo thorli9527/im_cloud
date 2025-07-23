@@ -1,7 +1,7 @@
 // src/common/redis_pool.rs
 
 use crate::RedisPool;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use deadpool_redis::{Config, Runtime};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;

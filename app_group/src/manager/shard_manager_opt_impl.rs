@@ -1,8 +1,12 @@
 use crate::manager::shard_job::ArbManagerJob;
-use crate::manager::shard_manager::{GroupMembersPage, ShardManager, ShardManagerOpt, GROUP_SHARD_SIZE, MEMBER_SHARD_SIZE};
+use crate::manager::shard_manager::{
+    GROUP_SHARD_SIZE, GroupMembersPage, MEMBER_SHARD_SIZE, ShardManager, ShardManagerOpt,
+};
+use anyhow::Result;
 use async_trait::async_trait;
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
+use biz_service::protocol::arb::rpc_arb_models::{NodeType, QueryNodeReq};
 use biz_service::protocol::common::GroupMemberEntity;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
@@ -13,10 +17,8 @@ use mongodb::bson::doc;
 use mongodb::options::FindOptions;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use anyhow::Result;
 use tonic::transport::Channel;
 use twox_hash::XxHash64;
-use biz_service::protocol::arb::rpc_arb_models::{NodeType, QueryNodeReq};
 
 #[async_trait]
 impl ShardManagerOpt for ShardManager {
@@ -28,9 +30,7 @@ impl ShardManagerOpt for ShardManager {
         let mut page = 0;
         let mut arb_manager_job = ArbManagerJob::new();
         arb_manager_job.init_arb_client().await?;
-        let req = QueryNodeReq {
-            node_type: NodeType::GroupNode as i32
-        };
+        let req = QueryNodeReq { node_type: NodeType::GroupNode as i32 };
         let response = arb_manager_job.arb_client.unwrap().list_all_nodes(req).await?;
 
         let list = response.get_ref();
@@ -68,7 +68,8 @@ impl ShardManagerOpt for ShardManager {
                     continue;
                 }
                 // 查询该群的所有成员
-                let members: Vec<GroupMemberEntity> = group_member_service.get_all_members_by_group_id(&group_id).await?;;
+                let members: Vec<GroupMemberEntity> =
+                    group_member_service.get_all_members_by_group_id(&group_id).await?;
 
                 // 将每个成员添加到该群组分片中
                 for member in members {
@@ -84,17 +85,15 @@ impl ShardManagerOpt for ShardManager {
         Ok(())
     }
     /// 计算群组分片索引（用于分配 group → shard）
-    fn add_user_to_group(&self, group_id: &GroupId, uid: &UserId) ->anyhow::Result<()>{
+    fn add_user_to_group(&self, group_id: &GroupId, uid: &UserId) -> anyhow::Result<()> {
         let shard_index = self.hash_group_id(group_id) as i32;
         let member_index = self.hash_group_member_id(group_id, uid);
         let shard_key = format!("shard_{}", shard_index);
 
         let current = self.current.load();
 
-        let group_map = current
-            .group_member_map
-            .entry(shard_key.clone())
-            .or_insert_with(DashMap::new);
+        let group_map =
+            current.group_member_map.entry(shard_key.clone()).or_insert_with(DashMap::new);
 
         // 每个群组维护 N 个成员集合
         let member_shards = group_map.entry(group_id.clone()).or_insert_with(|| {
@@ -116,7 +115,7 @@ impl ShardManagerOpt for ShardManager {
         );
         return Ok(());
     }
-    
+
     /// 从指定群组中移除某个用户（自动计算分片）
     fn remove_user_from_group(&self, group_id: &GroupId, uid: &UserId) {
         let shard_index = self.hash_group_id(group_id) as i32;
@@ -207,21 +206,17 @@ impl ShardManagerOpt for ShardManager {
             }
         }
 
-       return Option::None ;
+        return Option::None;
     }
     fn get_group_member_total_count(&self, group_id: &GroupId) -> Option<usize> {
         let shard_index = self.hash_group_id(group_id) as i32;
         let shard_key = format!("shard_{}", shard_index);
 
-        self.current
-            .load()
-            .group_member_map
-            .get(&shard_key)
-            .and_then(|group_map| {
-                group_map.get(group_id).map(|member_shards| {
-                    member_shards.iter().map(|shard| shard.len()).sum::<usize>()
-                })
-            })
+        self.current.load().group_member_map.get(&shard_key).and_then(|group_map| {
+            group_map
+                .get(group_id)
+                .map(|member_shards| member_shards.iter().map(|shard| shard.len()).sum::<usize>())
+        })
     }
     fn mark_user_online(&self, group_id: &GroupId, uid: &UserId) {
         let shard_index = self.hash_group_id(&group_id) as i32;
@@ -229,14 +224,10 @@ impl ShardManagerOpt for ShardManager {
 
         // 1. 插入在线用户 → 群组映射
         let guard = self.current.load();
-        let group_map = guard
-            .group_online_member_map
-            .entry(shard_key.clone())
-            .or_insert_with(DashMap::new);
+        let group_map =
+            guard.group_online_member_map.entry(shard_key.clone()).or_insert_with(DashMap::new);
 
-        let user_set = group_map
-            .entry(group_id.clone())
-            .or_insert_with(DashSet::new);
+        let user_set = group_map.entry(group_id.clone()).or_insert_with(DashSet::new);
         user_set.insert(uid.clone());
     }
 
@@ -264,10 +255,7 @@ impl ShardManagerOpt for ShardManager {
                 }
 
                 if group_map.is_empty() {
-                    self.current
-                        .load()
-                        .group_online_member_map
-                        .remove(&shard_key);
+                    self.current.load().group_online_member_map.remove(&shard_key);
                 }
             }
         }
@@ -275,7 +263,7 @@ impl ShardManagerOpt for ShardManager {
 
     async fn get_admin_for_group(&self, group_id: &GroupId) -> anyhow::Result<Option<Vec<UserId>>> {
         let group_service = GroupService::get();
-        let admin_member=group_service.query_admin_member_by_group_id(group_id).await?;
+        let admin_member = group_service.query_admin_member_by_group_id(group_id).await?;
         Ok(Some(admin_member))
     }
 }

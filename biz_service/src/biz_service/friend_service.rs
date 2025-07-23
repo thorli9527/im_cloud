@@ -1,13 +1,13 @@
 use crate::entitys::friend::FriendEntity;
-use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
+use crate::manager::user_manager::{UserManager, UserManagerOpt};
 use anyhow::Result;
-use common::repository_util::{BaseRepository, Repository};
 use common::UserId;
+use common::index_trait::MongoIndexModelProvider;
+use common::repository_util::{BaseRepository, Repository};
 use mongodb::bson::Bson;
-use mongodb::{bson::doc, Database};
+use mongodb::{Database, bson::doc};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use common::index_trait::MongoIndexModelProvider;
 
 #[derive(Debug)]
 pub struct UserFriendService {
@@ -20,17 +20,21 @@ impl UserFriendService {
         let vec = FriendEntity::index_models();
         for model in vec {
             let collection1 = collection.clone();
-            //启用新线程
+            // 启用新线程
             tokio::spawn(async move {
                 collection1.create_index(model).await.unwrap();
             });
         }
         Self { dao: BaseRepository::new(db, collection.clone()) }
     }
-    
 
     /// 拉黑好友（将 is_blocked 设置为 true）
-    pub async fn friend_block(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<()> {
+    pub async fn friend_block(
+        &self,
+        agent_id: &str,
+        uid: &UserId,
+        friend_id: &UserId,
+    ) -> Result<()> {
         let filter = doc! {
             "agent_id": agent_id,
             "uid": uid,
@@ -47,7 +51,12 @@ impl UserFriendService {
     }
 
     /// 解除拉黑好友（将 is_blocked 设置为 false）
-    pub async fn friend_unblock(&self, agent_id: &str, uid: &UserId, friend_id: &UserId) -> Result<()> {
+    pub async fn friend_unblock(
+        &self,
+        agent_id: &str,
+        uid: &UserId,
+        friend_id: &UserId,
+    ) -> Result<()> {
         let filter = doc! {
             "agent_id": agent_id,
             "uid": uid,
@@ -64,11 +73,10 @@ impl UserFriendService {
         Ok(())
     }
 
-
     /// 是否是好友（Mongo 或缓存判断）
-    pub async fn is_friend(&self,uid: &UserId, friend_id: &UserId) -> Result<bool> {
+    pub async fn is_friend(&self, uid: &UserId, friend_id: &UserId) -> Result<bool> {
         let manager = UserManager::get();
-        manager.is_friend( uid, friend_id).await
+        manager.is_friend(uid, friend_id).await
     }
 
     /// 获取好友列表
@@ -82,7 +90,11 @@ impl UserFriendService {
     }
 
     /// 查询单个好友详细信息（例如备注/昵称）
-    pub async fn get_friend_detail(&self, uid: &UserId, friend_id: &UserId) -> Result<Option<FriendEntity>> {
+    pub async fn get_friend_detail(
+        &self,
+        uid: &UserId,
+        friend_id: &UserId,
+    ) -> Result<Option<FriendEntity>> {
         let filter = doc! {
             "uid": uid,
             "friend_id": friend_id

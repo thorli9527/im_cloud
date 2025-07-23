@@ -1,5 +1,5 @@
 use crate::config::DatabaseConfig;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use mongodb::options::ClientOptions;
 use mongodb::{Client, Database};
 use once_cell::sync::OnceCell;
@@ -35,10 +35,7 @@ impl Db {
     /// # Panics
     /// 若未初始化则 panic
     pub fn get() -> &'static Database {
-        &INSTANCE
-            .get()
-            .expect("MongoDB is not initialized")
-            .db
+        &INSTANCE.get().expect("MongoDB is not initialized").db
     }
 }
 

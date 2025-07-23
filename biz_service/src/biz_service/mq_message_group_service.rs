@@ -31,7 +31,13 @@ impl GroupMessageService {
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
-    pub async fn send_group_message(&self, agent_id: &str, from: &String, to: &String, segments: &Vec<Segment>) -> Result<GroupMsgEntity, AppError> {
+    pub async fn send_group_message(
+        &self,
+        agent_id: &str,
+        from: &String,
+        to: &String,
+        segments: &Vec<Segment>,
+    ) -> Result<GroupMsgEntity, AppError> {
         let now_time = now();
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
@@ -46,9 +52,7 @@ impl GroupMessageService {
                 seq_in_msg: build_snow_id() as u64, // 分布式唯一顺序段号
                 edited: false,
                 visible: true,
-                metadata: {
-                     HashMap::new()
-                },
+                metadata: { HashMap::new() },
             })
             .collect();
         // 构造 UserMessage 对象
@@ -67,8 +71,15 @@ impl GroupMessageService {
         let kafka_service = KafkaService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        let message_type= ByteMessageType::GroupMsgType;
-        kafka_service.send_proto(&message_type,&message,&message.message_id, &app_config.get_kafka().topic_group).await?;
+        let message_type = ByteMessageType::GroupMsgType;
+        kafka_service
+            .send_proto(
+                &message_type,
+                &message,
+                &message.message_id,
+                &app_config.get_kafka().topic_group,
+            )
+            .await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

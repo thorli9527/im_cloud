@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bytes::Bytes;
 use dashmap::DashMap;
 use futures::TryFutureExt;
@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::kafka::friend_msg::friend_msg_to_socket;
 use crate::manager::socket_manager::SocketManager;
-use biz_service::manager::user_manager_core::{UserManager, UserManagerOpt};
+use biz_service::manager::user_manager::{UserManager, UserManagerOpt};
 use biz_service::protocol::common::ByteMessageType;
 use common::config::KafkaConfig;
 use common::util::date_util::now;
@@ -52,7 +52,10 @@ pub fn get_consumer() -> Option<Arc<StreamConsumer>> {
 }
 
 /// 启动 Kafka 消费循环
-pub async fn start_consumer(kafka_cfg: &KafkaConfig, socket_manager: Arc<SocketManager>) -> Result<()> {
+pub async fn start_consumer(
+    kafka_cfg: &KafkaConfig,
+    socket_manager: Arc<SocketManager>,
+) -> Result<()> {
     let consumer: StreamConsumer = ClientConfig::new()
         .set("group.id", "im-dispatch-group")
         .set("bootstrap.servers", kafka_cfg.brokers.clone())
@@ -60,7 +63,11 @@ pub async fn start_consumer(kafka_cfg: &KafkaConfig, socket_manager: Arc<SocketM
         .create()?;
 
     consumer.subscribe(&[&kafka_cfg.topic_single.clone(), &kafka_cfg.topic_group.clone()])?;
-    log::info!("✅ Kafka 消费者已启动，订阅主题：{}, {}", &kafka_cfg.topic_single, &kafka_cfg.topic_group);
+    log::info!(
+        "✅ Kafka 消费者已启动，订阅主题：{}, {}",
+        &kafka_cfg.topic_single,
+        &kafka_cfg.topic_group
+    );
 
     let arc_consumer = Arc::new(consumer);
     if CONSUMER.set(arc_consumer.clone()).is_err() {
@@ -98,31 +105,25 @@ pub async fn handle_kafka_message(
     let body = &payload[1..];
 
     match msg_type {
-        ByteMessageType::SystemNotificationMsgType => {
-        }
-        ByteMessageType::UserFlushMsgType => {
-        }
+        ByteMessageType::SystemNotificationMsgType => {}
+        ByteMessageType::UserFlushMsgType => {}
 
         // 10~19 用户在线状态
-        ByteMessageType::OnlineStatusMsgType => {
-        }
-        ByteMessageType::OfflineStatusMsgType => {
-        }
+        ByteMessageType::OnlineStatusMsgType => {}
+        ByteMessageType::OfflineStatusMsgType => {}
 
         // 20~29 聊天消息
-        ByteMessageType::UserMsgType => {
-        }
-        ByteMessageType::GroupMsgType => {
-        }
+        ByteMessageType::UserMsgType => {}
+        ByteMessageType::GroupMsgType => {}
 
         // 30~39 好友 & 群组事件
         ByteMessageType::FriendEventMsgType => {
             friend_msg_to_socket(body, msg, socket_manager).await?;
         }
-        ByteMessageType::GroupCreateMsgType => {
-           
-        }
-        ByteMessageType::GroupDismissMsgType => {
+        ByteMessageType::GroupCreateMsgType => {}
+        ByteMessageType::GroupDismissMsgType => {}
+        ByteMessageType::HeartbeatMsgType => {
+            log::debug!("心跳消息: {}", now());
         }
 
         _ => {

@@ -1,14 +1,14 @@
-use std::str::FromStr;
+use crate::errors::AppError;
 use crate::redis::redis_pool::RedisPoolTools;
 use crate::repository::db::Db;
 use config::Config;
+use log::LevelFilter;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::str::FromStr;
 use std::sync::Arc;
-use log::LevelFilter;
-use crate::errors::AppError;
 
-#[derive(Debug, Deserialize, Clone,Default)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct AppConfig {
     pub database: Option<DatabaseConfig>,
     pub redis: Option<RedisConfig>,
@@ -19,7 +19,7 @@ pub struct AppConfig {
     pub shard: Option<ShardConfig>,
     pub socket: Option<SocketConfig>,
 }
-#[derive(Debug, Deserialize, Clone,Default)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct ShardConfig {
     pub shard_address: Option<String>,
     pub server_host: Option<String>,
@@ -31,31 +31,31 @@ impl AppConfig {
             .add_source(config::Environment::with_prefix("APP").separator("_"))
             .build()
             .expect("Failed to build configuration");
-        let cfg = config.try_deserialize::<AppConfig>().expect("Failed to deserialize configuration");
+        let cfg =
+            config.try_deserialize::<AppConfig>().expect("Failed to deserialize configuration");
         return cfg;
     }
-    pub  async fn init(file: &String) {
+    pub async fn init(file: &String) {
         let instance = Self::new(&file);
         if instance.redis.is_some() {
-            let redis_config=instance.clone().redis.unwrap();
+            let redis_config = instance.clone().redis.unwrap();
             RedisPoolTools::init(&redis_config.url).expect("init redis error");
         }
-        
+
         if instance.database.is_some() {
-            let database_config=instance.clone().database.unwrap();
+            let database_config = instance.clone().database.unwrap();
             Db::init(&database_config).await.expect("init database error");
         }
-        
-        if instance.sys.is_some(){
-            let log_lovel=instance.clone().sys.unwrap().log_leve;
-            if log_lovel.is_some(){
+
+        if instance.sys.is_some() {
+            let log_lovel = instance.clone().sys.unwrap().log_leve;
+            if log_lovel.is_some() {
                 init_log(&log_lovel.clone().unwrap()).expect("init log error");
             }
-            
         }
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
-    
+
     pub fn get_database(&self) -> DatabaseConfig {
         self.database.clone().unwrap_or_default()
     }
@@ -91,21 +91,21 @@ pub fn init_log(log_lovel: &str) -> Result<(), AppError> {
     Ok(())
 }
 static INSTANCE: OnceCell<Arc<AppConfig>> = OnceCell::new();
-#[derive(Debug, Deserialize, Clone,Default)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct CacheConfig {
     pub node_id: usize,
     pub node_total: usize,
 }
-#[derive(Debug, Deserialize, Clone,Default)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct DatabaseConfig {
     pub url: String,
     pub db_name: String,
 }
-#[derive(Debug, Deserialize, Clone,Default)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct RedisConfig {
     pub url: String,
 }
-#[derive(Debug, Deserialize, Clone,Default)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct SysConfig {
     //全局日志级别
     pub log_leve: Option<String>,
@@ -115,19 +115,19 @@ pub struct SysConfig {
     pub md5_key: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Clone,Default)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
 }
 
-#[derive(Debug, Deserialize, Clone,Default)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct KafkaConfig {
     pub brokers: String,
     pub topic_single: String,
     pub topic_group: String,
 }
-#[derive(Debug, Deserialize, Clone,Default)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct SocketConfig {
     pub node_addr: String,
 }

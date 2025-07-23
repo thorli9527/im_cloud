@@ -1,11 +1,16 @@
 use crate::manager::shard_job::{ArbManagerJob, ManagerJobOpt};
-use crate::manager::shard_manager::{MemData, ShardInfo, ShardManager, MEMBER_SHARD_SIZE};
+use crate::manager::shard_manager::{MEMBER_SHARD_SIZE, MemData, ShardInfo, ShardManager};
 use actix_web::web::get;
 use biz_service::manager::common::shard_index;
+use biz_service::protocol::arb::rpc_arb_models::{
+    BaseRequest, MemberRef, NodeType, QueryNodeReq, ShardState, SyncListGroup,
+    UpdateShardStateRequest,
+};
 use biz_service::protocol::common::GroupMemberEntity;
+use common::GroupId;
+use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
-use common::GroupId;
 use dashmap::{DashMap, DashSet};
 use rdkafka::groups::GroupInfo;
 use std::collections::HashMap;
@@ -13,8 +18,6 @@ use std::sync::Arc;
 use std::thread::current;
 use tokio::sync::RwLock;
 use tonic::async_trait;
-use biz_service::protocol::arb::rpc_arb_models::{BaseRequest, MemberRef, NodeType, QueryNodeReq, ShardState, SyncListGroup, UpdateShardStateRequest};
-use common::config::AppConfig;
 
 pub struct RPCSyncData {
     // 群组信息
@@ -38,8 +41,8 @@ impl ManagerJobOpt for ArbManagerJob {
             .register_node(BaseRequest {
                 node_addr: shard_address,
                 node_type: NodeType::GroupNode as i32,
-                kafka_addr:Some(kafka_addr.clone()),
-                socket_addr:None
+                kafka_addr: Some(kafka_addr.clone()),
+                socket_addr: None,
             })
             .await?;
 
@@ -55,7 +58,7 @@ impl ManagerJobOpt for ArbManagerJob {
         let info = response.into_inner();
         shard_info.index = hash_index(&info.node_addr, info.total);
         shard_info.total = info.total;
-     
+
         Ok(())
     }
 
@@ -72,7 +75,7 @@ impl ManagerJobOpt for ArbManagerJob {
             node_addr: shard_address,
             new_state: ShardState::Preparing as i32,
         };
-        shard_info.state= ShardState::Preparing;
+        shard_info.state = ShardState::Preparing;
         let response = client.update_shard_state(state_request).await?;
         if response.into_inner().success {
             let current = shard_manager.current.load();
@@ -82,16 +85,15 @@ impl ManagerJobOpt for ArbManagerJob {
             shard_info.last_heartbeat = shard_info.last_update_time;
             // ✅ 存储快照
             shard_manager.clone_current_to_snapshot();
-            shard_info.state= ShardState::Migrating;
+            shard_info.state = ShardState::Migrating;
             // ✅ 清空 current
             shard_manager.clear_current();
             // ✅ 迁移状态已设置为 Preparing 开始同步数据
             if let Err(e) = self.change_migrating().await {
                 log::error!("❌ sync groups error: {:?}", e);
             }
-          
+
             log::info!("🔄 current 分片数据已清空，准备进入迁移流程");
-           
         }
         Ok(())
     }
@@ -100,11 +102,11 @@ impl ManagerJobOpt for ArbManagerJob {
     async fn change_migrating(&mut self) -> anyhow::Result<()> {
         let shard_manager = ShardManager::get();
         let shard_address = shard_manager.shard_address.clone();
-        
+
         let current = shard_manager.current.load();
         let mut shard_info = current.shard_info.write().await;
-        shard_info.state= ShardState::Migrating;
-        
+        shard_info.state = ShardState::Migrating;
+
         let client = self.init_arb_client().await?;
 
         // 1. 设置分片状态为 Migrating
@@ -160,9 +162,7 @@ impl ManagerJobOpt for ArbManagerJob {
 
                         let target_shards =
                             target_group_map.entry(group_id.clone()).or_insert_with(|| {
-                                (0..MEMBER_SHARD_SIZE)
-                                    .map(|_| DashSet::new())
-                                    .collect::<Vec<_>>()
+                                (0..MEMBER_SHARD_SIZE).map(|_| DashSet::new()).collect::<Vec<_>>()
                             });
 
                         for (i, shard) in member_shards.iter().enumerate() {
@@ -182,9 +182,8 @@ impl ManagerJobOpt for ArbManagerJob {
                             .group_online_member_map
                             .entry(shard_key.clone())
                             .or_insert_with(DashMap::new);
-                        let target_user_set = target_group_map
-                            .entry(group_id.clone())
-                            .or_insert_with(DashSet::new);
+                        let target_user_set =
+                            target_group_map.entry(group_id.clone()).or_insert_with(DashSet::new);
 
                         for user in online_set.iter().map(|u| u.key().clone()) {
                             let index = shard_manager.hash_group_member_id(group_id, &user);
@@ -200,13 +199,9 @@ impl ManagerJobOpt for ArbManagerJob {
         }
         if let Err(e) = self.sync_data().await {
             log::error!("❌ sync groups error: {:?}", e);
-            shard_info.state= ShardState::Syncing;
+            shard_info.state = ShardState::Syncing;
         }
-        log::info!(
-            "✅ 共迁移群组 {} 个至当前分片 shard_{}",
-            migrated_group_count,
-            current_index
-        );
+        log::info!("✅ 共迁移群组 {} 个至当前分片 shard_{}", migrated_group_count, current_index);
         Ok(())
     }
 
@@ -214,17 +209,13 @@ impl ManagerJobOpt for ArbManagerJob {
         let shard_manager = ShardManager::get();
         let client = self.init_arb_client().await?;
 
-        let request = QueryNodeReq {
-            node_type: NodeType::GroupNode as i32,
-        };
+        let request = QueryNodeReq { node_type: NodeType::GroupNode as i32 };
         let response = client.list_all_nodes(request).await?;
         let nodes = response.into_inner().nodes;
 
         let endpoints: Vec<String> = nodes.iter().map(|node| node.clone().node_addr).collect();
-        let  group_rpc_clients = shard_manager
-            .init_grpc_clients(endpoints)
-            .await
-            .expect("init grpc clients error");
+        let group_rpc_clients =
+            shard_manager.init_grpc_clients(endpoints).await.expect("init grpc clients error");
 
         let current = shard_manager.snapshot.load();
         let guard = current.shard_info.read().await;
@@ -240,10 +231,7 @@ impl ManagerJobOpt for ArbManagerJob {
                 if shard_index == current_index {
                     continue;
                 }
-                shard_group_map
-                    .entry(shard_index)
-                    .or_insert_with(Vec::new)
-                    .push(group_id.clone());
+                shard_group_map.entry(shard_index).or_insert_with(Vec::new).push(group_id.clone());
             }
         }
 
@@ -265,10 +253,7 @@ impl ManagerJobOpt for ArbManagerJob {
                         shard_member_map
                             .entry(expected_index)
                             .or_insert_with(Vec::new)
-                            .push(MemberRef {
-                                group_id: group_id.clone(),
-                                uid: uid.clone(),
-                            });
+                            .push(MemberRef { group_id: group_id.clone(), uid: uid.clone() });
                     }
                 }
             }
@@ -287,10 +272,7 @@ impl ManagerJobOpt for ArbManagerJob {
                     shard_online_map
                         .entry(expected_index)
                         .or_insert_with(Vec::new)
-                        .push(MemberRef {
-                            group_id: group_id.clone(),
-                            uid,
-                        });
+                        .push(MemberRef { group_id: group_id.clone(), uid });
                 }
             }
         }
@@ -314,7 +296,9 @@ impl ManagerJobOpt for ArbManagerJob {
                     tasks.push(tokio::spawn(async move {
                         match client.sync_data(req).await {
                             Ok(_) => log::info!("✅ 同步群组至 shard_{} 成功", shard_index),
-                            Err(e) => log::error!("❌ 同步群组至 shard_{} 失败: {:?}", shard_index, e),
+                            Err(e) => {
+                                log::error!("❌ 同步群组至 shard_{} 失败: {:?}", shard_index, e)
+                            }
                         }
                     }));
                 }
@@ -331,7 +315,9 @@ impl ManagerJobOpt for ArbManagerJob {
                     tasks.push(tokio::spawn(async move {
                         match client.sync_data(req).await {
                             Ok(_) => log::info!("✅ 同步成员至 shard_{} 成功", shard_index),
-                            Err(e) => log::error!("❌ 同步成员至 shard_{} 失败: {:?}", shard_index, e),
+                            Err(e) => {
+                                log::error!("❌ 同步成员至 shard_{} 失败: {:?}", shard_index, e)
+                            }
                         }
                     }));
                 }
@@ -348,7 +334,9 @@ impl ManagerJobOpt for ArbManagerJob {
                     tasks.push(tokio::spawn(async move {
                         match client.sync_data(req).await {
                             Ok(_) => log::info!("✅ 同步在线成员至 shard_{} 成功", shard_index),
-                            Err(e) => log::error!("❌ 同步在线成员至 shard_{} 失败: {:?}", shard_index, e),
+                            Err(e) => {
+                                log::error!("❌ 同步在线成员至 shard_{} 失败: {:?}", shard_index, e)
+                            }
                         }
                     }));
                 }
@@ -370,9 +358,8 @@ impl ManagerJobOpt for ArbManagerJob {
         Ok(())
     }
 
-
     async fn change_failed(&mut self) -> anyhow::Result<()> {
-        let  shard_manager = ShardManager::get();
+        let shard_manager = ShardManager::get();
         let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
@@ -384,10 +371,10 @@ impl ManagerJobOpt for ArbManagerJob {
     }
 
     async fn change_ready(&mut self) -> anyhow::Result<()> {
-        let  shard_manager = ShardManager::get();
+        let shard_manager = ShardManager::get();
         let current = shard_manager.current.load();
         let mut shard_info = current.shard_info.write().await;
-        shard_info.state= ShardState::Ready;
+        shard_info.state = ShardState::Ready;
         let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
@@ -402,7 +389,7 @@ impl ManagerJobOpt for ArbManagerJob {
     }
 
     async fn change_normal(&mut self) -> anyhow::Result<()> {
-        let  shard_manager = ShardManager::get();
+        let shard_manager = ShardManager::get();
         let current = shard_manager.current.load();
         let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
@@ -413,12 +400,12 @@ impl ManagerJobOpt for ArbManagerJob {
         client.update_shard_state(state_request).await?;
 
         let mut shard_info = current.shard_info.write().await;
-        shard_info.state= ShardState::Normal;
+        shard_info.state = ShardState::Normal;
         Ok(())
     }
 
     async fn change_preparing_offline(&mut self) -> anyhow::Result<()> {
-        let  shard_manager = ShardManager::get();
+        let shard_manager = ShardManager::get();
         let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
@@ -430,7 +417,7 @@ impl ManagerJobOpt for ArbManagerJob {
     }
 
     async fn change_offline(&mut self) -> anyhow::Result<()> {
-        let  shard_manager = ShardManager::get();
+        let shard_manager = ShardManager::get();
         let shard_address = shard_manager.shard_address.clone();
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
@@ -451,8 +438,7 @@ impl ManagerJobOpt for ArbManagerJob {
             kafka_addr: Some(kafka_addr.clone()),
             socket_addr: None,
         };
-        client.heartbeat(request)
-            .await?;
+        client.heartbeat(request).await?;
         Ok(())
     }
 }

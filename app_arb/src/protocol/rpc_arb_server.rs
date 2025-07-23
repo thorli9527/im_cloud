@@ -6,10 +6,10 @@ pub mod arb_server_rpc_service_client {
         dead_code,
         missing_docs,
         clippy::wildcard_imports,
-        clippy::let_unit_value,
+        clippy::let_unit_value
     )]
-    use tonic::codegen::*;
     use tonic::codegen::http::Uri;
+    use tonic::codegen::*;
     /// ============================
     /// 仲裁服务接口定义
     /// ============================
@@ -51,14 +51,13 @@ pub mod arb_server_rpc_service_client {
             F: tonic::service::Interceptor,
             T::ResponseBody: Default,
             T: tonic::codegen::Service<
-                http::Request<tonic::body::Body>,
-                Response = http::Response<
-                    <T as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody,
+                    http::Request<tonic::body::Body>,
+                    Response = http::Response<
+                        <T as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody,
+                    >,
                 >,
-            >,
-            <T as tonic::codegen::Service<
-                http::Request<tonic::body::Body>,
-            >>::Error: Into<StdError> + std::marker::Send + std::marker::Sync,
+            <T as tonic::codegen::Service<http::Request<tonic::body::Body>>>::Error:
+                Into<StdError> + std::marker::Send + std::marker::Sync,
         {
             ArbServerRpcServiceClient::new(InterceptedService::new(inner, interceptor))
         }
@@ -95,33 +94,19 @@ pub mod arb_server_rpc_service_client {
         }
         pub async fn update_shard_state(
             &mut self,
-            request: impl tonic::IntoRequest<
-                super::super::rpc_arb_models::UpdateShardStateRequest,
-            >,
-        ) -> std::result::Result<
-            tonic::Response<super::super::common::CommonResp>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::unknown(
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+            request: impl tonic::IntoRequest<super::super::rpc_arb_models::UpdateShardStateRequest>,
+        ) -> std::result::Result<tonic::Response<super::super::common::CommonResp>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/rpc_arb_server.ArbServerRpcService/UpdateShardState",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(
-                    GrpcMethod::new(
-                        "rpc_arb_server.ArbServerRpcService",
-                        "UpdateShardState",
-                    ),
-                );
+                .insert(GrpcMethod::new("rpc_arb_server.ArbServerRpcService", "UpdateShardState"));
             self.inner.unary(req, path, codec).await
         }
         /// === 节点注册与生命周期 ===
@@ -132,23 +117,16 @@ pub mod arb_server_rpc_service_client {
             tonic::Response<super::super::rpc_arb_models::NodeInfo>,
             tonic::Status,
         > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::unknown(
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/rpc_arb_server.ArbServerRpcService/RegisterNode",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("rpc_arb_server.ArbServerRpcService", "RegisterNode"),
-                );
+                .insert(GrpcMethod::new("rpc_arb_server.ArbServerRpcService", "RegisterNode"));
             self.inner.unary(req, path, codec).await
         }
         pub async fn list_all_nodes(
@@ -158,79 +136,51 @@ pub mod arb_server_rpc_service_client {
             tonic::Response<super::super::rpc_arb_models::ListAllNodesResponse>,
             tonic::Status,
         > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::unknown(
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/rpc_arb_server.ArbServerRpcService/ListAllNodes",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("rpc_arb_server.ArbServerRpcService", "ListAllNodes"),
-                );
+                .insert(GrpcMethod::new("rpc_arb_server.ArbServerRpcService", "ListAllNodes"));
             self.inner.unary(req, path, codec).await
         }
         /// === 节点状态与控制 ===
         pub async fn graceful_leave(
             &mut self,
             request: impl tonic::IntoRequest<super::super::rpc_arb_models::BaseRequest>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::common::CommonResp>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::unknown(
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+        ) -> std::result::Result<tonic::Response<super::super::common::CommonResp>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/rpc_arb_server.ArbServerRpcService/GracefulLeave",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(
-                    GrpcMethod::new(
-                        "rpc_arb_server.ArbServerRpcService",
-                        "GracefulLeave",
-                    ),
-                );
+                .insert(GrpcMethod::new("rpc_arb_server.ArbServerRpcService", "GracefulLeave"));
             self.inner.unary(req, path, codec).await
         }
         pub async fn heartbeat(
             &mut self,
             request: impl tonic::IntoRequest<super::super::rpc_arb_models::BaseRequest>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::common::CommonResp>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::unknown(
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+        ) -> std::result::Result<tonic::Response<super::super::common::CommonResp>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/rpc_arb_server.ArbServerRpcService/heartbeat",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("rpc_arb_server.ArbServerRpcService", "heartbeat"),
-                );
+                .insert(GrpcMethod::new("rpc_arb_server.ArbServerRpcService", "heartbeat"));
             self.inner.unary(req, path, codec).await
         }
     }
@@ -242,7 +192,7 @@ pub mod arb_server_rpc_service_server {
         dead_code,
         missing_docs,
         clippy::wildcard_imports,
-        clippy::let_unit_value,
+        clippy::let_unit_value
     )]
     use tonic::codegen::*;
     /// Generated trait containing gRPC methods that should be implemented for use with ArbServerRpcServiceServer.
@@ -250,13 +200,8 @@ pub mod arb_server_rpc_service_server {
     pub trait ArbServerRpcService: std::marker::Send + std::marker::Sync + 'static {
         async fn update_shard_state(
             &self,
-            request: tonic::Request<
-                super::super::rpc_arb_models::UpdateShardStateRequest,
-            >,
-        ) -> std::result::Result<
-            tonic::Response<super::super::common::CommonResp>,
-            tonic::Status,
-        >;
+            request: tonic::Request<super::super::rpc_arb_models::UpdateShardStateRequest>,
+        ) -> std::result::Result<tonic::Response<super::super::common::CommonResp>, tonic::Status>;
         /// === 节点注册与生命周期 ===
         async fn register_node(
             &self,
@@ -276,17 +221,11 @@ pub mod arb_server_rpc_service_server {
         async fn graceful_leave(
             &self,
             request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::common::CommonResp>,
-            tonic::Status,
-        >;
+        ) -> std::result::Result<tonic::Response<super::super::common::CommonResp>, tonic::Status>;
         async fn heartbeat(
             &self,
             request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::common::CommonResp>,
-            tonic::Status,
-        >;
+        ) -> std::result::Result<tonic::Response<super::super::common::CommonResp>, tonic::Status>;
     }
     /// ============================
     /// 仲裁服务接口定义
@@ -312,13 +251,8 @@ pub mod arb_server_rpc_service_server {
                 max_encoding_message_size: None,
             }
         }
-        pub fn with_interceptor<F>(
-            inner: T,
-            interceptor: F,
-        ) -> InterceptedService<Self, F>
-        where
-            F: tonic::service::Interceptor,
-        {
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> InterceptedService<Self, F>
+        where F: tonic::service::Interceptor {
             InterceptedService::new(Self::new(inner), interceptor)
         }
         /// Enable decompressing requests with the given encoding.
@@ -370,16 +304,13 @@ pub mod arb_server_rpc_service_server {
                 "/rpc_arb_server.ArbServerRpcService/UpdateShardState" => {
                     #[allow(non_camel_case_types)]
                     struct UpdateShardStateSvc<T: ArbServerRpcService>(pub Arc<T>);
-                    impl<
-                        T: ArbServerRpcService,
-                    > tonic::server::UnaryService<
-                        super::super::rpc_arb_models::UpdateShardStateRequest,
-                    > for UpdateShardStateSvc<T> {
+                    impl<T: ArbServerRpcService>
+                        tonic::server::UnaryService<
+                            super::super::rpc_arb_models::UpdateShardStateRequest,
+                        > for UpdateShardStateSvc<T>
+                    {
                         type Response = super::super::common::CommonResp;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
                             request: tonic::Request<
@@ -388,10 +319,7 @@ pub mod arb_server_rpc_service_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as ArbServerRpcService>::update_shard_state(
-                                        &inner,
-                                        request,
-                                    )
+                                <T as ArbServerRpcService>::update_shard_state(&inner, request)
                                     .await
                             };
                             Box::pin(fut)
@@ -422,26 +350,19 @@ pub mod arb_server_rpc_service_server {
                 "/rpc_arb_server.ArbServerRpcService/RegisterNode" => {
                     #[allow(non_camel_case_types)]
                     struct RegisterNodeSvc<T: ArbServerRpcService>(pub Arc<T>);
-                    impl<
-                        T: ArbServerRpcService,
-                    > tonic::server::UnaryService<
-                        super::super::rpc_arb_models::BaseRequest,
-                    > for RegisterNodeSvc<T> {
+                    impl<T: ArbServerRpcService>
+                        tonic::server::UnaryService<super::super::rpc_arb_models::BaseRequest>
+                        for RegisterNodeSvc<T>
+                    {
                         type Response = super::super::rpc_arb_models::NodeInfo;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
-                            request: tonic::Request<
-                                super::super::rpc_arb_models::BaseRequest,
-                            >,
+                            request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as ArbServerRpcService>::register_node(&inner, request)
-                                    .await
+                                <T as ArbServerRpcService>::register_node(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -471,26 +392,19 @@ pub mod arb_server_rpc_service_server {
                 "/rpc_arb_server.ArbServerRpcService/ListAllNodes" => {
                     #[allow(non_camel_case_types)]
                     struct ListAllNodesSvc<T: ArbServerRpcService>(pub Arc<T>);
-                    impl<
-                        T: ArbServerRpcService,
-                    > tonic::server::UnaryService<
-                        super::super::rpc_arb_models::QueryNodeReq,
-                    > for ListAllNodesSvc<T> {
+                    impl<T: ArbServerRpcService>
+                        tonic::server::UnaryService<super::super::rpc_arb_models::QueryNodeReq>
+                        for ListAllNodesSvc<T>
+                    {
                         type Response = super::super::rpc_arb_models::ListAllNodesResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
-                            request: tonic::Request<
-                                super::super::rpc_arb_models::QueryNodeReq,
-                            >,
+                            request: tonic::Request<super::super::rpc_arb_models::QueryNodeReq>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as ArbServerRpcService>::list_all_nodes(&inner, request)
-                                    .await
+                                <T as ArbServerRpcService>::list_all_nodes(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -520,26 +434,19 @@ pub mod arb_server_rpc_service_server {
                 "/rpc_arb_server.ArbServerRpcService/GracefulLeave" => {
                     #[allow(non_camel_case_types)]
                     struct GracefulLeaveSvc<T: ArbServerRpcService>(pub Arc<T>);
-                    impl<
-                        T: ArbServerRpcService,
-                    > tonic::server::UnaryService<
-                        super::super::rpc_arb_models::BaseRequest,
-                    > for GracefulLeaveSvc<T> {
+                    impl<T: ArbServerRpcService>
+                        tonic::server::UnaryService<super::super::rpc_arb_models::BaseRequest>
+                        for GracefulLeaveSvc<T>
+                    {
                         type Response = super::super::common::CommonResp;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
-                            request: tonic::Request<
-                                super::super::rpc_arb_models::BaseRequest,
-                            >,
+                            request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as ArbServerRpcService>::graceful_leave(&inner, request)
-                                    .await
+                                <T as ArbServerRpcService>::graceful_leave(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -569,21 +476,15 @@ pub mod arb_server_rpc_service_server {
                 "/rpc_arb_server.ArbServerRpcService/heartbeat" => {
                     #[allow(non_camel_case_types)]
                     struct heartbeatSvc<T: ArbServerRpcService>(pub Arc<T>);
-                    impl<
-                        T: ArbServerRpcService,
-                    > tonic::server::UnaryService<
-                        super::super::rpc_arb_models::BaseRequest,
-                    > for heartbeatSvc<T> {
+                    impl<T: ArbServerRpcService>
+                        tonic::server::UnaryService<super::super::rpc_arb_models::BaseRequest>
+                        for heartbeatSvc<T>
+                    {
                         type Response = super::super::common::CommonResp;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
-                            request: tonic::Request<
-                                super::super::rpc_arb_models::BaseRequest,
-                            >,
+                            request: tonic::Request<super::super::rpc_arb_models::BaseRequest>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
@@ -614,25 +515,16 @@ pub mod arb_server_rpc_service_server {
                     };
                     Box::pin(fut)
                 }
-                _ => {
-                    Box::pin(async move {
-                        let mut response = http::Response::new(
-                            tonic::body::Body::default(),
-                        );
-                        let headers = response.headers_mut();
-                        headers
-                            .insert(
-                                tonic::Status::GRPC_STATUS,
-                                (tonic::Code::Unimplemented as i32).into(),
-                            );
-                        headers
-                            .insert(
-                                http::header::CONTENT_TYPE,
-                                tonic::metadata::GRPC_CONTENT_TYPE,
-                            );
-                        Ok(response)
-                    })
-                }
+                _ => Box::pin(async move {
+                    let mut response = http::Response::new(tonic::body::Body::default());
+                    let headers = response.headers_mut();
+                    headers.insert(
+                        tonic::Status::GRPC_STATUS,
+                        (tonic::Code::Unimplemented as i32).into(),
+                    );
+                    headers.insert(http::header::CONTENT_TYPE, tonic::metadata::GRPC_CONTENT_TYPE);
+                    Ok(response)
+                }),
             }
         }
     }

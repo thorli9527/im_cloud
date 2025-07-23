@@ -1,11 +1,5 @@
-use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 use crate::protocol::common::ClientEntity;
-use crate::protocol::msg::auth::DeviceType;
-use anyhow::Result;
-use common::config::AppConfig;
-use common::repository_util::{BaseRepository, Repository};
-use common::util::common_utils::{build_md5_with_key, build_uid};
-use common::UserId;
+use common::repository_util::BaseRepository;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
@@ -18,54 +12,12 @@ pub struct ClientService {
 impl ClientService {
     pub fn new(db: Database) -> Self {
         let collection = db.collection("client");
-        Self {
-            dao: BaseRepository::new(db, collection.clone()),
-        }
-    }
-    pub async fn new_data(
-        &self,
-        user_id: &UserId,
-        name: String,
-        avatar: String,
-        password: String,
-    ) -> Result<ClientEntity> {
-        let mut user = ClientEntity::default();
-
-        user.name = name;
-        user.avatar = avatar;
-        user.uid = build_uid();
-        let md5_key = &AppConfig::get().get_sys().md5_key;
-        if !password.is_empty() {
-            user.password = build_md5_with_key(&password, &md5_key.clone().unwrap());
-        }
-        self.dao.insert(&user).await?;
-        Ok(user)
+        Self { dao: BaseRepository::new(db, collection.clone()) }
     }
 
-    pub async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<ClientEntity>> {
-        let option = UserManager::get().get_user_info(user_id).await?;
-        Ok(option)
-    }
-    
-
-    pub async fn verify_token(&self, token: &str) -> Result<bool> {
-        Ok(UserManager::get().verify_token(token).await?)
-    }
-
-    pub async fn build_token(&self, uid: &UserId, device_type: &DeviceType) -> Result<()> {
-        let user_manager = UserManager::get();
-        user_manager.build_token(uid, device_type).await?;
-        Ok(())
-    }
-    pub async fn find_client_by_token(&self, token: &str) -> Result<Option<ClientEntity>> {
-        let user_manager = UserManager::get();
-        Ok(user_manager.find_user_by_token(token).await?)
-    }
     pub fn init(db: Database) {
         let instance = Self::new(db);
-        INSTANCE
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     /// 获取单例

@@ -4,7 +4,7 @@ use crate::entitys::user_role_entity::UserRoleEntity;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::date_util::now;
-use mongodb::{bson::doc, Database};
+use mongodb::{Database, bson::doc};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 
@@ -49,8 +49,7 @@ impl UserRoleService {
     }
 
     pub fn init(db: Database) {
-        INSTANCE.set(Arc::new(Self::new(db)))
-            .expect("UserRoleService already initialized");
+        INSTANCE.set(Arc::new(Self::new(db))).expect("UserRoleService already initialized");
     }
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("UserRoleService not initialized").clone()

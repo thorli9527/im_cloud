@@ -1,11 +1,11 @@
-use crate::redis::redis_pool::RedisPoolTools;
 use crate::RedisPool;
+use crate::redis::redis_pool::RedisPoolTools;
 use anyhow::Result;
 use async_trait::async_trait;
 use deadpool_redis::redis;
 use deadpool_redis::redis::Pipeline;
 use once_cell::sync::OnceCell;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -17,7 +17,7 @@ pub struct RedisTemplate {
 
 impl RedisTemplate {
     fn new() -> Self {
-        let pool =  RedisPoolTools::get().clone();
+        let pool = RedisPoolTools::get().clone();
         RedisTemplate { pool }
     }
 
@@ -47,9 +47,7 @@ impl RedisTemplate {
     /// 执行一组命令作为 pipeline（非事务）
     /// 执行一组命令作为 pipeline（非事务）
     pub async fn execute_pipeline<F>(&self, pipe_fn: F) -> Result<()>
-    where
-        F: FnOnce(&mut Pipeline) -> &mut Pipeline + Send,
-    {
+    where F: FnOnce(&mut Pipeline) -> &mut Pipeline + Send {
         let mut conn = self.pool.get().await?;
         let mut pipe = redis::pipe();
         pipe_fn(&mut pipe);
@@ -59,9 +57,7 @@ impl RedisTemplate {
 
     /// 执行一组命令作为事务（MULTI/EXEC）
     pub async fn execute_transaction<F>(&self, _keys: &[&str], txn_fn: F) -> Result<()>
-    where
-        F: FnOnce(&mut Pipeline) -> &mut Pipeline + Send,
-    {
+    where F: FnOnce(&mut Pipeline) -> &mut Pipeline + Send {
         let mut conn = self.pool.get().await?;
         let mut pipe = redis::pipe();
         pipe.atomic();
@@ -74,7 +70,12 @@ impl RedisTemplate {
 /// Value 类型 Redis 操作接口定义
 #[async_trait]
 pub trait ValueOps {
-    async fn set<T: Serialize + Sync>(&self, key: &str, value: &T, expire: Option<u64>) -> Result<()>;
+    async fn set<T: Serialize + Sync>(
+        &self,
+        key: &str,
+        value: &T,
+        expire: Option<u64>,
+    ) -> Result<()>;
     async fn get<T: DeserializeOwned + Send>(&self, key: &str) -> Result<Option<T>>;
     async fn delete(&self, key: &str) -> Result<bool>;
     async fn has_key(&self, key: &str) -> Result<bool>;
@@ -90,7 +91,12 @@ pub trait ListOps {
     async fn push<T: Serialize + Sync>(&self, key: &str, value: &T) -> Result<()>;
     async fn right_push_all<T: Serialize + Sync>(&self, key: &str, values: &[T]) -> Result<()>;
     async fn left_push<T: Serialize + Sync>(&self, key: &str, value: &T) -> Result<()>;
-    async fn range<T: DeserializeOwned + Send>(&self, key: &str, start: isize, stop: isize) -> Result<Vec<T>>;
+    async fn range<T: DeserializeOwned + Send>(
+        &self,
+        key: &str,
+        start: isize,
+        stop: isize,
+    ) -> Result<Vec<T>>;
     async fn left_pop<T: DeserializeOwned + Send>(&self, key: &str) -> Result<Option<T>>;
     async fn right_pop<T: DeserializeOwned + Send>(&self, key: &str) -> Result<Option<T>>;
     async fn length(&self, key: &str) -> Result<usize>;
@@ -109,8 +115,16 @@ pub trait HashOps {
     async fn hkeys(&self, key: &str) -> Result<Vec<String>>;
     async fn hvals<T: DeserializeOwned + Send>(&self, key: &str) -> Result<Vec<T>>;
     async fn hlen(&self, key: &str) -> Result<usize>;
-    async fn hmset<T: Serialize + Sync>(&self, key: &str, entries: &HashMap<String, T>) -> Result<()>;
-    async fn hmget<T: DeserializeOwned + Send>(&self, key: &str, fields: &[&str]) -> Result<Vec<Option<T>>>;
+    async fn hmset<T: Serialize + Sync>(
+        &self,
+        key: &str,
+        entries: &HashMap<String, T>,
+    ) -> Result<()>;
+    async fn hmget<T: DeserializeOwned + Send>(
+        &self,
+        key: &str,
+        fields: &[&str],
+    ) -> Result<Vec<Option<T>>>;
 }
 
 /// Value 类型接口实现结构体

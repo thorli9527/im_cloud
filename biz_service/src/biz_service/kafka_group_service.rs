@@ -1,6 +1,10 @@
-use crate::protocol::common::{ByteMessageType};
+use crate::manager::init;
+use crate::protocol::common::ByteMessageType;
+use crate::protocol::msg::group::GroupNodeMsgType;
 use anyhow::{Result, anyhow};
 use common::config::KafkaConfig;
+use common::util::common_utils::build_md5;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use once_cell::sync::OnceCell;
 use prost::Message;
 use rdkafka::ClientConfig;
@@ -10,24 +14,18 @@ use rdkafka::statistics::Broker;
 use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 use utoipa::openapi::security::Password;
-use common::util::common_utils::build_md5;
-use crate::manager::init;
-use crate::protocol::msg::group::GroupNodeMsgType;
 
-pub const GROUP_NODE_MSG_TOPIC : &str= "group-node-msg";
+pub const GROUP_NODE_MSG_TOPIC: &str = "group-node-msg";
 #[derive(Clone)]
 pub struct KafkaGroupService {
     pub producer: Arc<FutureProducer>,
 }
 impl fmt::Debug for KafkaGroupService {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("KafkaGroupService")
-            .field("producer", &"FutureProducer(...)")
-            .finish()
+        f.debug_struct("KafkaGroupService").field("producer", &"FutureProducer(...)").finish()
     }
 }
 impl KafkaGroupService {
@@ -40,19 +38,17 @@ impl KafkaGroupService {
             .set("sasl.username", "admin")
             .set("sasl.password", build_md5(&broker_addr))
             // ✅ 性能相关配置
-            .set("queue.buffering.max.kbytes", "10240")     // 默认4000，提升内存 buffer
-            .set("queue.buffering.max.ms", "5")              // 延迟聚合
-            .set("compression.type", "lz4")                  // 压缩提升吞吐
-            .set("acks", "1")                                // 成本均衡（0/1/all）
+            .set("queue.buffering.max.kbytes", "10240") // 默认4000，提升内存 buffer
+            .set("queue.buffering.max.ms", "5") // 延迟聚合
+            .set("compression.type", "lz4") // 压缩提升吞吐
+            .set("acks", "1") // 成本均衡（0/1/all）
             .set("batch.num.messages", "1000")
             .set("linger.ms", "5")
             .set("message.timeout.ms", "30000")
             .create()
             .map_err(|e| anyhow!("Kafka producer create failed for {broker_addr}: {e}"))?;
 
-        Ok(Self {
-            producer: Arc::new(producer),
-        })
+        Ok(Self { producer: Arc::new(producer) })
     }
 
     /// 发送 Protobuf 消息（带类型码首字节）
@@ -60,7 +56,7 @@ impl KafkaGroupService {
         &self,
         msg_type: &GroupNodeMsgType,
         message: &M,
-        message_id: &str
+        message_id: &str,
     ) -> Result<()> {
         let mut payload = Vec::with_capacity(1 + message.encoded_len());
         payload.push(*msg_type as u8);
@@ -68,9 +64,7 @@ impl KafkaGroupService {
 
         let key = message_id.to_string();
 
-        let record = FutureRecord::to(GROUP_NODE_MSG_TOPIC)
-            .payload(&payload)
-            .key(&key);
+        let record = FutureRecord::to(GROUP_NODE_MSG_TOPIC).payload(&payload).key(&key);
         let timeout = Duration::from_millis(500); // ✅ 更合理的超时
 
         match self.producer.send(record, timeout).await {
@@ -108,14 +102,11 @@ impl KafkaGroupService {
     }
 
     /// 创建 topics（失败日志提示，但不中断）
-    pub async fn create_topics(
-        brokers: &str,
-        topics: &[(String, i32, i32)],
-    ) -> Result<()> {
+    pub async fn create_topics(brokers: &str, topics: &[(String, i32, i32)]) -> Result<()> {
         let admin: AdminClient<_> = ClientConfig::new()
             .set("bootstrap.servers", brokers)
             .set("security.protocol", "SASL_SSL") // 或 "SASL_PLAINTEXT" 视你的集群配置而定
-            .set("sasl.mechanism", "PLAIN")       // 也可以是 SCRAM-SHA-256 / SCRAM-SHA-512 等
+            .set("sasl.mechanism", "PLAIN") // 也可以是 SCRAM-SHA-256 / SCRAM-SHA-512 等
             .set("sasl.username", "admin")
             .set("sasl.password", build_md5(brokers))
             .create()

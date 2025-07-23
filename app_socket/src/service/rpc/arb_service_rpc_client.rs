@@ -1,5 +1,9 @@
 // 在 app_socket 中添加节点注册与心跳逻辑到 app_arb 服务
 
+use crate::kafka;
+use biz_service::biz_service::kafka_group_service::KafkaGroupService;
+use biz_service::protocol::arb::rpc_arb_models::{BaseRequest, NodeInfo, NodeType, QueryNodeReq};
+use biz_service::protocol::arb::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::{build_md5, hash_index};
 use config::Config;
@@ -8,12 +12,8 @@ use std::clone;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio::time::{interval, Duration};
+use tokio::time::{Duration, interval};
 use tonic::transport::Channel;
-use biz_service::biz_service::kafka_group_service::KafkaGroupService;
-use biz_service::protocol::arb::rpc_arb_models::{BaseRequest, NodeInfo, NodeType, QueryNodeReq};
-use biz_service::protocol::arb::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
-use crate::kafka;
 
 #[derive(Debug, Clone)]
 pub struct ArbClient {
@@ -31,7 +31,11 @@ pub struct ArbClient {
 
 impl ArbClient {
     /// 创建 ArbClient 并注册自身地址
-    pub async fn new(shard_config: &ShardConfig, kafka_addr: &str,socket_addr:&str) -> anyhow::Result<Self> {
+    pub async fn new(
+        shard_config: &ShardConfig,
+        kafka_addr: &str,
+        socket_addr: &str,
+    ) -> anyhow::Result<Self> {
         let node_addr = shard_config
             .server_host
             .clone()
@@ -41,31 +45,27 @@ impl ArbClient {
             arb_client: client,
             shard_kafka_list: HashMap::new(),
             node_addr,
-            socket_addr:socket_addr.to_string(),
+            socket_addr: socket_addr.to_string(),
             kafka_addr: kafka_addr.to_string(),
         })
     }
     pub fn get() -> Arc<RwLock<ArbClient>> {
-        INSTANCE
-            .get()
-            .expect("ArbClient is not initialized")
-            .clone()
+        INSTANCE.get().expect("ArbClient is not initialized").clone()
     }
     /// 注册本节点 + 初始化 shard_clients
     pub async fn init() -> anyhow::Result<()> {
         let shard_config = AppConfig::get().shard.clone().unwrap();
         let kafka_addr = AppConfig::get().kafka.clone().unwrap();
         let socket_addr = AppConfig::get().socket.clone().unwrap();
-        let mut arb_client = ArbClient::new(&shard_config, &kafka_addr.brokers, &socket_addr.node_addr).await?;
+        let mut arb_client =
+            ArbClient::new(&shard_config, &kafka_addr.brokers, &socket_addr.node_addr).await?;
 
         arb_client.register().await?;
 
         // 初始化 shard clients 列表
         arb_client.init_shard_kafka_list().await?;
 
-        INSTANCE
-            .set(Arc::new(RwLock::new(arb_client)))
-            .expect("ArbClient init failed");
+        INSTANCE.set(Arc::new(RwLock::new(arb_client))).expect("ArbClient init failed");
         Ok(())
     }
     pub fn get_shard_kafka(
@@ -102,9 +102,7 @@ impl ArbClient {
 
         self.shard_kafka_list.clear();
         // 获取最新仲裁节点列表
-        let req = QueryNodeReq {
-            node_type: NodeType::GroupNode as i32,
-        };
+        let req = QueryNodeReq { node_type: NodeType::GroupNode as i32 };
 
         let resp = self
             .arb_client
@@ -121,11 +119,10 @@ impl ArbClient {
             .collect();
 
         //重新排序 list_addrs
-        for node_addr in  resp.nodes.iter() {
+        for node_addr in resp.nodes.iter() {
             let addr = &node_addr.clone().socket_addr.unwrap();
-            let kafka_service =KafkaGroupService::new(addr).await?;
-            self.shard_kafka_list.insert(hash_index(addr,resp.nodes.len() as i32),kafka_service);
-
+            let kafka_service = KafkaGroupService::new(addr).await?;
+            self.shard_kafka_list.insert(hash_index(addr, resp.nodes.len() as i32), kafka_service);
         }
         Ok(())
     }

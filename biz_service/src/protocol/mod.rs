@@ -1,7 +1,7 @@
 pub mod arb;
 
 pub mod msg {
-    pub mod auth{
+    pub mod auth {
         include!("auth.rs");
     }
     pub mod entity {
@@ -22,7 +22,7 @@ pub mod msg {
     pub mod message {
         include!("message.rs");
     }
-    
+
     pub mod status {
         include!("status.rs");
     }

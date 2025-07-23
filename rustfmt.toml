@@ -1,0 +1,4 @@
+# rustfmt.toml 配置
+use_small_heuristics = "Max"      # 最小化换行（尽可能紧凑）
+empty_item_single_line = true     # 空函数体保持单行
+where_single_line = true          # where子句保持单行

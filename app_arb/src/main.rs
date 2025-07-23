@@ -1,13 +1,13 @@
-mod service;
 mod protocol;
+mod service;
 
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcServiceServer;
 use crate::service::rpc::arb_service_impl::ArbiterServiceImpl;
 use common::config::AppConfig;
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 use tracing::log;
 
 #[tokio::main]

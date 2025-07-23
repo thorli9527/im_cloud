@@ -10,7 +10,7 @@ members = [
     "app_socket",
     "app_group",
     "app_api",
-    "app_arb", "app_test",  ]
+    "app_arb", "app_test", ]
 [workspace.dependencies]
 # ========================
 # 🌐 Web 框架
@@ -78,6 +78,7 @@ utoipa = { version = "5.3.1" }              # OpenAPI 文档生成
 # ========================
 # 🧠 实用工具/数据结构
 # ========================
+regex = { version = "1.11.1" }
 uuid = { version = "1.17.0" }               # UUID 唯一标识
 twox-hash = { version = "2.1.1" }           # 快速哈希函数（用于 hashmap 优化）
 num_enum = { version = "0.7.4", features = ["default"] } # 枚举值与整数转换

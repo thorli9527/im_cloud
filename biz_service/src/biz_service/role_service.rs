@@ -2,7 +2,7 @@ use crate::entitys::role_entity::RoleEntity;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::date_util::now;
-use mongodb::{bson::doc, Database};
+use mongodb::{Database, bson::doc};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 #[derive(Debug)]
@@ -23,7 +23,13 @@ impl RoleService {
     }
 
     /// 添加新角色
-    pub async fn add_role(&self, name: &str, code: &str, description: Option<String>, is_builtin: bool) -> Result<String> {
+    pub async fn add_role(
+        &self,
+        name: &str,
+        code: &str,
+        description: Option<String>,
+        is_builtin: bool,
+    ) -> Result<String> {
         let entity = RoleEntity {
             id: "".into(),
             name: name.into(),
@@ -37,8 +43,7 @@ impl RoleService {
     }
 
     pub fn init(db: Database) {
-        INSTANCE.set(Arc::new(Self::new(db)))
-            .expect("RoleService already initialized");
+        INSTANCE.set(Arc::new(Self::new(db))).expect("RoleService already initialized");
     }
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("RoleService not initialized").clone()

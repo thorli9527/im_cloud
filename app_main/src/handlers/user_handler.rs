@@ -35,12 +35,7 @@ pub struct UserInfoQueryDto {
 pub async fn user_list(dto: Json<UserInfoQueryDto>) -> Result<impl Responder, AppError> {
     let page_result = UserService::get()
         .dao
-        .query_by_page(
-            dto.to_query_doc(),
-            dto.page_size,
-            Some(OrderType::Asc),
-            "_id",
-        )
+        .query_by_page(dto.to_query_doc(), dto.page_size, Some(OrderType::Asc), "_id")
         .await?;
     Ok(Json(result_data(page_result)))
 }
@@ -60,10 +55,7 @@ pub async fn user_add(dto: Json<UserAddDto>) -> Result<impl Responder, AppError>
         return Ok(result_error(e.to_string()));
     }
     let user_service = UserService::get();
-    let user = user_service
-        .dao
-        .find_one(doc! {"user_name": &dto.user_name})
-        .await?;
+    let user = user_service.dao.find_one(doc! {"user_name": &dto.user_name}).await?;
     if user.is_some() {
         return Ok(result_error("用户已存在"));
     }
@@ -100,11 +92,8 @@ pub async fn property_change(
     }
 
     let user_service = UserService::get();
-    let user = user_service
-        .dao
-        .find_by_id(&uid)
-        .await
-        .map_err(|e| anyhow!("用户查询失败: {}", e))?;
+    let user =
+        user_service.dao.find_by_id(&uid).await.map_err(|e| anyhow!("用户查询失败: {}", e))?;
 
     if user.is_none() {
         return Ok(web::Json(json!({
@@ -117,9 +106,8 @@ pub async fn property_change(
     let new_value = property.value.trim();
     match property.property_name.as_str() {
         "status" => {
-            user.status = new_value
-                .parse::<bool>()
-                .map_err(|_| anyhow!("status 字段应为 true 或 false"))?;
+            user.status =
+                new_value.parse::<bool>().map_err(|_| anyhow!("status 字段应为 true 或 false"))?;
         }
         "is_admin" => {
             user.is_admin = new_value
@@ -136,11 +124,7 @@ pub async fn property_change(
 
     user.update_time = now() as u64;
 
-    user_service
-        .dao
-        .save(&user)
-        .await
-        .expect("更新用户信息失败");
+    user_service.dao.save(&user).await.expect("更新用户信息失败");
 
     return Ok(web::Json(json!({
         "code": 0,
@@ -165,15 +149,9 @@ pub struct ResetPassword {
 pub async fn reset_password(dto: Json<ResetPassword>) -> Result<impl Responder, AppError> {
     match &dto.validate() {
         Ok(_) => {
-            let md5_key=AppConfig::get().sys.clone().unwrap().md5_key.unwrap();
-            let password = build_md5_with_key(
-                &md5_key,
-                &dto.password.as_ref().unwrap(),
-            );
-            UserService::get()
-                .dao
-                .up_property(&dto.user_id, "status", password)
-                .await?;
+            let md5_key = AppConfig::get().sys.clone().unwrap().md5_key.unwrap();
+            let password = build_md5_with_key(&md5_key, &dto.password.as_ref().unwrap());
+            UserService::get().dao.up_property(&dto.user_id, "status", password).await?;
             Ok(result())
         }
         Err(e) => return Ok(result_error(e.to_string())),
@@ -212,13 +190,7 @@ pub async fn user_change_pass(dto: Json<UserPassChange>) -> Result<impl Responde
     if user.is_none() {
         return Ok(result_error("用户不存在"));
     }
-    let md5_key = AppConfig::get()
-        .clone()
-        .sys
-        .clone()
-        .unwrap()
-        .md5_key
-        .unwrap();
+    let md5_key = AppConfig::get().clone().sys.clone().unwrap().md5_key.unwrap();
     let user = user.unwrap();
 
     // Step 3: 验证原密码
@@ -229,10 +201,7 @@ pub async fn user_change_pass(dto: Json<UserPassChange>) -> Result<impl Responde
 
     // Step 4: 构建新密码并更新
     let new_encrypted = build_md5_with_key(new_password, &md5_key);
-    user_service
-        .dao
-        .up_property(user_id, "password", new_encrypted)
-        .await?;
+    user_service.dao.up_property(user_id, "password", new_encrypted).await?;
 
     Ok(result())
 }
