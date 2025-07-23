@@ -7,10 +7,7 @@ pub struct ArbClient {
 impl ArbClient {
     pub async fn new() -> Self {
         let server_host = AppConfig::get().get_shard().server_host.unwrap();
-        let channel =
-            arb_server_rpc_service_client::ArbServerRpcServiceClient::connect(server_host)
-                .await
-                .unwrap();
+        let channel = arb_server_rpc_service_client::ArbServerRpcServiceClient::connect(server_host).await.unwrap();
         Self { client: channel }
     }
 }

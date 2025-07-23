@@ -1,17 +1,13 @@
-use crate::biz_service::friend_service::UserFriendService;
-use crate::biz_service::user_service::UserService;
 use crate::entitys::friend::FriendEntity;
-use crate::protocol::common::ByteMessageType::FriendEventMsgType;
 use crate::protocol::msg::friend::{EventStatus, FriendEventMsg, FriendEventType};
 use anyhow::Result;
 use bson::doc;
 use bson::oid::ObjectId;
-use common::UserId;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::build_snow_id;
 use common::util::date_util::now;
+use common::UserId;
 use log::warn;
-use mongodb::sync::{Client, ClientSession};
 use mongodb::{Collection, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
@@ -115,6 +111,7 @@ impl FriendEventService {
                 session.commit_transaction().await?;
             }
             Err(e) => {
+                log::error!("{}", e);
                 session.abort_transaction().await?;
             }
         }

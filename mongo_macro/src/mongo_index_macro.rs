@@ -14,7 +14,7 @@ pub fn expand_index_model_provider(input: proc_macro::TokenStream) -> proc_macro
                 let mut is_unique = false;
                 let mut sort_order = 1i32;
 
-                let mut input = meta.input;
+                let input = meta.input;
                 while !input.is_empty() {
                     let path: syn::Path = match input.parse() {
                         Ok(p) => p,

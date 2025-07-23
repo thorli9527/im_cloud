@@ -1,7 +1,6 @@
 use crate::result::result;
 use actix_web::{Responder, get, web};
 use common::errors::AppError;
-use utoipa::ToSchema;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(status);

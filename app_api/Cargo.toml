@@ -24,6 +24,7 @@ chrono.workspace = true
 lazy_static.workspace = true
 validator.workspace = true
 regex.workspace = true
+actix-files.workspace = true
 [build-dependencies]
 tonic = "0.13.1"
 tonic-build = "0.13.1"

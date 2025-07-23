@@ -2,10 +2,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
 use mongodb::bson::oid::ObjectId;
-use mongodb::bson::{Bson, doc};
+use mongodb::bson::{doc, Bson};
 use mongodb::options::FindOptions;
-use mongodb::{Collection, Database, bson, bson::Document};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use mongodb::{bson, bson::Document, Collection, Database};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::cmp::PartialEq;
 use std::marker::PhantomData;
 use utoipa::ToSchema;
@@ -178,7 +178,7 @@ where T: Serialize + DeserializeOwned + Unpin + Send + Sync
         property: &str,
         value: E,
     ) -> Result<()> {
-        let object_id = ObjectId::parse_str(id.clone())?;
+        let object_id = ObjectId::parse_str(id)?;
         let filter = doc! {"_id":object_id};
         let update = doc! {
             "$set": {

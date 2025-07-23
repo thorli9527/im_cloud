@@ -1,11 +1,10 @@
 use crate::protocol::common::{GroupMemberEntity, GroupRoleType};
-use anyhow::{Result, anyhow};
-use bson::Document;
-use common::UserId;
+use anyhow::{anyhow, Result};
 use common::errors::AppError;
 use common::redis::redis_pool::RedisPoolTools;
 use common::repository_util::{BaseRepository, OrderType, PageResult, Repository};
 use common::util::date_util::now;
+use common::UserId;
 use deadpool_redis::redis;
 use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
@@ -60,11 +59,7 @@ impl GroupMemberService {
                     .await?;
 
                 if exists.is_some() {
-                    tracing::warn!(
-                        "⚠️ 群成员已存在，跳过添加: group_id={}, user_id={}",
-                        group_id,
-                        user_id
-                    );
+                    tracing::warn!("⚠️ 群成员已存在，跳过添加: group_id={}, user_id={}", group_id, user_id);
                     continue;
                 }
 
@@ -86,8 +81,7 @@ impl GroupMemberService {
                 for member in members {
                     let group_id = &member.group_id;
                     let user_id = &member.uid;
-                    let role =
-                        GroupRoleType::from_i32(member.role).unwrap_or(GroupRoleType::Member);
+                    let role = GroupRoleType::try_from(member.role).unwrap_or(GroupRoleType::Member);
 
                     let member_set_key = Self::key_group_members(group_id);
                     let admin_key = format!("group:admin:{}", group_id);
@@ -120,8 +114,7 @@ impl GroupMemberService {
     pub async fn remove(&self, group_id: &str, user_id: &UserId) -> Result<()> {
         // Step 1: 验证成员角色
         let member = self.find_by_group_id_and_uid(group_id, user_id).await?;
-        let role = GroupRoleType::from_i32(member.role)
-            .ok_or_else(|| anyhow!("group.member.role.invalid"))?;
+        let role = GroupRoleType::try_from(member.role)?;
 
         if role == GroupRoleType::Owner {
             return Err(anyhow!("group.owner.cannot.be.removed"));
@@ -141,40 +134,16 @@ impl GroupMemberService {
         let detail_key = group_member_key(group_id, user_id);
 
         // 批量执行 Redis 删除
-        let (removed_from_set, removed_from_admin, deleted_detail): (i32, i32, i32) = redis::pipe()
-            .atomic()
-            .cmd("SREM")
-            .arg(&member_key)
-            .arg(user_id)
-            .cmd("SREM")
-            .arg(&admin_key)
-            .arg(user_id)
-            .cmd("DEL")
-            .arg(&detail_key)
-            .query_async(&mut conn)
-            .await
-            .unwrap_or((0, 0, 0));
+        let (removed_from_set, removed_from_admin, deleted_detail): (i32, i32, i32) =
+            redis::pipe().atomic().cmd("SREM").arg(&member_key).arg(user_id).cmd("SREM").arg(&admin_key).arg(user_id).cmd("DEL").arg(&detail_key).query_async(&mut conn).await.unwrap_or((0, 0, 0));
 
-        tracing::info!(
-            "🗑️ 成员移除成功: group_id={}, user_id={}, redis[srem:{}+{} del:{}]",
-            group_id,
-            user_id,
-            removed_from_set,
-            removed_from_admin,
-            deleted_detail
-        );
+        tracing::info!("🗑️ 成员移除成功: group_id={}, user_id={}, redis[srem:{}+{} del:{}]", group_id, user_id, removed_from_set, removed_from_admin, deleted_detail);
 
         Ok(())
     }
 
     /// 从缓存优先读取分页成员列表，否则回源 MongoDB
-    pub async fn query_by_group_id(
-        &self,
-        group_id: &str,
-        page_size: i64,
-        order_type: Option<OrderType>,
-        sort_field: &str,
-    ) -> Result<PageResult<GroupMemberEntity>> {
+    pub async fn query_by_group_id(&self, group_id: &str, page_size: i64, order_type: Option<OrderType>, sort_field: &str) -> Result<PageResult<GroupMemberEntity>> {
         let set_key = Self::key_group_members(group_id); // Redis Set key
         let hash_key = group_member_list_key(group_id); // Redis Hash: group:member:list:{group_id}
         let mut conn = RedisPoolTools::get().get().await?;
@@ -237,10 +206,7 @@ impl GroupMemberService {
 
     /// 查询某个群组下所有成员（优先使用 Redis，未命中回源 MongoDB）
     /// 返回 Vec<GroupMemberEntity>
-    pub async fn get_all_members_by_group_id(
-        &self,
-        group_id: &str,
-    ) -> Result<Vec<GroupMemberEntity>> {
+    pub async fn get_all_members_by_group_id(&self, group_id: &str) -> Result<Vec<GroupMemberEntity>> {
         let set_key = Self::key_group_members(group_id);
         let mut conn = RedisPoolTools::get().get().await?;
 
@@ -259,11 +225,7 @@ impl GroupMemberService {
             }
 
             if !members.is_empty() {
-                tracing::info!(
-                    "✅ 从 Redis 加载群成员成功: group_id={}, count={}",
-                    group_id,
-                    members.len()
-                );
+                tracing::info!("✅ 从 Redis 加载群成员成功: group_id={}, count={}", group_id, members.len());
                 return Ok(members);
             }
         }
@@ -283,11 +245,7 @@ impl GroupMemberService {
                 let _: () = conn.set_ex(detail_key, json, 3600).await?;
             }
 
-            tracing::info!(
-                "📦 MongoDB加载并缓存群成员: group_id={}, count={}",
-                group_id,
-                results.len()
-            );
+            tracing::info!("📦 MongoDB加载并缓存群成员: group_id={}, count={}", group_id, results.len());
         }
 
         Ok(results)
@@ -311,8 +269,7 @@ impl GroupMemberService {
 
         // 删除详情缓存 key：group:member:{group_id}:{uid}
         if !uids.is_empty() {
-            let detail_keys: Vec<String> =
-                uids.iter().map(|uid| group_member_key(group_id, uid)).collect();
+            let detail_keys: Vec<String> = uids.iter().map(|uid| group_member_key(group_id, uid)).collect();
             let _: () = conn.del(detail_keys).await?;
         }
 
@@ -357,16 +314,10 @@ impl GroupMemberService {
         }
     }
 
-    pub async fn change_member_role(
-        &self,
-        group_id: &str,
-        member_id: &UserId,
-        new_role: &GroupRoleType,
-    ) -> Result<()> {
+    pub async fn change_member_role(&self, group_id: &str, member_id: &UserId, new_role: &GroupRoleType) -> Result<()> {
         // Step 1: 查询原角色
         let existing = self.find_by_group_id_and_uid(group_id, member_id).await?;
-        let old_role = GroupRoleType::from_i32(existing.role)
-            .ok_or_else(|| AppError::BizError("group.member.role.invalid".to_string()))?;
+        let old_role = GroupRoleType::try_from(existing.role)?;
 
         // Step 2: 拒绝任何涉及 Owner 的变更
         if old_role == GroupRoleType::Owner || new_role == &GroupRoleType::Owner {
@@ -375,12 +326,7 @@ impl GroupMemberService {
 
         // Step 3: 无需变更
         if old_role == *new_role {
-            tracing::debug!(
-                "ℹ️ 群成员角色无变更，跳过处理: group_id={}, user_id={}, role={:?}",
-                group_id,
-                member_id,
-                new_role
-            );
+            tracing::debug!("ℹ️ 群成员角色无变更，跳过处理: group_id={}, user_id={}, role={:?}", group_id, member_id, new_role);
             return Ok(());
         }
 
@@ -414,22 +360,12 @@ impl GroupMemberService {
             }
         }
 
-        tracing::info!(
-            "✅ 成员角色更新成功: group_id={}, user_id={}, {:?} → {:?}",
-            group_id,
-            member_id,
-            old_role,
-            new_role
-        );
+        tracing::info!("✅ 成员角色更新成功: group_id={}, user_id={}, {:?} → {:?}", group_id, member_id, old_role, new_role);
 
         Ok(())
     }
 
-    pub async fn find_by_group_id_and_uid(
-        &self,
-        group_id: &str,
-        uid: &UserId,
-    ) -> Result<GroupMemberEntity> {
+    pub async fn find_by_group_id_and_uid(&self, group_id: &str, uid: &UserId) -> Result<GroupMemberEntity> {
         let redis_key = group_member_key(group_id, uid);
         let mut conn = RedisPoolTools::get().get().await.map_err(|e| {
             tracing::error!("Redis连接失败: {}", e);

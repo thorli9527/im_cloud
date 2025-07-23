@@ -31,19 +31,11 @@ pub struct RegisterResponse {
 fn validate_target(value: &str) -> Result<(), ValidationError> {
     if value.contains('@') {
         // 假设为邮箱
-        if value.validate_email() {
-            Ok(())
-        } else {
-            Err(ValidationError::new("邮箱格式无效"))
-        }
+        if value.validate_email() { Ok(()) } else { Err(ValidationError::new("邮箱格式无效")) }
     } else {
         // 假设为手机号，匹配国际电话格式 +86188xxx 或 001-xxx
         let phone_re = regex::Regex::new(r"^\+?[0-9]{7,20}$").unwrap();
-        if phone_re.is_match(value) {
-            Ok(())
-        } else {
-            Err(ValidationError::new("国际电话格式错误"))
-        }
+        if phone_re.is_match(value) { Ok(()) } else { Err(ValidationError::new("国际电话格式错误")) }
     }
 }
 // 密码至少包含字母和数字
@@ -51,11 +43,7 @@ fn validate_password(pwd: &str) -> Result<(), ValidationError> {
     let has_letter = pwd.chars().any(|c| c.is_ascii_alphabetic());
     let has_digit = pwd.chars().any(|c| c.is_ascii_digit());
 
-    if has_letter && has_digit {
-        Ok(())
-    } else {
-        Err(ValidationError::new("密码必须包含字母和数字"))
-    }
+    if has_letter && has_digit { Ok(()) } else { Err(ValidationError::new("密码必须包含字母和数字")) }
 }
 fn validate_username(username: &str) -> Result<(), ValidationError> {
     return common::util::validate::validate_username(username);
@@ -87,9 +75,5 @@ pub struct RegisterVerifyRequest {
 fn validate_password_strength(pwd: &str) -> Result<(), ValidationError> {
     let has_letter = pwd.chars().any(|c| c.is_ascii_alphabetic());
     let has_digit = pwd.chars().any(|c| c.is_ascii_digit());
-    if has_letter && has_digit {
-        Ok(())
-    } else {
-        Err(ValidationError::new("密码必须包含字母和数字"))
-    }
+    if has_letter && has_digit { Ok(()) } else { Err(ValidationError::new("密码必须包含字母和数字")) }
 }

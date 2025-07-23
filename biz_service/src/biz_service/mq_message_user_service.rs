@@ -32,13 +32,7 @@ impl UserMessageService {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
     /// 构造并保存一条用户消息，返回完整 UserMessage
-    pub async fn send_user_message(
-        &self,
-        agent_id: &str,
-        from: &String,
-        to: &String,
-        segments: &Vec<Segment>,
-    ) -> Result<UserMsgEntity, AppError> {
+    pub async fn send_user_message(&self, from: &String, to: &String, segments: &Vec<Segment>) -> Result<UserMsgEntity, AppError> {
         let now_time = now();
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
@@ -75,14 +69,7 @@ impl UserMessageService {
         // 发送到 Kafka
         let app_config = AppConfig::get();
         let msg_type: ByteMessageType = ByteMessageType::UserMsgType;
-        kafka_service
-            .send_proto(
-                &msg_type,
-                &message,
-                &message.message_id,
-                &app_config.get_kafka().topic_single,
-            )
-            .await?;
+        kafka_service.send_proto(&msg_type, &message, &message.message_id, &app_config.get_kafka().topic_single).await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

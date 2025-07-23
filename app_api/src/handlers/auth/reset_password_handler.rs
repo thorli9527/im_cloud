@@ -1,15 +1,12 @@
-use crate::handlers::auth::reset_password_handler_dto::{
-    ResetPasswordResponse, ResetPasswordSendRequest, ResetPasswordVerifyRequest,
-};
-use crate::result::{result, result_error, result_error_code};
+use crate::handlers::auth::reset_password_handler_dto::{ResetPasswordResponse, ResetPasswordSendRequest, ResetPasswordVerifyRequest};
+use crate::result::{result, result_error_code};
 use actix_web::web::ServiceConfig;
-use actix_web::{post, web, HttpResponse, Responder};
-use biz_service::manager::user_manager_auth::{
-    ResetPasswordType, UserManagerAuth, UserManagerAuthOpt,
-};
+use actix_web::{HttpResponse, Responder, post, web};
+use biz_service::manager::user_manager_auth::{ResetPasswordType, UserManagerAuth, UserManagerAuthOpt};
 use common::errors::AppError;
 use tracing::log;
 use validator::Validate;
+
 pub fn configure(cfg: &mut ServiceConfig) {
     cfg.service(auth_reset_password_send_code);
     cfg.service(auth_reset_password_verify_code);
@@ -26,9 +23,7 @@ pub fn configure(cfg: &mut ServiceConfig) {
     )
 )]
 #[post("/auth/reset_password/send_code")]
-pub async fn auth_reset_password_send_code(
-    req: web::Json<ResetPasswordSendRequest>,
-) -> impl Responder {
+pub async fn auth_reset_password_send_code(req: web::Json<ResetPasswordSendRequest>) -> impl Responder {
     let reset_type = match req.reset_type {
         1 => ResetPasswordType::Phone,
         2 => ResetPasswordType::Email,
@@ -37,8 +32,7 @@ pub async fn auth_reset_password_send_code(
 
     let user_manager = UserManagerAuth::get();
     match user_manager.reset_password_build_code(&reset_type, &req.user_name).await {
-        Ok(_) => HttpResponse::Ok()
-            .json(ResetPasswordResponse { message: "验证码已发送".to_string() }),
+        Ok(_) => HttpResponse::Ok().json(ResetPasswordResponse { message: "验证码已发送".to_string() }),
         Err(e) => {
             log::error!("重置密码发送验证码失败: {}", e);
             HttpResponse::BadRequest().body("system.error")
@@ -57,9 +51,7 @@ pub async fn auth_reset_password_send_code(
     )
 )]
 #[post("/auth/reset_password/verify_code")]
-pub async fn auth_reset_password_verify_code(
-    req: web::Json<ResetPasswordVerifyRequest>,
-) -> Result<impl Responder, AppError> {
+pub async fn auth_reset_password_verify_code(req: web::Json<ResetPasswordVerifyRequest>) -> Result<impl Responder, AppError> {
     if let Err(e) = req.validate() {
         return Ok(result_error_code("validate.error", 400));
     }
@@ -71,10 +63,7 @@ pub async fn auth_reset_password_verify_code(
     };
 
     let user_manager = UserManagerAuth::get();
-    match user_manager
-        .reset_password_verify_code(&reset_type, &req.user_name, &req.code, &req.new_password)
-        .await
-    {
+    match user_manager.reset_password_verify_code(&reset_type, &req.user_name, &req.code, &req.new_password).await {
         Ok(_) => return Ok(result()),
         Err(e) => {
             log::error!("重置密码验证码失败: {}", e);

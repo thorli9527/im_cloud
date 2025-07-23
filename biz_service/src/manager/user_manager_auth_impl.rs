@@ -11,11 +11,11 @@ use async_trait::async_trait;
 use bson::doc;
 use common::config::AppConfig;
 use common::repository_util::Repository;
-use common::util::common_utils::{build_md5_with_key, build_snow_id, build_uid, build_uuid};
 use common::util::date_util::now;
 use common::UserId;
 use deadpool_redis::redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
+use common::util::common_utils::{build_md5_with_key, build_uid, build_uuid};
 
 #[derive(Serialize, Deserialize)]
 struct VerifySession {
