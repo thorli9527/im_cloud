@@ -1,4 +1,4 @@
 mod kafka;
-pub mod manager;
-mod scheduler;
+pub mod scheduler;
 pub mod service;
+pub mod socket;

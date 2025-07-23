@@ -1,4 +1,4 @@
-use crate::manager::socket_manager::{ConnectionId, SocketManager};
+use crate::socket::socket_manager::{ConnectionId, SocketManager};
 use biz_service::manager::user_manager_auth::{UserManagerAuth, UserManagerAuthOpt};
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::{DeviceType, LoginRespMsg};

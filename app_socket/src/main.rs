@@ -1,7 +1,7 @@
-use app_socket::manager;
-use app_socket::manager::socket_manager::{get_socket_manager, SocketManager};
-use app_socket::manager::socket_server::start_server;
+use app_socket::scheduler::job_manager;
 use app_socket::service::rpc::arb_socket_server_impl::ArbSocketRpcServiceImpl;
+use app_socket::socket::socket_manager::{get_socket_manager, SocketManager};
+use app_socket::socket::socket_server::start_server;
 use biz_service::biz_service::kafka_socket_service::KafkaService;
 use common::config::AppConfig;
 use std::sync::Arc;
@@ -21,7 +21,7 @@ async fn main() -> anyhow::Result<()> {
     //初始化业务
     biz_service::manager::init();
     let manager: Arc<SocketManager> = get_socket_manager();
-    tokio::spawn(manager::job_manager::start_heartbeat_cleaner(manager.clone(), 30));
+    tokio::spawn(job_manager::start_heartbeat_cleaner(manager.clone(), 30));
 
     //启动 group rpc 服务
     ArbSocketRpcServiceImpl::start().await;

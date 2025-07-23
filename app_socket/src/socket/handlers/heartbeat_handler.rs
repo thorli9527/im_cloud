@@ -1,7 +1,7 @@
-use crate::manager::socket_manager::get_socket_manager;
 use common::util::date_util::now;
 use std::sync::atomic::Ordering;
 use tokio::time::{self, Duration, Interval};
+use crate::socket::socket_manager::get_socket_manager;
 
 /// 启动全局统一心跳检测任务
 pub fn start_global_heartbeat_checker() {

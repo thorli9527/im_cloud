@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::manager::socket_error::SendError;
+use crate::socket::socket_error::SendError;
 use anyhow::Result;
 use biz_service::protocol::arb::rpc_arb_models::NodeInfo;
 use biz_service::protocol::common::ByteMessageType;
@@ -58,11 +58,7 @@ pub struct SocketManager {
 
 impl SocketManager {
     pub fn new() -> Self {
-        Self {
-            connections: DashMap::new(),
-            user_index: DashMap::new(),
-            group_members: DashMap::new(),
-        }
+        Self { connections: DashMap::new(), user_index: DashMap::new(), group_members: DashMap::new() }
     }
 
     /// 新增连接
@@ -109,25 +105,14 @@ impl SocketManager {
         conn.sender.send(bytes).map_err(|_| SendError::ChannelClosed)
     }
     ///发送消息到指定连接（使用 ByteMessageType 前缀）
-    pub fn send_to_connection_proto<M: Message>(
-        &self,
-        id: &ConnectionId,
-        msg_type: &ByteMessageType,
-        msg: &M,
-    ) -> Result<(), SendError> {
+    pub fn send_to_connection_proto<M: Message>(&self, id: &ConnectionId, msg_type: &ByteMessageType, msg: &M) -> Result<(), SendError> {
         let mut buf = Vec::with_capacity(128);
         buf.push(*msg_type as u8); // 消息类型前缀
         msg.encode(&mut buf).map_err(|_| SendError::EncodeError)?;
         self.send_to_connection(id, Bytes::from(buf))
     }
 
-    pub fn send_to_user_proto<M: Message>(
-        &self,
-        user_id: &str,
-        msg_type: &ByteMessageType,
-        msg: &M,
-        device_filter: Option<DeviceType>,
-    ) -> Result<(), SendError> {
+    pub fn send_to_user_proto<M: Message>(&self, user_id: &str, msg_type: &ByteMessageType, msg: &M, device_filter: Option<DeviceType>) -> Result<(), SendError> {
         let mut buf = Vec::with_capacity(128);
         buf.push(*msg_type as u8);
         msg.encode(&mut buf).map_err(|_| SendError::EncodeError)?;
@@ -135,21 +120,11 @@ impl SocketManager {
     }
     /// 获取用户所有连接
     pub fn get_connections_by_user(&self, user_id: &str) -> Vec<ConnectionInfo> {
-        self.user_index
-            .get(user_id)
-            .map(|set| {
-                set.iter().filter_map(|id| self.connections.get(id).map(|c| c.clone())).collect()
-            })
-            .unwrap_or_default()
+        self.user_index.get(user_id).map(|set| set.iter().filter_map(|id| self.connections.get(id).map(|c| c.clone())).collect()).unwrap_or_default()
     }
 
     /// 向用户发送消息（支持设备类型过滤）
-    pub fn send_to_user(
-        &self,
-        user_id: &str,
-        bytes: Bytes,
-        device_filter: Option<DeviceType>,
-    ) -> Result<(), SendError> {
+    pub fn send_to_user(&self, user_id: &str, bytes: Bytes, device_filter: Option<DeviceType>) -> Result<(), SendError> {
         let mut sent = false;
 
         if let Some(conn_ids) = self.user_index.get(user_id) {
@@ -211,11 +186,7 @@ impl SocketManager {
 
             match socket_list.get(idx as usize) {
                 Some(target_node) if target_node.socket_addr.as_ref().unwrap() != &socket_addr => {
-                    log::info!(
-                        "🚧 连接不属于本节点，迁移中: conn_id={:?}, 分配节点={}",
-                        conn_id.0,
-                        target_node.socket_addr.as_ref().unwrap(),
-                    );
+                    log::info!("🚧 连接不属于本节点，迁移中: conn_id={:?}, 分配节点={}", conn_id.0, target_node.socket_addr.as_ref().unwrap(),);
 
                     // 可使用 RECONNECT 消息结构替代裸字符串
                     let _ = conn_info.sender.send(Bytes::from("RECONNECT"));
