@@ -1,9 +1,7 @@
 use crate::biz_service::client_service::ClientService;
 use crate::biz_service::kafka_socket_service::KafkaService;
 use crate::manager::user_manager::{UserManager, UserManagerOpt};
-use crate::manager::user_manager_auth::{
-    ResetPasswordType, UserManagerAuth, UserManagerAuthOpt, UserRegType,
-};
+use crate::manager::user_manager_auth::{ResetPasswordType, UserManagerAuth, UserManagerAuthOpt, UserRegType};
 use crate::protocol::common::{ByteMessageType, ClientEntity};
 use crate::protocol::msg::auth::{DeviceType, LoginRespMsg, LogoutRespMsg};
 use anyhow::anyhow;
@@ -11,11 +9,11 @@ use async_trait::async_trait;
 use bson::doc;
 use common::config::AppConfig;
 use common::repository_util::Repository;
+use common::util::common_utils::{build_md5_with_key, build_uid, build_uuid};
 use common::util::date_util::now;
 use common::UserId;
 use deadpool_redis::redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
-use common::util::common_utils::{build_md5_with_key, build_uid, build_uuid};
 
 #[derive(Serialize, Deserialize)]
 struct VerifySession {
@@ -26,13 +24,7 @@ struct VerifySession {
 }
 #[async_trait]
 impl UserManagerAuthOpt for UserManagerAuth {
-    async fn login(
-        &self,
-        message_id: &u64,
-        user_name: &str,
-        password: &str,
-        device_type: &DeviceType,
-    ) -> anyhow::Result<String> {
+    async fn login(&self, message_id: &u64, user_name: &str, password: &str, device_type: &DeviceType) -> anyhow::Result<String> {
         let user_manager = UserManager::get();
         let client_info = user_manager.get_user_info_by_name(user_name).await?;
 
@@ -53,28 +45,12 @@ impl UserManagerAuthOpt for UserManagerAuth {
 
         let kafka_service = KafkaService::get();
         // 发送登录响应消息
-        let login_msg = &LoginRespMsg {
-            message_id: message_id.clone(),
-            token: token.clone(),
-            expires_at: now() as u64,
-        };
-        kafka_service
-            .send_proto(
-                &ByteMessageType::LoginRespMsgType,
-                login_msg,
-                &login_msg.message_id,
-                &AppConfig::get().get_kafka().topic_group,
-            )
-            .await?;
+        let login_msg = &LoginRespMsg { message_id: message_id.clone(), token: token.clone(), expires_at: now() as u64 };
+        kafka_service.send_proto(&ByteMessageType::LoginRespMsgType, login_msg, &login_msg.message_id, &AppConfig::get().get_kafka().topic_group).await?;
         Ok(token)
     }
 
-    async fn logout(
-        &self,
-        message_id: &u64,
-        uid: &UserId,
-        device_type: &DeviceType,
-    ) -> anyhow::Result<()> {
+    async fn logout(&self, message_id: &u64, uid: &UserId, device_type: &DeviceType) -> anyhow::Result<()> {
         let user_manager = UserManager::get();
         user_manager.offline(uid, device_type).await?;
         let kafka_service = KafkaService::get();
@@ -84,24 +60,11 @@ impl UserManagerAuthOpt for UserManagerAuth {
         }
         // 发送登出响应消息
         let log_out_msg = LogoutRespMsg { message_id: message_id.clone() };
-        kafka_service
-            .send_proto(
-                &ByteMessageType::LogoutRespMsgType,
-                &log_out_msg,
-                &log_out_msg.message_id,
-                &AppConfig::get().get_kafka().topic_group,
-            )
-            .await?;
+        kafka_service.send_proto(&ByteMessageType::LogoutRespMsgType, &log_out_msg, &log_out_msg.message_id, &AppConfig::get().get_kafka().topic_group).await?;
         Ok(())
     }
 
-    async fn register(
-        &self,
-        user_name: &str,
-        password: &str,
-        reg_type: &UserRegType,
-        target: &str,
-    ) -> anyhow::Result<String> {
+    async fn register(&self, user_name: &str, password: &str, reg_type: &UserRegType, target: &str) -> anyhow::Result<String> {
         let client_service = ClientService::get();
         let existed = client_service.dao.find_one(doc! { "name": user_name }).await?.is_some();
 
@@ -111,35 +74,23 @@ impl UserManagerAuthOpt for UserManagerAuth {
 
         // 生成验证码
         let code = format!("{:06}", rand::random::<u32>() % 1000000);
-        let uuid = build_uuid();
+        let reg_id = build_uuid();
 
-        let redis_key = format!("register:verify:uuid:{}", uuid);
-        let session = VerifySession {
-            user_name: user_name.to_string(),
-            code: code.clone(),
-            reg_type: *reg_type as u8,
-            target: target.to_string(),
-        };
+        let redis_key = format!("register:verify:uuid:{}", reg_id);
+        let session = VerifySession { user_name: user_name.to_string(), code: code.clone(), reg_type: *reg_type as u8, target: target.to_string() };
         let json_data = serde_json::to_string(&session)?;
 
         let mut conn = UserManager::get().pool.get().await?;
         conn.set_ex::<_, _, ()>(&redis_key, json_data, 300).await?;
 
         // 实际生产应调用短信/邮箱服务
-        log::info!("[注册验证码] 发送到 {}: {}，uuid={}", target, code, uuid);
+        log::info!("[注册验证码] 发送到 {}: {}，uuid={}", target, code, reg_id);
 
         // 返回 uuid 给前端
-        Ok(uuid)
+        Ok(reg_id)
     }
 
-    async fn register_verify_code(
-        &self,
-        user_name: &str,
-        password: &str,
-        reg_id: &str,
-        code: &str,
-        reg_type: &UserRegType,
-    ) -> anyhow::Result<String> {
+    async fn register_verify_code(&self, user_name: &str, password: &str, reg_id: &str, code: &str, reg_type: &UserRegType) -> anyhow::Result<String> {
         // 构造 Redis Key
         let redis_key = format!("register:verify:uuid:{}", reg_id);
         let mut conn = UserManager::get().pool.get().await?;
@@ -172,8 +123,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
 
         // Step 3: 创建用户
         let uid = build_uid();
-        let hashed_pwd =
-            build_md5_with_key(password, &AppConfig::get().get_sys().md5_key.clone().unwrap());
+        let hashed_pwd = build_md5_with_key(password, &AppConfig::get().get_sys().md5_key.clone().unwrap());
         let now = now() as u64;
 
         let client = ClientEntity {
@@ -181,16 +131,8 @@ impl UserManagerAuthOpt for UserManagerAuth {
             uid: uid.clone(),
             name: user_name.to_string(),
             password: hashed_pwd,
-            email: if matches!(reg_type, UserRegType::Email) {
-                Some(session.target.clone())
-            } else {
-                None
-            },
-            phone: if matches!(reg_type, UserRegType::Phone) {
-                Some(session.target.clone())
-            } else {
-                None
-            },
+            email: if matches!(reg_type, UserRegType::Email) { Some(session.target.clone()) } else { None },
+            phone: if matches!(reg_type, UserRegType::Phone) { Some(session.target.clone()) } else { None },
             language: None,
             avatar: "".to_string(),
             allow_add_friend: 0,
@@ -210,35 +152,23 @@ impl UserManagerAuthOpt for UserManagerAuth {
         Ok(uid)
     }
 
-    async fn change_password(
-        &self,
-        token: &str,
-        old_password: &str,
-        new_password: &str,
-    ) -> anyhow::Result<()> {
+    async fn change_password(&self, token: &str, old_password: &str, new_password: &str) -> anyhow::Result<()> {
         let user_manager = UserManager::get();
         let dto = user_manager.get_client_token(token).await?;
-        let client =
-            user_manager.get_user_info(&dto.uid).await?.ok_or_else(|| anyhow!("用户不存在"))?;
+        let client = user_manager.get_user_info(&dto.uid).await?.ok_or_else(|| anyhow!("用户不存在"))?;
         let app_config = AppConfig::get();
-        let hashed_old =
-            build_md5_with_key(old_password, &app_config.get_sys().md5_key.clone().unwrap());
+        let hashed_old = build_md5_with_key(old_password, &app_config.get_sys().md5_key.clone().unwrap());
 
         if client.password != hashed_old {
             return Err(anyhow!("原密码错误"));
         }
 
-        let new_pwd =
-            build_md5_with_key(new_password, &app_config.get_sys().md5_key.clone().unwrap());
+        let new_pwd = build_md5_with_key(new_password, &app_config.get_sys().md5_key.clone().unwrap());
         ClientService::get().dao.up_property(&client.id, "password", new_pwd).await?;
         Ok(())
     }
 
-    async fn reset_password_build_code(
-        &self,
-        reset_type: &ResetPasswordType,
-        user_name: &str,
-    ) -> anyhow::Result<()> {
+    async fn reset_password_build_code(&self, reset_type: &ResetPasswordType, user_name: &str) -> anyhow::Result<()> {
         let redis_key = format!("reset:verify:{}:{}", *reset_type as u8, user_name);
         let code = format!("{:06}", rand::random::<u32>() % 1000000);
         let mut conn = UserManager::get().pool.get().await?;
@@ -247,13 +177,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
         Ok(())
     }
 
-    async fn reset_password_verify_code(
-        &self,
-        reset_type: &ResetPasswordType,
-        user_name: &str,
-        code: &str,
-        new_password: &str,
-    ) -> anyhow::Result<()> {
+    async fn reset_password_verify_code(&self, reset_type: &ResetPasswordType, user_name: &str, code: &str, new_password: &str) -> anyhow::Result<()> {
         let redis_key = format!("reset:verify:{}:{}", *reset_type as u8, user_name);
         let mut conn = UserManager::get().pool.get().await?;
         let cached: Option<String> = conn.get(&redis_key).await?;
@@ -267,8 +191,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
             doc! {"email": user_name}
         };
 
-        let new_pwd =
-            build_md5_with_key(new_password, &AppConfig::get().get_sys().md5_key.clone().unwrap());
+        let new_pwd = build_md5_with_key(new_password, &AppConfig::get().get_sys().md5_key.clone().unwrap());
         let client_service = ClientService::get();
         let client_opt = client_service.dao.find_one(filter).await?;
         if let Some(client) = client_opt {

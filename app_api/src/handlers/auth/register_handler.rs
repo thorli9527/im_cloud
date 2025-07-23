@@ -1,7 +1,7 @@
 use crate::handlers::auth::register_handler_dto::{RegisterRequest, RegisterResponse, RegisterVerifyRequest};
 use crate::result::ApiResponse;
 use actix_web::web::ServiceConfig;
-use actix_web::{Responder, post, web};
+use actix_web::{post, web, Responder};
 use biz_service::manager::user_manager_auth::{UserManagerAuth, UserManagerAuthOpt, UserRegType};
 use common::errors::AppError;
 use serde_json::json;
@@ -40,9 +40,9 @@ pub async fn auth_register(payload: web::Json<RegisterRequest>) -> Result<impl R
     let user_manager = UserManagerAuth::get();
 
     match user_manager.register(&payload.username, &payload.password, &reg_type, &payload.target).await {
-        Ok(uid) => {
+        Ok(reg_id) => {
             let body = json!({
-                "uid": uid.to_string(),
+                "regId": reg_id.to_string(),
             });
             return Ok(ApiResponse::json(body));
         }
