@@ -3,9 +3,8 @@ use arc_swap::ArcSwap;
 use biz_service::protocol::arb::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
 use biz_service::protocol::arb::rpc_arb_models::ShardState;
 use biz_service::protocol::msg::group::{
-    ChangeGroupMsg, ChangeMemberRoleMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg,
-    HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg,
-    RequestJoinGroupMsg, TransferOwnershipMsg, UpdateMemberProfileMsg,
+    ChangeGroupMsg, ChangeMemberRoleMsg, DestroyGroupMsg, ExitGroupMsg, HandleInviteMsg, HandleJoinRequestMsg, InviteMembersMsg, MemberOnlineMsg, MuteMemberMsg, RemoveMembersMsg, RequestJoinGroupMsg,
+    TransferOwnershipMsg, UpdateMemberProfileMsg,
 };
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::hash_index;
@@ -30,7 +29,6 @@ pub struct GroupMembersPage {
 
 #[derive(Debug, Default, Clone)]
 pub struct ShardInfo {
-    pub version: u64,
     pub state: ShardState,
     pub last_update_time: u64,
     pub last_heartbeat: u64,
@@ -68,12 +66,7 @@ pub trait ShardManagerOpt: Send + Sync {
     /// 获取某个群组的所有成员 ID 列表
     fn get_users_for_group(&self, group_id: &GroupId) -> Option<Vec<UserId>>;
     /// 获取群组成员分页列表
-    fn get_group_members_page(
-        &self,
-        group_id: &GroupId,
-        offset: usize,
-        limit: usize,
-    ) -> Option<Vec<UserId>>;
+    fn get_group_members_page(&self, group_id: &GroupId, offset: usize, limit: usize) -> Option<Vec<UserId>>;
 
     fn get_group_member_total_count(&self, group_id: &GroupId) -> Option<usize>;
     /// 标记用户在线
@@ -175,11 +168,7 @@ impl ShardManager {
     pub fn get_node_addr(&self) -> &str {
         self.shard_config.shard_address.as_deref().expect("shard_address must be set")
     }
-    pub async fn init_grpc_clients(
-        &self,
-        endpoints: Vec<String>,
-    ) -> std::result::Result<HashMap<i32, ArbGroupServiceClient<Channel>>, Box<dyn std::error::Error>>
-    {
+    pub async fn init_grpc_clients(&self, endpoints: Vec<String>) -> std::result::Result<HashMap<i32, ArbGroupServiceClient<Channel>>, Box<dyn std::error::Error>> {
         let mut clients = HashMap::new();
         let size = endpoints.len();
         for endpoint in endpoints {

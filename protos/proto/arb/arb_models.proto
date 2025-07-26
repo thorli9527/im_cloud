@@ -19,8 +19,8 @@ enum ShardState {
 }
 // 节点类型
 enum NodeType{
-  GROUP_NODE= 0;
-  SOCKET_NODE=1;
+  GROUP_NODE = 0;
+  SOCKET_NODE = 1;
 }
 
 // =====================
@@ -30,8 +30,7 @@ enum NodeType{
 message BaseRequest {
   string node_addr = 1;   // 节点地址（如 192.168.1.10:9000）
   NodeType node_type = 2; // 节点类型
-  optional string kafka_addr = 3; // Kafka 地址（可选，用于消息传递）
-  optional string socket_addr = 4; // Socket 地址（可选，用于实时通信）
+  optional string socket_addr = 3; // Socket 地址（可选，用于实时通信）
 }
 
 // =====================
@@ -52,7 +51,7 @@ message NodeInfo {
   uint64 version = 2;               // 当前版本号（用于 CAS 检查）
   ShardState state = 3;             // 当前状态
   uint64 last_update_time = 4;      // 最后更新时间戳（毫秒）
-  int32 total= 6;                   // 分片总数
+  int32 total = 6;                   // 分片总数
   NodeType node_type = 7;           // 节点类型
   optional string kafka_addr = 8;   // Kafka 地址（可选，用于消息传递）
   optional string socket_addr = 9;  // Socket 地址（可选，用于实时通信）
@@ -67,11 +66,11 @@ enum SyncDataType {
   GROUP_MEMBER_UPDATE = 5;
 }
 message MemberRef {
-  string uid = 1;                        // 用户ID
-  string group_id = 2;                   // 群组ID
+  string id = 1;                        // 用户ID
+  common.GroupRoleType role = 3;         // 成员角色
 }
 message SyncListGroup {
-  repeated string groups = 1;            // 群组ID列表
+  string group_id = 1;            // 群组ID列表
   repeated MemberRef members = 2;        // 成员列表
   repeated MemberRef on_line_member = 3; // 在线成员
 }

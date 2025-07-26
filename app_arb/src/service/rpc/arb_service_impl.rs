@@ -1,17 +1,14 @@
 use crate::protocol::common::CommonResp;
-use crate::protocol::rpc_arb_group::UpdateVersionReq;
 use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use crate::protocol::rpc_arb_models::{
-    BaseRequest, ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, ShardState,
-    UpdateShardStateRequest,
-};
+use crate::protocol::rpc_arb_group::UpdateVersionReq;
+use crate::protocol::rpc_arb_models::{BaseRequest, ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, ShardState, UpdateShardStateRequest};
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcService;
 use crate::protocol::rpc_arb_socket::arb_socket_service_client::ArbSocketServiceClient;
 use common::util::date_util::now;
 use dashmap::DashMap;
 use std::clone;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::transport::Channel;
 use tonic::{Request, Response, Status};
@@ -29,10 +26,7 @@ pub struct ArbiterServiceImpl {
 }
 
 impl ArbiterServiceImpl {
-    pub async fn init_socket_clients(
-        &self,
-    ) -> Result<Vec<ArbSocketServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>>
-    {
+    pub async fn init_socket_clients(&self) -> Result<Vec<ArbSocketServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
         let mut endpoints = Vec::new();
         for ref node in self.socket_nodes.iter() {
             let node_info = node.value();
@@ -40,16 +34,13 @@ impl ArbiterServiceImpl {
         }
         let mut clients = Vec::new();
         for endpoint in endpoints {
-            let channel =
-                Channel::from_shared(format!("http://{}", endpoint.clone()))?.connect().await?;
+            let channel = Channel::from_shared(format!("http://{}", endpoint.clone()))?.connect().await?;
             let client = ArbSocketServiceClient::new(channel);
             clients.push(client);
         }
         Ok(clients)
     }
-    pub async fn init_shard_clients(
-        &self,
-    ) -> Result<Vec<ArbGroupServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn init_shard_clients(&self) -> Result<Vec<ArbGroupServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
         let mut endpoints = Vec::new();
         for ref node in self.shard_nodes.iter() {
             let node_info = node.value();
@@ -57,8 +48,7 @@ impl ArbiterServiceImpl {
         }
         let mut clients = Vec::new();
         for endpoint in endpoints {
-            let channel =
-                Channel::from_shared(format!("http://{}", endpoint.clone()))?.connect().await?;
+            let channel = Channel::from_shared(format!("http://{}", endpoint.clone()))?.connect().await?;
             let client = ArbGroupServiceClient::new(channel);
             clients.push(client);
         }
@@ -70,10 +60,7 @@ impl ArbiterServiceImpl {
 impl ArbServerRpcService for ArbiterServiceImpl {
     // === 分片管理 ===
 
-    async fn update_shard_state(
-        &self,
-        request: Request<UpdateShardStateRequest>,
-    ) -> Result<Response<CommonResp>, Status> {
+    async fn update_shard_state(&self, request: Request<UpdateShardStateRequest>) -> Result<Response<CommonResp>, Status> {
         let req = request.into_inner();
         let current_node_addr = req.node_addr.clone();
         let new_state = req.new_state;
@@ -84,10 +71,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                 entry.state = match ShardState::from_i32(new_state) {
                     Some(valid_state) => valid_state as i32,
                     None => {
-                        return Err(Status::invalid_argument(format!(
-                            "Invalid ShardState: {}",
-                            new_state
-                        )));
+                        return Err(Status::invalid_argument(format!("Invalid ShardState: {}", new_state)));
                     }
                 };
                 entry.version += 1;
@@ -98,19 +82,13 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                     // 如果新状态是 Normal，检查所有 shard 状态
                     if req.new_state == ShardState::Normal as i32 {
                         // 统计是否所有 shard 节点状态为 Normal
-                        let all_normal = self
-                            .shard_nodes
-                            .iter()
-                            .all(|entry| entry.value().state == ShardState::Normal as i32);
+                        let all_normal = self.shard_nodes.iter().all(|entry| entry.value().state == ShardState::Normal as i32);
 
                         if all_normal {
                             // 升级 arb_version
                             let new_version = self.arb_version.fetch_add(1, Ordering::SeqCst) + 1;
 
-                            log::info!(
-                                "[ArbVersion] All shard nodes are Normal. Upgrading arb_version to {}",
-                                new_version
-                            );
+                            log::info!("[ArbVersion] All shard nodes are Normal. Upgrading arb_version to {}", new_version);
 
                             // 通知所有 socket 节点刷新 shard 列表
                             if let Ok(mut socket_clients) = self.init_socket_clients().await {
@@ -119,20 +97,14 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                                 }
                             }
                         } else {
-                            log::info!(
-                                "[ArbVersion] Node {} is Normal, but not all are Normal yet.",
-                                current_node_addr
-                            );
+                            log::info!("[ArbVersion] Node {} is Normal, but not all are Normal yet.", current_node_addr);
                         }
                     }
                 }
 
                 Ok(Response::new(CommonResp {
                     success: true,
-                    message: format!(
-                        "Updated node {} to state {:?}, version = {}",
-                        current_node_addr, entry.state, entry.version
-                    ),
+                    message: format!("Updated node {} to state {:?}, version = {}", current_node_addr, entry.state, entry.version),
                 }))
             }
 
@@ -141,10 +113,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
     }
 
     /// 注册节点：如果 node_addr 已存在，则返回失败；否则分配唯一 index 并插入
-    async fn register_node(
-        &self,
-        request: Request<BaseRequest>,
-    ) -> Result<Response<NodeInfo>, Status> {
+    async fn register_node(&self, request: Request<BaseRequest>) -> Result<Response<NodeInfo>, Status> {
         let req = request.into_inner();
         let node_addr = req.node_addr;
         if req.node_type == NodeType::GroupNode as i32 {
@@ -157,7 +126,6 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                     state: node_info.state,
                     node_type: req.node_type,
                     last_update_time: node_info.last_update_time,
-                    kafka_addr: req.kafka_addr,
                     socket_addr: None,
                 }));
             }
@@ -178,8 +146,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
 
             for (mut item) in self.shard_nodes.iter_mut() {
                 item.state = ShardState::Preparing as i32;
-                let mut client_list =
-                    self.init_shard_clients().await.expect("init shard clients error");
+                let mut client_list = self.init_shard_clients().await.expect("init shard clients error");
                 for mut client in client_list.iter_mut() {
                     let request = Request::new(UpdateVersionReq {
                         node_addr: item.node_addr.clone(),
@@ -235,30 +202,26 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             return Ok(Response::new(entry));
         }
     }
-    async fn list_all_nodes(
-        &self,
-        request: Request<QueryNodeReq>,
-    ) -> Result<Response<ListAllNodesResponse>, Status> {
+    async fn list_all_nodes(&self, request: Request<QueryNodeReq>) -> Result<Response<ListAllNodesResponse>, Status> {
         let req = request.into_inner();
         if req.node_type == NodeType::GroupNode as i32 {
-            let nodes: Vec<NodeInfo> =
-                self.shard_nodes.iter().map(|entry| entry.value().clone()).collect();
+            let nodes: Vec<NodeInfo> = self.shard_nodes.iter().map(|entry| entry.value().clone()).collect();
 
             log::info!("获取所有节点信息");
-            let response = ListAllNodesResponse { nodes };
+            let response = ListAllNodesResponse {
+                nodes,
+            };
             return Ok(Response::new(response));
         }
-        let nodes: Vec<NodeInfo> =
-            self.socket_nodes.iter().map(|entry| entry.value().clone()).collect();
+        let nodes: Vec<NodeInfo> = self.socket_nodes.iter().map(|entry| entry.value().clone()).collect();
         log::info!("获取所有节点信息");
-        let response = ListAllNodesResponse { nodes };
+        let response = ListAllNodesResponse {
+            nodes,
+        };
         return Ok(Response::new(response));
     }
 
-    async fn graceful_leave(
-        &self,
-        request: Request<BaseRequest>,
-    ) -> Result<Response<CommonResp>, Status> {
+    async fn graceful_leave(&self, request: Request<BaseRequest>) -> Result<Response<CommonResp>, Status> {
         let req = request.into_inner();
         let node_addr = req.node_addr;
 
@@ -284,10 +247,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         }
     }
 
-    async fn heartbeat(
-        &self,
-        request: Request<BaseRequest>,
-    ) -> Result<Response<CommonResp>, Status> {
+    async fn heartbeat(&self, request: Request<BaseRequest>) -> Result<Response<CommonResp>, Status> {
         match self.shard_nodes.get_mut(&request.get_ref().node_addr) {
             Some(mut entry) => {
                 let value: &mut NodeInfo = entry.value_mut();
@@ -295,7 +255,10 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                 value.last_update_time = now() as u64;
                 //打印日志
                 log::info!("心跳: {}", &request.get_ref().node_addr);
-                Ok(Response::new(CommonResp { success: true, message: "".to_string() }))
+                Ok(Response::new(CommonResp {
+                    success: true,
+                    message: "".to_string(),
+                }))
             }
             None => Ok(Response::new(CommonResp {
                 success: false,

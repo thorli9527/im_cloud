@@ -13,11 +13,8 @@ pub struct BaseRequest {
     /// 节点类型
     #[prost(enumeration = "NodeType", tag = "2")]
     pub node_type: i32,
-    /// Kafka 地址（可选，用于消息传递）
-    #[prost(string, optional, tag = "3")]
-    pub kafka_addr: ::core::option::Option<::prost::alloc::string::String>,
     /// Socket 地址（可选，用于实时通信）
-    #[prost(string, optional, tag = "4")]
+    #[prost(string, optional, tag = "3")]
     pub socket_addr: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// =====================
@@ -70,18 +67,19 @@ pub struct NodeInfo {
 pub struct MemberRef {
     /// 用户ID
     #[prost(string, tag = "1")]
-    pub uid: ::prost::alloc::string::String,
-    /// 群组ID
-    #[prost(string, tag = "2")]
-    pub group_id: ::prost::alloc::string::String,
+    pub id: ::prost::alloc::string::String,
+    /// 成员角色
+    #[prost(enumeration = "super::common::GroupRoleType", tag = "3")]
+    pub role: i32,
 }
+
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SyncListGroup {
     /// 群组ID列表
-    #[prost(string, repeated, tag = "1")]
-    pub groups: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(string, tag = "1")]
+    pub group_id: ::prost::alloc::string::String,
     /// 成员列表
     #[prost(message, repeated, tag = "2")]
     pub members: ::prost::alloc::vec::Vec<MemberRef>,
