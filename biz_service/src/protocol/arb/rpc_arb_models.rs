@@ -72,7 +72,6 @@ pub struct MemberRef {
     #[prost(enumeration = "super::common::GroupRoleType", tag = "3")]
     pub role: i32,
 }
-
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -84,8 +83,8 @@ pub struct SyncListGroup {
     #[prost(message, repeated, tag = "2")]
     pub members: ::prost::alloc::vec::Vec<MemberRef>,
     /// 在线成员
-    #[prost(message, repeated, tag = "3")]
-    pub on_line_member: ::prost::alloc::vec::Vec<MemberRef>,
+    #[prost(string, repeated, tag = "3")]
+    pub on_line_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// ============================
 /// 请求结构：更新分片状态

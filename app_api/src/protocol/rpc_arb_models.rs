@@ -83,8 +83,8 @@ pub struct SyncListGroup {
     #[prost(message, repeated, tag = "2")]
     pub members: ::prost::alloc::vec::Vec<MemberRef>,
     /// 在线成员
-    #[prost(message, repeated, tag = "3")]
-    pub on_line_member: ::prost::alloc::vec::Vec<MemberRef>,
+    #[prost(string, repeated, tag = "3")]
+    pub on_line_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// ============================
 /// 请求结构：更新分片状态

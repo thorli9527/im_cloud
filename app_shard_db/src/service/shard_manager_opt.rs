@@ -15,7 +15,7 @@ use mongodb::options::FindOptions;
 
 #[async_trait]
 impl ShardManagerOpt for ShardManager {
-    async fn load_from(&self) -> anyhow::Result<()> {
+    async fn load_from_data(&self) -> anyhow::Result<()> {
         let group_service = GroupService::get();
         let group_member_service = GroupMemberService::get();
         let collection = &group_service.dao.collection;
@@ -90,14 +90,14 @@ impl ShardManagerOpt for ShardManager {
 
     /// 从指定群组中移除某个用户（自动计算分片）
     fn remove_member(&self, group_id: &GroupId, uid: &UserId) -> anyhow::Result<()> {
-        self.current.load().shard_map.remove_item(group_id, uid);
+        self.current.load().shard_map.remove(group_id, uid);
         Ok(())
     }
 
     /// 获取某个群组的所有成员 ID 列表
     fn get_member(&self, group_id: &GroupId) -> Result<Vec<MemberRef>> {
-        let member_list = self.current.load().shard_map.get_all_items(group_id);
-        return Ok(member_list.unwrap());
+        let member_list = self.current.load().shard_map.get_member_by_key(group_id);
+        return Ok(member_list);
     }
 
     /// 获取群组成员分页列表
@@ -106,7 +106,7 @@ impl ShardManagerOpt for ShardManager {
         return Ok(result);
     }
     fn get_member_count(&self, group_id: &GroupId) -> Result<usize> {
-        let count = self.current.load().shard_map.get_item_count(group_id);
+        let count = self.current.load().shard_map.get_member_count_by_key(group_id);
         return Ok(count as usize);
     }
     fn online(&self, group_id: &GroupId, uid: &UserId) -> Result<()> {
@@ -115,25 +115,10 @@ impl ShardManagerOpt for ShardManager {
     }
 
     fn offline(&self, group_id: &GroupId, user_id: &UserId) {
-        let shard_index = self.hash_group_id(&group_id) as i32;
-        let shard_key = format!("shard_{}", shard_index);
-
-        if let Some(group_map) = self.current.load().group_online_member_map.get(&shard_key) {
-            if let Some(user_set) = group_map.get(group_id) {
-                user_set.remove(user_id);
-
-                if user_set.is_empty() {
-                    group_map.remove(group_id);
-                }
-
-                if group_map.is_empty() {
-                    self.current.load().group_online_member_map.remove(&shard_key);
-                }
-            }
-        }
+        self.current.load().shard_map.set_online(group_id, user_id, false);
     }
     fn get_on_line_member(&self, group_id: &GroupId) -> Vec<UserId> {
-        self.current.load().
+        self.current.load().shard_map.get_online_ids(group_id)
     }
 
     async fn get_admin_member(&self, group_id: &GroupId) -> anyhow::Result<Option<Vec<UserId>>> {

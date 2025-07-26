@@ -43,7 +43,6 @@ impl MemData {
     pub fn new() -> Self {
         Self {
             shard_map: HashShardMap::new(GROUP_SHARD_SIZE, MEMBER_SHARD_SIZE),
-            online_map: HashShardMap::new(GROUP_SHARD_SIZE, MEMBER_SHARD_SIZE),
             shard_info: RwLock::new(ShardInfo::default()),
         }
     }
@@ -124,7 +123,7 @@ impl ShardManager {
     pub async fn init() {
         let app_cfg = AppConfig::get();
         let instance = Self::new(app_cfg.shard.clone().unwrap());
-        instance.load_from().await;
+        instance.load_from_data().await.expect("load_from redis error");
         INSTANCE_COUNTRY.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
@@ -137,7 +136,7 @@ static INSTANCE_COUNTRY: OnceCell<Arc<ShardManager>> = OnceCell::new();
 
 #[async_trait]
 pub trait ShardManagerOpt: Send + Sync {
-    async fn load_from(&self) -> anyhow::Result<()>;
+    async fn load_from_data(&self) -> anyhow::Result<()>;
     /// 添加用户到指定群组（自动根据 group_id 映射分片）
     fn add_member(&self, group_id: &GroupId, uid: &UserId) -> anyhow::Result<()>;
     /// 移除用户从指定群组（自动根据 group_id 映射分片）
@@ -158,13 +157,3 @@ pub trait ShardManagerOpt: Send + Sync {
     /// 获取在线管理员
     async fn get_admin_member(&self, group_id: &GroupId) -> Result<Option<Vec<UserId>>>;
 }
-
-// pub trait GroupManagerOpt {
-//     fn add_member(&self, group_id: &str, item: &MemberRef) -> Result<()>;
-//     fn add_members(&self, group_id: &str, item_list: &Vec<MemberRef>) -> Result<()>;
-//     fn remove_member(&self, group_id: &str, uid: &UserId) -> Result<()>;
-//     fn remove_members(&self, group_id: &str, uid_list: &Vec<UserId>) -> Result<()>;
-//     fn list_members_page(&self, group_id: &str, page: usize, page_size: usize) -> Result<Vec<String>, String>;
-//     fn get_member_count(&self, group_id: &str) -> Result<usize>;
-//
-// }

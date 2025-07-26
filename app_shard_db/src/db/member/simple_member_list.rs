@@ -1,89 +1,87 @@
 use biz_service::protocol::arb::rpc_arb_models::MemberRef;
 use dashmap::{DashMap, DashSet};
-use std::sync::Mutex;
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
 pub struct SimpleMemberList {
-    pub index: Mutex<Vec<MemberRef>>,
-    pub id_set: DashSet<String>,
-    pub online_map: DashMap<String, bool>,
-}
-
-impl Clone for SimpleMemberList {
-    fn clone(&self) -> Self {
-        let index = self.index.lock().unwrap().clone();
-        let mut new_set = DashSet::new();
-        for id in self.id_set.iter() {
-            new_set.insert(id.clone());
-        }
-        let mut new_online = DashMap::new();
-        for entry in self.online_map.iter() {
-            new_online.insert(entry.key().clone(), *entry.value());
-        }
-        Self {
-            index: Mutex::new(index),
-            id_set: new_set,
-            online_map: new_online,
-        }
-    }
+    pub members: DashMap<String, Arc<MemberRef>>, // ID -> 成员对象
+    online_map: DashSet<String>,                  // 仅存储在线成员
 }
 
 impl SimpleMemberList {
+    pub fn new() -> Self {
+        Self {
+            members: DashMap::new(),
+            online_map: DashSet::new(),
+        }
+    }
+
     pub fn add(&self, item: MemberRef) {
         if item.id.is_empty() {
             return;
         }
-        if self.id_set.insert(item.id.clone()) {
-            self.index.lock().unwrap().push(item.clone());
-        }
-        self.online_map.insert(item.id, false);
+        self.members.insert(item.id.clone(), Arc::new(item));
     }
 
     pub fn add_many(&self, items: Vec<MemberRef>) {
-        let mut index = self.index.lock().unwrap();
         for item in items {
-            if !item.id.is_empty() && self.id_set.insert(item.id.clone()) {
-                index.push(item.clone());
+            if !item.id.is_empty() {
+                self.members.insert(item.id.clone(), Arc::new(item));
+                // 不自动上线
             }
-            self.online_map.insert(item.id, false);
         }
     }
 
     pub fn remove(&self, id: &str) -> bool {
+        let removed = self.members.remove(id).is_some();
         self.online_map.remove(id);
-        if self.id_set.remove(id).is_some() {
-            let mut index = self.index.lock().unwrap();
-            if let Some(pos) = index.iter().position(|v| v.id == id) {
-                index.remove(pos);
-            }
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn get_page(&self, page: usize, page_size: usize) -> Vec<MemberRef> {
-        let index = self.index.lock().unwrap();
-        index.iter().skip(page * page_size).take(page_size).cloned().collect()
+        removed
     }
 
     pub fn get_all(&self) -> Vec<MemberRef> {
-        self.index.lock().unwrap().clone()
+        self.members.iter().map(|entry| entry.value().as_ref().clone()).collect()
+    }
+
+    pub fn get_page(&self, page: usize, page_size: usize) -> Vec<MemberRef> {
+        let mut all = self.get_all();
+        all.sort_by(|a, b| a.id.cmp(&b.id));
+        all.into_iter().skip(page * page_size).take(page_size).collect()
     }
 
     pub fn len(&self) -> usize {
-        self.id_set.len()
+        self.members.len()
     }
 
     pub fn clear(&self) {
+        self.members.clear();
         self.online_map.clear();
-        self.id_set.clear();
-        self.index.lock().unwrap().clear();
     }
+
+    pub fn set_online(&self, id: &str) {
+        self.online_map.insert(id.to_string());
+    }
+
+    pub fn set_offline(&self, id: &str) {
+        self.online_map.remove(id);
+    }
+
     pub fn is_online(&self, id: &str) -> bool {
-        self.online_map.get(id).map(|v| *v).unwrap_or(false)
+        self.online_map.contains(id)
     }
-    pub fn set_online(&self, id: &str, online: bool) {
-        self.online_map.insert(id.to_string(), online);
+
+    pub fn online_count(&self) -> usize {
+        self.online_map.len()
+    }
+
+    /// 返回在线成员 ID 分页
+    pub fn get_online_page(&self, page: usize, page_size: usize) -> Vec<String> {
+        let mut ids: Vec<String> = self.online_map.iter().map(|id| id.clone()).collect();
+        ids.sort();
+        ids.into_iter().skip(page * page_size).take(page_size).collect()
+    }
+
+    /// 返回所有在线成员 ID
+    pub fn get_online_all(&self) -> Vec<String> {
+        self.online_map.iter().map(|id| id.clone()).collect()
     }
 }

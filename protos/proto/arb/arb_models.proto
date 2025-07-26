@@ -72,7 +72,7 @@ message MemberRef {
 message SyncListGroup {
   string group_id = 1;            // 群组ID列表
   repeated MemberRef members = 2;        // 成员列表
-  repeated MemberRef on_line_member = 3; // 在线成员
+  repeated string on_line_ids = 3; // 在线成员
 }
 
 // ============================

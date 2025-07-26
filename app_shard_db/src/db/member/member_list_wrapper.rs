@@ -1,114 +1,134 @@
+use crate::db::member::member_shard::SIMPLE_LIST_THRESHOLD;
 use crate::db::member::sharded_member_list::ShardedMemberList;
 use crate::db::member::simple_member_list::SimpleMemberList;
+use arc_swap::ArcSwap;
 use biz_service::protocol::arb::rpc_arb_models::MemberRef;
 use std::sync::Arc;
-use crate::db::sharded_list::SIMPLE_LIST_THRESHOLD;
 
 #[derive(Debug)]
-pub enum MemberListWrapper {
+enum MemberListImpl {
     Simple(Arc<SimpleMemberList>),
     Sharded(Arc<ShardedMemberList>),
 }
+
+#[derive(Debug)]
+pub struct MemberListWrapper {
+    inner: ArcSwap<MemberListImpl>,
+}
+
 impl Clone for MemberListWrapper {
     fn clone(&self) -> Self {
-        match self {
-            MemberListWrapper::Simple(inner) => MemberListWrapper::Simple(inner.clone()),
-            MemberListWrapper::Sharded(inner) => MemberListWrapper::Sharded(inner.clone()),
+        Self {
+            inner: ArcSwap::from(self.inner.load_full()),
         }
     }
 }
 
 impl MemberListWrapper {
+    pub fn new_simple() -> Self {
+        Self {
+            inner: ArcSwap::from_pointee(MemberListImpl::Simple(Arc::new(SimpleMemberList::default()))),
+        }
+    }
+
     pub fn add(&self, item: MemberRef) {
-        match self {
-            MemberListWrapper::Simple(inner) => inner.add(item),
-            MemberListWrapper::Sharded(inner) => inner.add(item),
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.add(item),
+            MemberListImpl::Sharded(inner) => inner.add(item),
         }
     }
 
     pub fn add_many(&self, items: Vec<MemberRef>) {
-        match self {
-            MemberListWrapper::Simple(inner) => inner.add_many(items),
-            MemberListWrapper::Sharded(inner) => inner.add_many(items),
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.add_many(items),
+            MemberListImpl::Sharded(inner) => inner.add_many(items),
         }
     }
 
     pub fn remove(&self, id: &str) -> bool {
-        match self {
-            MemberListWrapper::Simple(inner) => inner.remove(id),
-            MemberListWrapper::Sharded(inner) => inner.remove(id),
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.remove(id),
+            MemberListImpl::Sharded(inner) => inner.remove(id),
         }
     }
 
     pub fn get_page(&self, page: usize, page_size: usize) -> Vec<MemberRef> {
-        match self {
-            MemberListWrapper::Simple(inner) => inner.get_page(page, page_size),
-            MemberListWrapper::Sharded(inner) => inner.get_page(page, page_size),
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.get_page(page, page_size),
+            MemberListImpl::Sharded(inner) => inner.get_page(page, page_size),
         }
     }
 
     pub fn len(&self) -> usize {
-        match self {
-            MemberListWrapper::Simple(inner) => inner.len(),
-            MemberListWrapper::Sharded(inner) => inner.total_len(),
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.len(),
+            MemberListImpl::Sharded(inner) => inner.total_len(),
         }
     }
 
     pub fn clear(&self) {
-        match self {
-            MemberListWrapper::Simple(inner) => inner.clear(),
-            MemberListWrapper::Sharded(inner) => inner.clear(),
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.clear(),
+            MemberListImpl::Sharded(inner) => inner.clear(),
         }
     }
 
     pub fn should_upgrade(&self) -> bool {
-        matches!(self, MemberListWrapper::Simple(inner) if inner.len() > SIMPLE_LIST_THRESHOLD)
+        matches!(self.inner.load().as_ref(), MemberListImpl::Simple(inner) if inner.len() > SIMPLE_LIST_THRESHOLD)
     }
 
-    pub fn upgrade(self: &Arc<Self>, per_group_shard: usize) -> Self {
-        match self.as_ref() {
-            MemberListWrapper::Simple(inner) => {
-                let sharded = ShardedMemberList::new(per_group_shard);
-                sharded.add_many(inner.get_all());
-                MemberListWrapper::Sharded(Arc::new(sharded))
-            }
-            MemberListWrapper::Sharded(_) => self.as_ref().clone(),
+    pub fn upgrade(&self, per_group_shard: usize) {
+        let current = self.inner.load();
+        if let MemberListImpl::Simple(inner) = current.as_ref() {
+            let mut sharded = ShardedMemberList::new(per_group_shard);
+            sharded.add_many(inner.get_all());
+            self.inner.store(Arc::new(MemberListImpl::Sharded(Arc::new(sharded))));
         }
     }
 
-    pub fn maybe_upgrade(&mut self, per_group_shard: usize) {
-        if let MemberListWrapper::Simple(inner) = self {
-            if inner.len() > SIMPLE_LIST_THRESHOLD {
-                let new_sharded = ShardedMemberList::new(per_group_shard);
-                new_sharded.add_many(inner.get_all());
-                *self = MemberListWrapper::Sharded(Arc::new(new_sharded));
-            }
-        }
-    }
     pub fn set_online(&self, id: &str, online: bool) {
-        match self {
-            MemberListWrapper::Simple(inner) => inner.set_online(id, online),
-            MemberListWrapper::Sharded(inner) => inner.set_online(id, online),
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => {
+                if online {
+                    inner.set_online(id)
+                } else {
+                    inner.set_offline(id)
+                }
+            }
+            MemberListImpl::Sharded(inner) => {
+                if online {
+                    inner.set_online(id)
+                } else {
+                    inner.set_offline(id)
+                }
+            }
         }
     }
-    pub fn get_online_members(&self) -> Vec<MemberRef> {
-        match self {
-            MemberListWrapper::Simple(inner) => inner.get_all().into_iter().filter(|m| inner.is_online(&m.id)).collect(),
-            MemberListWrapper::Sharded(inner) => {
-                let mut result = Vec::new();
-                for shard in inner.shards.iter() {
-                    result.extend(shard.get_all().into_iter().filter(|m| shard.is_online(&m.id)));
-                }
-                result
-            }
+
+    pub fn get_online_ids(&self) -> Vec<String> {
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.get_online_all(),
+            MemberListImpl::Sharded(inner) => inner.get_online_all(),
         }
     }
 
     pub fn get_online_count(&self) -> usize {
-        self.get_online_members().len()
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.online_count(),
+            MemberListImpl::Sharded(inner) => inner.online_count(),
+        }
     }
 
-    pub fn get_online_page(&self, page: usize, page_size: usize) -> Vec<MemberRef> {
-        self.get_online_members().into_iter().skip(page * page_size).take(page_size).collect()
+    pub fn get_online_page(&self, page: usize, page_size: usize) -> Vec<String> {
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.get_online_page(page, page_size),
+            MemberListImpl::Sharded(inner) => inner.get_online_page(page, page_size),
+        }
+    }
+    pub fn get_all(&self) -> Vec<MemberRef> {
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.get_all(),
+            MemberListImpl::Sharded(inner) => inner.get_all(),
+        }
     }
 }

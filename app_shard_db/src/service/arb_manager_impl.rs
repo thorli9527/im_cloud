@@ -1,22 +1,9 @@
 use crate::service::arb_manager::{ArbManagerJob, ManagerJobOpt};
 use crate::service::shard_manager::{ShardManager, MEMBER_SHARD_SIZE};
-use actix_web::web::get;
-use biz_service::manager::common::shard_index;
-use biz_service::protocol::arb::rpc_arb_models::{
-    BaseRequest, MemberRef, NodeType, QueryNodeReq, ShardState, SyncListGroup, UpdateShardStateRequest,
-};
-use biz_service::protocol::common::GroupMemberEntity;
-use chrono::format::Item;
+use biz_service::protocol::arb::rpc_arb_models::{BaseRequest, NodeType, QueryNodeReq, ShardState, SyncListGroup, UpdateShardStateRequest};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
-use common::GroupId;
-use dashmap::{DashMap, DashSet};
-use rdkafka::groups::GroupInfo;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::thread::current;
-use tokio::sync::RwLock;
 use tonic::async_trait;
 
 #[async_trait]
@@ -99,28 +86,17 @@ impl ManagerJobOpt for ArbManagerJob {
 
         let total = self.total;
         let node_index = hash_index(&self.shard_address, total as i32);
-        for key in guard.shard_map.all_keys() {
+        let key_list = guard.shard_map.all_keys();
+        for key in key_list.iter() {
             let hash_index = hash_index(&key, total as i32);
             if hash_index != node_index {
                 continue; // 只处理当前节点的在线成员
             }
-            if let Some(member_list) = guard.shard_map.get_all_items(&key) {
-                current.shard_map.insert_many(&key, &member_list);
-            } else {
-                log::warn!("⚠️ 无法读取 snapshot 中的群组成员：{}", key);
-            }
-        }
-
-        // 4️⃣ 拷贝 snapshot.online_map -> current.online_map
-        for key in guard.online_map.all_keys() {
-            let hash_index = hash_index(&key, total as i32);
-            if hash_index != node_index {
-                continue; // 只处理当前节点的在线成员
-            }
-            if let Some(online_list) = guard.online_map.get_all_items(&key) {
-                current.online_map.insert_many(&key, &online_list);
-            } else {
-                log::warn!("⚠️ 无法读取 snapshot 中的在线成员：{}", key);
+            let member_list = guard.shard_map.get_member_by_key(&key);
+            current.shard_map.insert_many(&key, member_list);
+            let on_line_ids = guard.shard_map.get_online_ids(&key);
+            for id in on_line_ids {
+                current.shard_map.set_online(&key, &id, true);
             }
         }
 
@@ -170,19 +146,15 @@ impl ManagerJobOpt for ArbManagerJob {
             if hash_index != node_index {
                 continue; // 只处理当前节点的在线成员
             }
-            let on_line_member = snapshot.online_map.get_all_items(&key);
 
-            if let Some(member_list) = snapshot.shard_map.get_all_items(&key) {
-                let sync_data = SyncListGroup {
-                    group_id: key,
-                    members: member_list,
-                    on_line_member: on_line_member.unwrap(),
-                };
-                let mut option = group_rpc_clients.get(&hash_index).unwrap().clone();
-                option.sync_data(sync_data).await?;
-            } else {
-                log::warn!("⚠️ 无法读取 snapshot 中的群组成员：{}", key);
-            }
+            let member_list = snapshot.shard_map.get_member_by_key(&key);
+            let sync_data = SyncListGroup {
+                group_id: key.clone(),
+                members: member_list,
+                on_line_ids: snapshot.shard_map.get_online_ids(&key),
+            };
+            let mut option = group_rpc_clients.get(&hash_index).unwrap().clone();
+            option.sync_data(sync_data).await?;
         }
 
         let mut shard_info = current.shard_info.write().await;
