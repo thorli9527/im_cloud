@@ -1,7 +1,9 @@
 use arc_swap::ArcSwap;
 use biz_service::protocol::arb::rpc_arb_models::MemberRef;
+use biz_service::protocol::common::GroupRoleType;
 use dashmap::DashSet;
 use std::sync::Arc;
+
 pub const SIMPLE_LIST_THRESHOLD: usize = 10_000;
 #[derive(Debug, Default)]
 pub struct MemberShard {
@@ -53,5 +55,29 @@ impl MemberShard {
     pub fn clear(&self) {
         self.id_set.clear();
         self.index.store(Arc::new(Vec::new()));
+    }
+    pub fn set_role(&self, id: &str, role: GroupRoleType) {
+        if !self.id_set.contains(id) {
+            return;
+        }
+
+        let current = self.index.load();
+        let mut new_vec = Vec::with_capacity(current.len());
+        let mut updated = false;
+
+        for member in current.iter() {
+            if member.id == id {
+                let mut updated_member = (**member).clone();
+                updated_member.role = role as i32;
+                new_vec.push(Arc::new(updated_member));
+                updated = true;
+            } else {
+                new_vec.push(member.clone());
+            }
+        }
+
+        if updated {
+            self.index.store(Arc::new(new_vec));
+        }
     }
 }

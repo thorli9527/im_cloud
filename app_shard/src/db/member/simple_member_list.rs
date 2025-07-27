@@ -1,4 +1,5 @@
 use biz_service::protocol::arb::rpc_arb_models::MemberRef;
+use biz_service::protocol::common::GroupRoleType;
 use dashmap::{DashMap, DashSet};
 use std::sync::Arc;
 
@@ -83,5 +84,15 @@ impl SimpleMemberList {
     /// 返回所有在线成员 ID
     pub fn get_online_all(&self) -> Vec<String> {
         self.online_map.iter().map(|id| id.clone()).collect()
+    }
+
+    pub fn set_role(&self, id: &str, role: GroupRoleType) {
+        if let Some(mut entry) = self.members.get_mut(id) {
+            // 克隆原始数据（Arc<MemberRef>），创建可变副本
+            let mut updated = (**entry).clone();
+            updated.role = role as i32;
+            // 替换为新的 Arc
+            *entry = Arc::new(updated);
+        }
     }
 }

@@ -5,6 +5,7 @@ use twox_hash::XxHash64;
 
 use crate::db::member::member_shard::MemberShard;
 use biz_service::protocol::arb::rpc_arb_models::MemberRef;
+use biz_service::protocol::common::GroupRoleType;
 
 #[derive(Debug, Clone)]
 pub struct ShardedMemberList {
@@ -105,5 +106,10 @@ impl ShardedMemberList {
     }
     pub fn get_all(&self) -> Vec<MemberRef> {
         self.shards.iter().flat_map(|entry| entry.value().get_all()).map(|arc| arc.as_ref().clone()).collect()
+    }
+
+    pub fn set_role(&self, id: &str, role: GroupRoleType) {
+        let shard = self.get_or_create_shard(id);
+        shard.set_role(id, role);
     }
 }

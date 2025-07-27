@@ -21,6 +21,7 @@ use tracing::log;
 #[derive(Clone, Default)]
 pub struct ArbiterServiceImpl {
     pub shard_nodes: Arc<DashMap<String, NodeInfo>>,
+    pub global_shard_state: Arc<tokio::sync::RwLock<ShardState>>,
     pub socket_nodes: Arc<DashMap<String, NodeInfo>>,
     pub arb_version: Arc<AtomicU64>,
 }
@@ -68,12 +69,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         // 更新目标节点状态
         match self.shard_nodes.get_mut(&current_node_addr) {
             Some(mut entry) => {
-                entry.state = match ShardState::from_i32(new_state) {
-                    Some(valid_state) => valid_state as i32,
-                    None => {
-                        return Err(Status::invalid_argument(format!("Invalid ShardState: {}", new_state)));
-                    }
-                };
+                entry.state = new_state;
                 entry.version += 1;
                 entry.last_update_time = now() as u64;
                 if entry.node_type == NodeType::GroupNode as i32 {
@@ -87,7 +83,8 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                         if all_normal {
                             // 升级 arb_version
                             let new_version = self.arb_version.fetch_add(1, Ordering::SeqCst) + 1;
-
+                            let mut global_shard_state = self.global_shard_state.write().await;
+                            *global_shard_state = ShardState::Normal;
                             log::info!("[ArbVersion] All shard nodes are Normal. Upgrading arb_version to {}", new_version);
 
                             // 通知所有 socket 节点刷新 shard 列表
@@ -127,8 +124,11 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                     node_type: req.node_type,
                     last_update_time: node_info.last_update_time,
                     socket_addr: None,
+                    kafka_addr: None,
                 }));
             }
+            let mut global_shard_state = self.global_shard_state.write().await;
+            *global_shard_state = ShardState::Ready;
             let current_total = self.shard_nodes.len() as i32 + 1;
             // 当前时间戳（毫秒）
             let now = now() as u64;
@@ -140,8 +140,8 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                 node_type: req.node_type,
                 state: ShardState::Preparing as i32,
                 last_update_time: now,
-                kafka_addr: req.kafka_addr,
                 socket_addr: None,
+                kafka_addr: None,
             };
 
             for (mut item) in self.shard_nodes.iter_mut() {
@@ -175,8 +175,8 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                     state: node_info.state,
                     node_type: req.node_type,
                     last_update_time: node_info.last_update_time,
-                    kafka_addr: req.kafka_addr,
                     socket_addr: None,
+                    kafka_addr: None,
                 }));
             }
 
@@ -190,8 +190,8 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                 node_type: req.node_type,
                 state: ShardState::Preparing as i32,
                 last_update_time: now,
-                kafka_addr: req.kafka_addr,
                 socket_addr: None,
+                kafka_addr: None,
             };
 
             // 插入

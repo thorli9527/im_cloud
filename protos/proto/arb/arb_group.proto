@@ -10,11 +10,9 @@ message UpdateVersionReq {
   uint64 version = 2;                     // 当前版本号（用于 CAS 检查）
   rpc_arb_models.ShardState state = 3;             // 当前状态
   uint64 last_update_time = 4;            // 最后更新时间戳（毫秒）
-  int32 total= 6;
+  int32 total = 6;
 }
 service ArbGroupService {
-  // 获取指定节点所属分片信息
-//  rpc getShardNode(rpc_arb_models.BaseRequest) returns (rpc_arb_models.NodeInfo);
   //更新版本号
   rpc updateVersion(UpdateVersionReq) returns (common.CommonResp);
   //同步数据

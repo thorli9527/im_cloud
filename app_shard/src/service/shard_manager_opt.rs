@@ -67,7 +67,8 @@ impl ShardManagerOpt for ShardManager {
 
                 // 将每个成员添加到该群组分片中
                 for member in members {
-                    self.add_member(&group_id, &member.uid);
+                    let role_type = GroupRoleType::try_from(member.role)?;
+                    self.add_member(&group_id, &member.uid, role_type)?;
                 }
             }
             if !has_result {
@@ -78,13 +79,28 @@ impl ShardManagerOpt for ShardManager {
 
         Ok(())
     }
+
+    async fn create(&self, group_id: &str) -> anyhow::Result<()> {
+        let group_member = GroupMemberService::get();
+        let members = group_member.get_all_members_by_group_id(group_id).await?;
+        for member in members {
+            let result = GroupRoleType::try_from(member.role)?;
+            self.add_member(group_id, &member.uid, result)?;
+        }
+        Ok(())
+    }
+
+    fn dismiss(&self, group_id: &str) {
+        self.current.load().shard_map.clear(group_id)
+    }
+
     /// 计算群组分片索引（用于分配 group → shard）
-    fn add_member(&self, group_id: &GroupId, uid: &UserId) -> Result<()> {
+    fn add_member(&self, group_id: &str, uid: &UserId, role: GroupRoleType) -> Result<()> {
         let member_ref = MemberRef {
             id: uid.clone(),
-            role: GroupRoleType::Member as i32,
+            role: role as i32,
         };
-        self.current.load().shard_map.insert(group_id.clone(), member_ref);
+        self.current.load().shard_map.insert(group_id.to_string(), member_ref);
         Ok(())
     }
 
@@ -121,6 +137,10 @@ impl ShardManagerOpt for ShardManager {
         self.current.load().shard_map.get_online_ids(group_id)
     }
 
+    fn change_role(&self, group_id: &GroupId, uid: &UserId, role: GroupRoleType) -> Result<()> {
+        self.current.load().shard_map.change_role(group_id, uid, role);
+        Ok(())
+    }
     async fn get_admin_member(&self, group_id: &GroupId) -> anyhow::Result<Option<Vec<UserId>>> {
         let group_service = GroupService::get();
         let admin_member = group_service.query_admin_member_by_group_id(group_id).await?;

@@ -1,0 +1,4 @@
+syntax = "proto3";
+package rpc_group;
+import "google/protobuf/empty.proto";
+import "common/common.proto"; // 引入全局定义

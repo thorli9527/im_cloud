@@ -109,8 +109,6 @@ pub mod arb_group_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        /// 获取指定节点所属分片信息
-        ///  rpc getShardNode(rpc_arb_models.BaseRequest) returns (rpc_arb_models.NodeInfo);
         /// 更新版本号
         pub async fn update_version(
             &mut self,
@@ -178,8 +176,6 @@ pub mod arb_group_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with ArbGroupServiceServer.
     #[async_trait]
     pub trait ArbGroupService: std::marker::Send + std::marker::Sync + 'static {
-        /// 获取指定节点所属分片信息
-        ///  rpc getShardNode(rpc_arb_models.BaseRequest) returns (rpc_arb_models.NodeInfo);
         /// 更新版本号
         async fn update_version(
             &self,

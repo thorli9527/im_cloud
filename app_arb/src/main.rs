@@ -1,6 +1,7 @@
 mod protocol;
 mod service;
 
+use crate::protocol::rpc_arb_models::ShardState;
 use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcServiceServer;
 use crate::service::rpc::arb_service_impl::ArbiterServiceImpl;
 use common::config::AppConfig;
@@ -16,7 +17,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 读取配置文件
     let app_cfg = AppConfig::get();
     let addr = SocketAddr::from_str(&app_cfg.get_shard().server_host.unwrap())?;
-    let svc = ArbiterServiceImpl { shard_nodes: Arc::new(Default::default()), socket_nodes: Arc::new(Default::default()), arb_version: Arc::new(AtomicU64::new(0)) };
+    let svc = ArbiterServiceImpl {
+        shard_nodes: Arc::new(Default::default()),
+        socket_nodes: Arc::new(Default::default()),
+        arb_version: Arc::new(AtomicU64::new(0)),
+        global_shard_state: Arc::new(tokio::sync::RwLock::new(ShardState::Normal)),
+    };
 
     tonic::transport::Server::builder().add_service(ArbServerRpcServiceServer::new(svc)).serve(addr).await?;
     log::warn!("ArbServerRpcServiceServer started");

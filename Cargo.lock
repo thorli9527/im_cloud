@@ -382,39 +382,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "app_group"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "anyhow",
- "arc-swap",
- "async-trait",
- "biz_service",
- "bytes",
- "chrono",
- "common",
- "dashmap",
- "deadpool-redis",
- "env_logger",
- "futures-util",
- "log",
- "mongodb",
- "once_cell",
- "prost 0.13.5",
- "prost-build 0.14.1",
- "prost-types 0.13.5",
- "rdkafka",
- "serde",
- "tokio",
- "tokio-util",
- "tonic",
- "tonic-build",
- "tracing",
- "twox-hash",
- "utoipa",
-]
-
-[[package]]
 name = "app_job"
 version = "0.1.0"
 

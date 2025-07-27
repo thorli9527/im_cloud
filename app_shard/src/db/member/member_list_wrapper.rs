@@ -3,6 +3,7 @@ use crate::db::member::sharded_member_list::ShardedMemberList;
 use crate::db::member::simple_member_list::SimpleMemberList;
 use arc_swap::ArcSwap;
 use biz_service::protocol::arb::rpc_arb_models::MemberRef;
+use biz_service::protocol::common::GroupRoleType;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -129,6 +130,12 @@ impl MemberListWrapper {
         match self.inner.load().as_ref() {
             MemberListImpl::Simple(inner) => inner.get_all(),
             MemberListImpl::Sharded(inner) => inner.get_all(),
+        }
+    }
+    pub fn change_role(&self, user_id: &str, role: GroupRoleType) {
+        match self.inner.load().as_ref() {
+            MemberListImpl::Simple(inner) => inner.set_role(user_id, role),
+            MemberListImpl::Sharded(inner) => inner.set_role(user_id, role),
         }
     }
 }

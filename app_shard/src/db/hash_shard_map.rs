@@ -1,6 +1,7 @@
 use crate::db::member::member_list_wrapper::MemberListWrapper;
 use arc_swap::ArcSwap;
 use biz_service::protocol::arb::rpc_arb_models::MemberRef;
+use biz_service::protocol::common::GroupRoleType;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -105,7 +106,11 @@ impl HashShardMap {
         new_map.remove(key);
         shard.inner.store(Arc::new(new_map));
     }
-
+    pub fn change_role(&self, key: &str, user_id: &str, role: GroupRoleType) {
+        if let Some(entry) = self.get_shard(key).inner.load().get(key) {
+            entry.change_role(user_id, role);
+        }
+    }
     pub fn all_keys(&self) -> Vec<String> {
         self.shards.iter().flat_map(|shard| shard.inner.load().keys().cloned().collect::<Vec<_>>()).collect()
     }

@@ -12,7 +12,7 @@ use std::clone;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio::time::{Duration, interval};
+use tokio::time::{interval, Duration};
 use tonic::transport::Channel;
 
 #[derive(Debug, Clone)]
@@ -31,15 +31,8 @@ pub struct ArbClient {
 
 impl ArbClient {
     /// 创建 ArbClient 并注册自身地址
-    pub async fn new(
-        shard_config: &ShardConfig,
-        kafka_addr: &str,
-        socket_addr: &str,
-    ) -> anyhow::Result<Self> {
-        let node_addr = shard_config
-            .server_host
-            .clone()
-            .ok_or_else(|| anyhow::anyhow!("Missing server_host in ShardConfig"))?;
+    pub async fn new(shard_config: &ShardConfig, kafka_addr: &str, socket_addr: &str) -> anyhow::Result<Self> {
+        let node_addr = shard_config.server_host.clone().ok_or_else(|| anyhow::anyhow!("Missing server_host in ShardConfig"))?;
         let client = ArbServerRpcServiceClient::connect(format!("http://{}", node_addr)).await?;
         Ok(Self {
             arb_client: client,
@@ -57,8 +50,7 @@ impl ArbClient {
         let shard_config = AppConfig::get().shard.clone().unwrap();
         let kafka_addr = AppConfig::get().kafka.clone().unwrap();
         let socket_addr = AppConfig::get().socket.clone().unwrap();
-        let mut arb_client =
-            ArbClient::new(&shard_config, &kafka_addr.brokers, &socket_addr.node_addr).await?;
+        let mut arb_client = ArbClient::new(&shard_config, &kafka_addr.brokers, &socket_addr.node_addr).await?;
 
         arb_client.register().await?;
 
@@ -68,11 +60,7 @@ impl ArbClient {
         INSTANCE.set(Arc::new(RwLock::new(arb_client))).expect("ArbClient init failed");
         Ok(())
     }
-    pub fn get_shard_kafka(
-        &self,
-        group_id: &str,
-        shard_id: u32,
-    ) -> anyhow::Result<KafkaGroupService> {
+    pub fn get_shard_kafka(&self, group_id: &str, shard_id: u32) -> anyhow::Result<KafkaGroupService> {
         let shard_group_index = hash_index(group_id, self.shard_kafka_list.len() as i32);
         // for (node_addr, client) in &self.shard_clients {
         //     let shard_node_index = hash_index(&node_addr, self.shard_clients.len() as i32);
@@ -86,7 +74,6 @@ impl ArbClient {
         let req = BaseRequest {
             node_addr: self.node_addr.clone(),
             node_type: NodeType::SocketNode as i32,
-            kafka_addr: Some(self.kafka_addr.clone()),
             socket_addr: Some(self.socket_addr.clone()),
         };
         let resp = self.arb_client.register_node(req).await?.into_inner();
@@ -102,21 +89,14 @@ impl ArbClient {
 
         self.shard_kafka_list.clear();
         // 获取最新仲裁节点列表
-        let req = QueryNodeReq { node_type: NodeType::GroupNode as i32 };
+        let req = QueryNodeReq {
+            node_type: NodeType::GroupNode as i32,
+        };
 
-        let resp = self
-            .arb_client
-            .list_all_nodes(req)
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to list group nodes: {}", e))?
-            .into_inner();
+        let resp = self.arb_client.list_all_nodes(req).await.map_err(|e| anyhow::anyhow!("Failed to list group nodes: {}", e))?.into_inner();
 
-        let new_addrs: HashSet<String> = resp
-            .nodes
-            .iter()
-            .filter(|n| n.node_type == NodeType::GroupNode as i32)
-            .map(|n| n.node_addr.clone())
-            .collect();
+        let new_addrs: HashSet<String> =
+            resp.nodes.iter().filter(|n| n.node_type == NodeType::GroupNode as i32).map(|n| n.node_addr.clone()).collect();
 
         //重新排序 list_addrs
         for node_addr in resp.nodes.iter() {
@@ -143,7 +123,6 @@ impl ArbClient {
                 let req = BaseRequest {
                     node_addr: node_addr.clone(),
                     node_type: NodeType::SocketNode as i32,
-                    kafka_addr: Some(kafka_addr.clone()),
                     socket_addr: Some(node_addr.clone()),
                 };
                 match client.heartbeat(req).await {
