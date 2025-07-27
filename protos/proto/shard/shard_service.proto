@@ -1,0 +1,94 @@
+syntax = "proto3";
+package rpc_shard_server;
+import "google/protobuf/empty.proto";
+import "common/common.proto";
+import "arb/arb_models.proto"; // 引入 Arb 模型定义
+
+message IdReq {
+  string ref_id = 1;
+}
+
+message AddMemberReq {
+  string group_id = 1;
+  string user_id = 2;
+  common.GroupRoleType role = 3;
+}
+
+message RemoveMemberReq {
+  string group_id = 1;
+  string user_id = 2;
+}
+
+
+message GetMemberPageReq {
+  string group_id = 1;
+  uint32 offset = 2;
+  uint32 limit = 3;
+}
+
+message GetMemberCountReq {
+  string group_id = 1;
+}
+
+message OnlineReq {
+  string group_id = 1;
+  string user_id = 2;
+  bool online = 3;
+}
+
+message ChangeRoleReq {
+  string group_id = 1;
+  string user_id = 2;
+  common.GroupRoleType role = 3;
+}
+
+// ------------------- 响应结构 -------------------
+
+message MemberListResp {
+  repeated rpc_arb_models.MemberRef members = 1;
+}
+
+message UserIdListResp {
+  repeated string user_ids = 1;
+}
+
+message MemberCountResp {
+  uint32 count = 1;
+}
+
+// ------------------- Service 定义 -------------------
+
+service ShardRpcService {
+  // 创建群组
+  rpc Create(IdReq) returns (google.protobuf.Empty);
+
+  // 解散群组
+  rpc Dismiss(IdReq) returns (google.protobuf.Empty);
+
+  // 添加成员
+  rpc AddMember(AddMemberReq) returns (google.protobuf.Empty);
+
+  // 移除成员
+  rpc RemoveMember(RemoveMemberReq) returns (google.protobuf.Empty);
+
+  // 获取全部成员
+  rpc GetMember(IdReq) returns (MemberListResp);
+
+  // 获取分页成员
+  rpc GetMemberPage(GetMemberPageReq) returns (MemberListResp);
+
+  // 获取成员总数
+  rpc GetMemberCount(GetMemberCountReq) returns (MemberCountResp);
+
+  // 用户上线
+  rpc Online(OnlineReq) returns (google.protobuf.Empty);
+
+  // 获取在线成员
+  rpc GetOnlineMember(IdReq) returns (UserIdListResp);
+
+  // 修改用户角色
+  rpc ChangeRole(ChangeRoleReq) returns (google.protobuf.Empty);
+
+  // 获取在线管理员（异步）
+  rpc GetAdminMember(IdReq) returns (UserIdListResp);
+}

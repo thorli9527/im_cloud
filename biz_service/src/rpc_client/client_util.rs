@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use prost::Message;
@@ -7,9 +7,9 @@ use tokio::sync::Mutex;
 use tonic::transport::Channel;
 
 use crate::biz_service::kafka_group_service::KafkaGroupService;
-use crate::protocol::arb::rpc_arb_models::{NodeType, QueryNodeReq};
-use crate::protocol::arb::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use crate::protocol::msg::group::GroupNodeMsgType;
+use crate::protocol::rpc::rpc_arb_models::{NodeType, QueryNodeReq};
+use crate::protocol::rpc::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 
@@ -33,10 +33,7 @@ impl ArbServerClient {
         // 还未初始化则进行初始化
         Self::init().await?;
 
-        INSTANCE_SERVICE
-            .get()
-            .cloned()
-            .ok_or_else(|| anyhow!("ArbServerClient instance not initialized after init"))
+        INSTANCE_SERVICE.get().cloned().ok_or_else(|| anyhow!("ArbServerClient instance not initialized after init"))
     }
 
     /// 初始化 ArbServerClient 实例
@@ -49,9 +46,7 @@ impl ArbServerClient {
         let arc_client = Arc::new(client.clone());
 
         // 注册全局实例
-        INSTANCE_SERVICE
-            .set(arc_client.clone())
-            .map_err(|_| anyhow!("ArbServerClient instance already initialized"))?;
+        INSTANCE_SERVICE.set(arc_client.clone()).map_err(|_| anyhow!("ArbServerClient instance already initialized"))?;
 
         // 初始化 gRPC 和 Kafka 客户端
         client.init_arb_client().await?;
@@ -62,9 +57,7 @@ impl ArbServerClient {
 
     /// 获取 Arb 服务 gRPC 客户端
     pub async fn get_arb_server_client(&self) -> Result<ArbServerRpcServiceClient<Channel>> {
-        let lock = ARB_SERVER_CLIENT
-            .get()
-            .ok_or_else(|| anyhow!("ArbServerRpcServiceClient not initialized"))?;
+        let lock = ARB_SERVER_CLIENT.get().ok_or_else(|| anyhow!("ArbServerRpcServiceClient not initialized"))?;
         let client = lock.lock().await;
         Ok(client.clone())
     }
@@ -77,9 +70,7 @@ impl ArbServerClient {
         let app_config = AppConfig::get();
         let addr = format!("http://{}", app_config.get_server().host);
         let client = ArbServerRpcServiceClient::connect(addr).await?;
-        ARB_SERVER_CLIENT
-            .set(Mutex::new(client))
-            .map_err(|_| anyhow!("ArbServerRpcServiceClient already initialized"))?;
+        ARB_SERVER_CLIENT.set(Mutex::new(client)).map_err(|_| anyhow!("ArbServerRpcServiceClient already initialized"))?;
         Ok(())
     }
 
@@ -87,7 +78,9 @@ impl ArbServerClient {
         let mut client = self.get_arb_server_client().await?;
 
         let node_list = client
-            .list_all_nodes(QueryNodeReq { node_type: NodeType::GroupNode as i32 })
+            .list_all_nodes(QueryNodeReq {
+                node_type: NodeType::GroupNode as i32,
+            })
             .await
             .map_err(|e| anyhow!("list_all_nodes failed: {e}"))?
             .into_inner()
@@ -103,8 +96,7 @@ impl ArbServerClient {
 
         for node in &node_list {
             let parts: Vec<&str> = node.node_addr.split(':').collect();
-            let ip =
-                parts.get(0).ok_or_else(|| anyhow!("Invalid node address: {}", node.node_addr))?;
+            let ip = parts.get(0).ok_or_else(|| anyhow!("Invalid node address: {}", node.node_addr))?;
             let index = hash_index(ip, total);
             let broker = format!("{}:9092", ip);
             let kafka_client = KafkaGroupService::new(&broker).await?;
@@ -116,9 +108,7 @@ impl ArbServerClient {
 
     /// 获取 Kafka producer
     async fn get_group_kafka(&self, group_id: &str) -> Result<Arc<KafkaGroupService>> {
-        let client_map = GROUP_SERVER_KAFKA_CLIENT
-            .get()
-            .ok_or_else(|| anyhow!("GROUP_SERVER_KAFKA_CLIENT not initialized"))?;
+        let client_map = GROUP_SERVER_KAFKA_CLIENT.get().ok_or_else(|| anyhow!("GROUP_SERVER_KAFKA_CLIENT not initialized"))?;
 
         let total = client_map.len() as i32;
         if total == 0 {
@@ -126,19 +116,11 @@ impl ArbServerClient {
         }
 
         let index = hash_index(group_id, total);
-        let client = client_map.get(&index).ok_or_else(|| {
-            anyhow!("Kafka client not found for group_id: {}, index: {}", group_id, index)
-        })?;
+        let client = client_map.get(&index).ok_or_else(|| anyhow!("Kafka client not found for group_id: {}, index: {}", group_id, index))?;
         Ok(client.clone())
     }
 
-    pub async fn send_msg<M: Message>(
-        &self,
-        group_id: &str,
-        msg_type: &GroupNodeMsgType,
-        message: &M,
-        message_id: &str,
-    ) -> Result<()> {
+    pub async fn send_msg<M: Message>(&self, group_id: &str, msg_type: &GroupNodeMsgType, message: &M, message_id: &str) -> Result<()> {
         let kafka_client = self.get_group_kafka(group_id).await?;
         kafka_client.send_proto(msg_type, message, message_id).await?;
         Ok(())

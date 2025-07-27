@@ -2,9 +2,9 @@ use crate::db::member::member_shard::SIMPLE_LIST_THRESHOLD;
 use crate::db::member::sharded_member_list::ShardedMemberList;
 use crate::db::member::simple_member_list::SimpleMemberList;
 use arc_swap::ArcSwap;
-use biz_service::protocol::arb::rpc_arb_models::MemberRef;
 use biz_service::protocol::common::GroupRoleType;
 use std::sync::Arc;
+use biz_service::protocol::rpc::rpc_arb_models::MemberRef;
 
 #[derive(Debug)]
 enum MemberListImpl {

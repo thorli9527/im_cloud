@@ -5,7 +5,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::socket::socket_error::SendError;
 use anyhow::Result;
-use biz_service::protocol::arb::rpc_arb_models::NodeInfo;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::DeviceType;
 use common::config::AppConfig;
@@ -17,6 +16,7 @@ use once_cell::sync::OnceCell;
 use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
+use biz_service::protocol::rpc::rpc_arb_models::NodeInfo;
 
 /// 客户端连接唯一标识
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -58,7 +58,11 @@ pub struct SocketManager {
 
 impl SocketManager {
     pub fn new() -> Self {
-        Self { connections: DashMap::new(), user_index: DashMap::new(), group_members: DashMap::new() }
+        Self {
+            connections: DashMap::new(),
+            user_index: DashMap::new(),
+            group_members: DashMap::new(),
+        }
     }
 
     /// 新增连接
@@ -112,7 +116,13 @@ impl SocketManager {
         self.send_to_connection(id, Bytes::from(buf))
     }
 
-    pub fn send_to_user_proto<M: Message>(&self, user_id: &str, msg_type: &ByteMessageType, msg: &M, device_filter: Option<DeviceType>) -> Result<(), SendError> {
+    pub fn send_to_user_proto<M: Message>(
+        &self,
+        user_id: &str,
+        msg_type: &ByteMessageType,
+        msg: &M,
+        device_filter: Option<DeviceType>,
+    ) -> Result<(), SendError> {
         let mut buf = Vec::with_capacity(128);
         buf.push(*msg_type as u8);
         msg.encode(&mut buf).map_err(|_| SendError::EncodeError)?;

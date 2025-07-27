@@ -1,8 +1,4 @@
 use crate::service::shard_manager::ShardManager;
-use biz_service::protocol::arb::rpc_arb_group;
-use biz_service::protocol::arb::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
-use biz_service::protocol::arb::rpc_arb_group::UpdateVersionReq;
-use biz_service::protocol::arb::rpc_arb_models::SyncListGroup;
 use biz_service::protocol::common::CommonResp;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
@@ -11,6 +7,10 @@ use log::info;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use tonic::{Request, Response, Status};
+use biz_service::protocol::rpc::rpc_arb_group;
+use biz_service::protocol::rpc::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
+use biz_service::protocol::rpc::rpc_arb_group::UpdateVersionReq;
+use biz_service::protocol::rpc::rpc_arb_models::SyncListGroup;
 
 /// arb 组 客户端接口
 pub struct ArbGroupServiceImpl {}

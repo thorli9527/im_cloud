@@ -1,4 +1,4 @@
-pub mod arb;
+pub mod rpc;
 
 pub mod msg {
     pub mod auth {

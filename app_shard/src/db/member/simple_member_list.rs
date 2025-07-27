@@ -1,7 +1,7 @@
-use biz_service::protocol::arb::rpc_arb_models::MemberRef;
 use biz_service::protocol::common::GroupRoleType;
 use dashmap::{DashMap, DashSet};
 use std::sync::Arc;
+use biz_service::protocol::rpc::rpc_arb_models::MemberRef;
 
 #[derive(Debug, Default)]
 pub struct SimpleMemberList {

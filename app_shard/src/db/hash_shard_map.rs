@@ -1,11 +1,11 @@
 use crate::db::member::member_list_wrapper::MemberListWrapper;
 use arc_swap::ArcSwap;
-use biz_service::protocol::arb::rpc_arb_models::MemberRef;
 use biz_service::protocol::common::GroupRoleType;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use twox_hash::XxHash64;
+use biz_service::protocol::rpc::rpc_arb_models::MemberRef;
 
 #[derive(Debug)]
 struct Shard {

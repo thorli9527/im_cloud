@@ -1,10 +1,11 @@
-use crate::service::arb_group_service_impl::ArbGroupServiceImpl;
 use crate::service::arb_manager::ArbManagerJob;
+use crate::service::rpc::arb_group_service_impl::ArbGroupServiceImpl;
+use crate::service::rpc::rpc_shard_server_impl::ShardRPCServiceImpl;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer};
 use biz_service::manager;
-use biz_service::protocol::arb::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
-use biz_service::protocol::arb::rpc_arb_socket::arb_socket_service_server::ArbSocketServiceServer;
+use biz_service::protocol::rpc::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
+use biz_service::protocol::rpc::rpc_shard_server::shard_rpc_service_server::ShardRpcServiceServer;
 use common::config::AppConfig;
 use log::warn;
 use std::net::SocketAddr;
@@ -45,7 +46,13 @@ async fn main() -> std::io::Result<()> {
 async fn start_grpc_server() {
     let app_cfg = AppConfig::get();
     let addr = SocketAddr::from_str(&app_cfg.get_shard().server_host.unwrap()).expect("Invalid address");
-    let svc = ArbGroupServiceServer::new(ArbGroupServiceImpl::new());
-    tonic::transport::Server::builder().add_service(svc).serve(addr).await.expect("Failed to start server");
+    let abr_group_service = ArbGroupServiceServer::new(ArbGroupServiceImpl::new());
+    let shard_group_service = ShardRpcServiceServer::new(ShardRPCServiceImpl::new());
+    tonic::transport::Server::builder()
+        .add_service(abr_group_service)
+        .add_service(shard_group_service)
+        .serve(addr)
+        .await
+        .expect("Failed to start server");
     log::warn!("ArbGroupServiceServer started");
 }

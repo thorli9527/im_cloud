@@ -15,11 +15,7 @@ fn build_api_service() {
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../app_api/src/protocol/")
         .compile_protos(
-            &[
-                "proto/common/common.proto",
-                "proto/arb/arb_models.proto",
-                "proto/arb/arb_server.proto",
-            ],
+            &["proto/common/common.proto", "proto/arb/arb_models.proto", "proto/arb/arb_server.proto"],
             &["proto"], // ✅ 设置 proto 根为 "protos"，对应 import "arb/xxx.proto"
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
@@ -103,7 +99,7 @@ fn build_biz_service() {
         .build_client(true) // 如无需生成 gRPC Client 代码
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
-        .out_dir("../biz_service/src/protocol/arb") // 输出 Rust 模块到该目录
+        .out_dir("../biz_service/src/protocol/rpc") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
                 "proto/common/common.proto",
@@ -111,13 +107,14 @@ fn build_biz_service() {
                 "proto/arb/arb_group.proto",
                 "proto/arb/arb_server.proto",
                 "proto/arb/arb_socket.proto",
+                "proto/shard/shard_service.proto",
             ],
             &["proto"], // proto 根目录
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
 
     //删除 ../biz_service/src/protocol/arb/common.rs
-    if let Err(e) = fs::remove_file("../biz_service/src/protocol/arb/common.rs") {}
+    if let Err(e) = fs::remove_file("../biz_service/src/protocol/rpc/common.rs") {}
 
     println!("cargo:warning=✅ proto biz_service rpc 编译完成！");
 }

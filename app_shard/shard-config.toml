@@ -9,9 +9,5 @@ server_host = "127.0.0.1:50000"
 [server]
 host = "127.0.0.1"
 port = 8091
-[kafka]
-brokers = "localhost:9092"
-topic_single = "im-p2p-messages"
-topic_group = "im-group-messages"
 [sys]
 log_leve = "warn"  #trace debug info error warn

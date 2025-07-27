@@ -1,8 +1,8 @@
 use arc_swap::ArcSwap;
-use biz_service::protocol::arb::rpc_arb_models::MemberRef;
 use biz_service::protocol::common::GroupRoleType;
 use dashmap::DashSet;
 use std::sync::Arc;
+use biz_service::protocol::rpc::rpc_arb_models::MemberRef;
 
 pub const SIMPLE_LIST_THRESHOLD: usize = 10_000;
 #[derive(Debug, Default)]

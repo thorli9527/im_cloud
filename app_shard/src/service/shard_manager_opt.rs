@@ -4,7 +4,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
-use biz_service::protocol::arb::rpc_arb_models::{MemberRef, NodeType, QueryNodeReq};
 use biz_service::protocol::common::{GroupMemberEntity, GroupRoleType};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
@@ -12,6 +11,7 @@ use common::{GroupId, UserId};
 use futures_util::StreamExt;
 use mongodb::bson::doc;
 use mongodb::options::FindOptions;
+use biz_service::protocol::rpc::rpc_arb_models::{MemberRef, NodeType, QueryNodeReq};
 
 #[async_trait]
 impl ShardManagerOpt for ShardManager {
