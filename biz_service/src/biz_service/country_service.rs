@@ -9,12 +9,14 @@ pub struct CountryService {
 }
 
 impl CountryService {
-    pub fn new(db: Database) -> Self {
+    pub async fn new(db: Database) -> Self {
         let collection = db.collection("country");
-        Self { dao: BaseRepository::new(db, collection.clone()) }
+        Self {
+            dao: BaseRepository::new(db, collection.clone(), "country").await,
+        }
     }
-    pub fn init(db: Database) {
-        let instance = Self::new(db);
+    pub async fn init(db: Database) {
+        let instance = Self::new(db).await;
         INSTANCE_COUNTRY.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 

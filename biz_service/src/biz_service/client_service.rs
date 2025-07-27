@@ -10,13 +10,16 @@ pub struct ClientService {
 }
 
 impl ClientService {
-    pub fn new(db: Database) -> Self {
+    pub async fn new(db: Database) -> Self {
         let collection = db.collection("client");
-        Self { dao: BaseRepository::new(db, collection.clone()) }
+        let result = Self {
+            dao: BaseRepository::new(db, collection.clone(), "client").await,
+        };
+        return result;
     }
 
-    pub fn init(db: Database) {
-        let instance = Self::new(db);
+    pub async fn init(db: Database) {
+        let instance = Self::new(db).await;
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 

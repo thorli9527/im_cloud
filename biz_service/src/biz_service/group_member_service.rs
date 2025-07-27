@@ -19,13 +19,16 @@ pub struct GroupMemberService {
 }
 
 impl GroupMemberService {
-    pub fn new(db: Database) -> Self {
+    pub async fn new(db: Database) -> Self {
         let collection = db.collection("group_member");
-        Self { dao: BaseRepository::new(db.clone(), collection.clone()), db: db }
+        Self {
+            dao: BaseRepository::new(db.clone(), collection.clone(), "group_member").await,
+            db: db,
+        }
     }
 
-    pub fn init(db: Database) {
-        let instance = Self::new(db);
+    pub async fn init(db: Database) {
+        let instance = Self::new(db).await;
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
@@ -134,16 +137,40 @@ impl GroupMemberService {
         let detail_key = group_member_key(group_id, user_id);
 
         // 批量执行 Redis 删除
-        let (removed_from_set, removed_from_admin, deleted_detail): (i32, i32, i32) =
-            redis::pipe().atomic().cmd("SREM").arg(&member_key).arg(user_id).cmd("SREM").arg(&admin_key).arg(user_id).cmd("DEL").arg(&detail_key).query_async(&mut conn).await.unwrap_or((0, 0, 0));
+        let (removed_from_set, removed_from_admin, deleted_detail): (i32, i32, i32) = redis::pipe()
+            .atomic()
+            .cmd("SREM")
+            .arg(&member_key)
+            .arg(user_id)
+            .cmd("SREM")
+            .arg(&admin_key)
+            .arg(user_id)
+            .cmd("DEL")
+            .arg(&detail_key)
+            .query_async(&mut conn)
+            .await
+            .unwrap_or((0, 0, 0));
 
-        tracing::info!("🗑️ 成员移除成功: group_id={}, user_id={}, redis[srem:{}+{} del:{}]", group_id, user_id, removed_from_set, removed_from_admin, deleted_detail);
+        tracing::info!(
+            "🗑️ 成员移除成功: group_id={}, user_id={}, redis[srem:{}+{} del:{}]",
+            group_id,
+            user_id,
+            removed_from_set,
+            removed_from_admin,
+            deleted_detail
+        );
 
         Ok(())
     }
 
     /// 从缓存优先读取分页成员列表，否则回源 MongoDB
-    pub async fn query_by_group_id(&self, group_id: &str, page_size: i64, order_type: Option<OrderType>, sort_field: &str) -> Result<PageResult<GroupMemberEntity>> {
+    pub async fn query_by_group_id(
+        &self,
+        group_id: &str,
+        page_size: i64,
+        order_type: Option<OrderType>,
+        sort_field: &str,
+    ) -> Result<PageResult<GroupMemberEntity>> {
         let set_key = Self::key_group_members(group_id); // Redis Set key
         let hash_key = group_member_list_key(group_id); // Redis Hash: group:member:list:{group_id}
         let mut conn = RedisPoolTools::get().get().await?;
@@ -182,7 +209,11 @@ impl GroupMemberService {
                     entities.truncate(page_size as usize);
                 }
 
-                return Ok(PageResult { items: entities, has_next: has_more, has_prev: false });
+                return Ok(PageResult {
+                    items: entities,
+                    has_next: has_more,
+                    has_prev: false,
+                });
             }
         }
 

@@ -16,15 +16,15 @@ pub mod user_service;
 use crate::biz_service::friend_event_service::FriendEventService;
 use common::db::Db;
 
-pub fn init_service() {
+pub async fn init_service() {
     let db = Db::get();
-    client_service::ClientService::init(db.clone());
-    country_service::CountryService::init(db.clone());
-    group_member_service::GroupMemberService::init(db.clone());
-    group_service::GroupService::init(db.clone());
-    user_service::UserService::init(db.clone());
-    mq_message_group_service::GroupMessageService::init(db.clone());
-    mq_message_user_service::UserMessageService::init(db.clone());
-    friend_service::UserFriendService::init(db.clone());
-    FriendEventService::init(db.clone());
+    client_service::ClientService::init(db.clone()).await;
+    country_service::CountryService::init(db.clone()).await;
+    group_member_service::GroupMemberService::init(db.clone()).await;
+    group_service::GroupService::init(db.clone()).await;
+    user_service::UserService::init(db.clone()).await;
+    mq_message_group_service::GroupMessageService::init(db.clone()).await;
+    mq_message_user_service::UserMessageService::init(db.clone()).await;
+    friend_service::UserFriendService::init(db.clone()).await;
+    FriendEventService::init(db.clone()).await;
 }

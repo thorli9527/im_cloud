@@ -4,8 +4,8 @@ use actix_web::web::ServiceConfig;
 use actix_web::{post, web, Responder};
 use biz_service::manager::user_manager_auth::{UserManagerAuth, UserManagerAuthOpt, UserRegType};
 use common::errors::AppError;
+use log::error;
 use serde_json::json;
-use tracing::{error, log};
 use validator::Validate;
 
 pub fn configure(cfg: &mut ServiceConfig) {
@@ -27,14 +27,15 @@ pub fn configure(cfg: &mut ServiceConfig) {
 pub async fn auth_register(payload: web::Json<RegisterRequest>) -> Result<impl Responder, AppError> {
     // 参数校验
     if let Err(errs) = payload.validate() {
-        return Ok(ApiResponse::json_error(400, "system.error"));
+        let msg = format!("validate.error, {}", errs.to_string());
+        return Ok(ApiResponse::json_error(400, msg));
     }
 
     let reg_type = match payload.reg_type {
         1 => UserRegType::Phone,
         2 => UserRegType::Email,
         3 => UserRegType::Nft,
-        _ => return Ok(ApiResponse::json_error(400, "system.error")),
+        _ => return Ok(ApiResponse::json_error(400, "data.error")),
     };
 
     let user_manager = UserManagerAuth::get();

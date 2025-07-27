@@ -21,9 +21,12 @@ pub struct FriendEventService {
 
 impl FriendEventService {
     /// 创建服务实例
-    pub fn new(db: Database) -> Self {
+    pub async fn new(db: Database) -> Self {
         let collection = db.collection("friend_event");
-        Self { db: db.clone(), dao: BaseRepository::new(db, collection.clone()) }
+        Self {
+            db: db.clone(),
+            dao: BaseRepository::new(db, collection.clone(), "friend_event").await,
+        }
     }
 
     /// 申请好友
@@ -33,13 +36,7 @@ impl FriendEventService {
         Ok(())
     }
     /// 受理好友申请
-    pub async fn accept_friend(
-        &self,
-        event_id: &String,
-        uid: &UserId,
-        a_name: &str,
-        remark: Option<&str>,
-    ) -> Result<()> {
+    pub async fn accept_friend(&self, event_id: &String, uid: &UserId, a_name: &str, remark: Option<&str>) -> Result<()> {
         let info = self.dao.find_by_id(event_id).await?;
         if info.is_none() {
             return Err(anyhow::anyhow!("申请记录不存在"));
@@ -176,11 +173,9 @@ impl FriendEventService {
     }
 
     /// 初始化全局单例
-    pub fn init(db: Database) {
-        let instance = Self::new(db);
-        INSTANCE_FRIEND_EVENT
-            .set(Arc::new(instance))
-            .expect("INSTANCE_FRIEND_EVENT already initialized");
+    pub async fn init(db: Database) {
+        let instance = Self::new(db).await;
+        INSTANCE_FRIEND_EVENT.set(Arc::new(instance)).expect("INSTANCE_FRIEND_EVENT already initialized");
     }
 
     /// 获取服务单例

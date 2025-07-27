@@ -1,18 +1,13 @@
 use crate::service::arb_manager::{ArbManagerJob, ManagerJobOpt};
 use crate::service::shard_manager::{ShardManager, MEMBER_SHARD_SIZE};
+use biz_service::protocol::rpc::rpc_arb_models::{BaseRequest, NodeType, QueryNodeReq, ShardState, SyncListGroup, UpdateShardStateRequest};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
 use tonic::async_trait;
-use biz_service::protocol::rpc::rpc_arb_models::{BaseRequest, NodeType, QueryNodeReq, ShardState, SyncListGroup, UpdateShardStateRequest};
 
 #[async_trait]
 impl ManagerJobOpt for ArbManagerJob {
-    async fn init(&mut self) -> anyhow::Result<()> {
-        self.init_arb_client().await?;
-        Ok(())
-    }
-
     async fn register_node(&mut self) -> anyhow::Result<()> {
         let config1 = &AppConfig::get().clone().shard.clone().unwrap();
         let shard_manager = ShardManager::get();

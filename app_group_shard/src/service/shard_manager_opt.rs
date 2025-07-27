@@ -5,13 +5,13 @@ use async_trait::async_trait;
 use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::protocol::common::{GroupMemberEntity, GroupRoleType};
+use biz_service::protocol::rpc::rpc_arb_models::{MemberRef, NodeType, QueryNodeReq};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::{GroupId, UserId};
 use futures_util::StreamExt;
 use mongodb::bson::doc;
 use mongodb::options::FindOptions;
-use biz_service::protocol::rpc::rpc_arb_models::{MemberRef, NodeType, QueryNodeReq};
 
 #[async_trait]
 impl ShardManagerOpt for ShardManager {
@@ -31,7 +31,9 @@ impl ShardManagerOpt for ShardManager {
         let list = response.get_ref();
 
         let shard_addr = &AppConfig::get().shard.clone().unwrap().shard_address.unwrap();
-
+        if list.nodes.len() == 0 {
+            return Ok(());
+        }
         let shard_index = hash_index(shard_addr, list.nodes.len() as i32);
 
         loop {

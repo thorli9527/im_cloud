@@ -2,7 +2,7 @@ use crate::entitys::role_entity::RoleEntity;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::date_util::now;
-use mongodb::{Database, bson::doc};
+use mongodb::{bson::doc, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 #[derive(Debug)]
@@ -11,9 +11,11 @@ pub struct RoleService {
 }
 
 impl RoleService {
-    pub fn new(db: Database) -> Self {
+    pub async fn new(db: Database) -> Self {
         let collection = db.collection("role");
-        Self { dao: BaseRepository::new(db, collection) }
+        Self {
+            dao: BaseRepository::new(db, collection, "role").await,
+        }
     }
 
     /// 获取所有角色列表
@@ -23,13 +25,7 @@ impl RoleService {
     }
 
     /// 添加新角色
-    pub async fn add_role(
-        &self,
-        name: &str,
-        code: &str,
-        description: Option<String>,
-        is_builtin: bool,
-    ) -> Result<String> {
+    pub async fn add_role(&self, name: &str, code: &str, description: Option<String>, is_builtin: bool) -> Result<String> {
         let entity = RoleEntity {
             id: "".into(),
             name: name.into(),
@@ -42,8 +38,8 @@ impl RoleService {
         self.dao.insert(&entity).await
     }
 
-    pub fn init(db: Database) {
-        INSTANCE.set(Arc::new(Self::new(db))).expect("RoleService already initialized");
+    pub async fn init(db: Database) {
+        INSTANCE.set(Arc::new(Self::new(db).await)).expect("RoleService already initialized");
     }
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("RoleService not initialized").clone()

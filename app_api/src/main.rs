@@ -3,7 +3,7 @@ use app_api::handlers;
 use common::config::AppConfig;
 
 use actix_web::{App, HttpServer};
-use tracing::log::warn;
+use log::warn;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -13,6 +13,9 @@ async fn main() -> std::io::Result<()> {
     //初始化日志
     let address_and_port = format!("{}:{}", &app_cfg.get_server().host, &app_cfg.get_server().port);
     warn!("Starting server on {}", address_and_port);
+    // 初始化 业务
+    biz_service::init_service().await;
+    biz_service::manager::init();
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())

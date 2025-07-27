@@ -4,7 +4,7 @@ use crate::entitys::user_role_entity::UserRoleEntity;
 use anyhow::Result;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::date_util::now;
-use mongodb::{Database, bson::doc};
+use mongodb::{bson::doc, Database};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 
@@ -14,9 +14,11 @@ pub struct UserRoleService {
 }
 
 impl UserRoleService {
-    pub fn new(db: Database) -> Self {
+    pub async fn new(db: Database) -> Self {
         let collection = db.collection("user_role");
-        Self { dao: BaseRepository::new(db, collection) }
+        Self {
+            dao: BaseRepository::new(db, collection, "user_role").await,
+        }
     }
 
     /// 给用户分配角色
@@ -48,8 +50,8 @@ impl UserRoleService {
         Ok(roles)
     }
 
-    pub fn init(db: Database) {
-        INSTANCE.set(Arc::new(Self::new(db))).expect("UserRoleService already initialized");
+    pub async fn init(db: Database) {
+        INSTANCE.set(Arc::new(Self::new(db).await)).expect("UserRoleService already initialized");
     }
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("UserRoleService not initialized").clone()

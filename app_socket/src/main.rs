@@ -17,8 +17,8 @@ async fn main() -> anyhow::Result<()> {
     let config = AppConfig::get();
     //初始化 kafka
     KafkaService::init(&config.get_kafka()).await;
-
     //初始化业务
+    biz_service::init_service().await;
     biz_service::manager::init();
     let manager: Arc<SocketManager> = get_socket_manager();
     tokio::spawn(job_manager::start_heartbeat_cleaner(manager.clone(), 30));

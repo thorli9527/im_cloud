@@ -1,13 +1,13 @@
 use crate::biz_service::group_member_service::GroupMemberService;
 use crate::biz_service::user_service::UserService;
 use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
-use anyhow::{Result, anyhow};
-use common::UserId;
+use anyhow::{anyhow, Result};
 use common::errors::AppError;
 use common::redis::redis_pool::RedisPoolTools;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
+use common::UserId;
 use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
 use mongodb::{Collection, Database};
@@ -22,15 +22,15 @@ pub struct GroupService {
 }
 
 impl GroupService {
-    pub fn new(db: Database) -> Self {
+    pub async fn new(db: Database) -> Self {
         let collection = db.collection("group_info");
-        Self { dao: BaseRepository::new(db.clone(), collection.clone()), db }
+        Self {
+            dao: BaseRepository::new(db.clone(), collection.clone(), "group_info").await,
+            db,
+        }
     }
 
-    pub async fn find_by_group_id(
-        &self,
-        group_id: impl AsRef<str>,
-    ) -> Result<GroupEntity, AppError> {
+    pub async fn find_by_group_id(&self, group_id: impl AsRef<str>) -> Result<GroupEntity, AppError> {
         let result = self.dao.find_by_id(group_id.as_ref()).await?;
         match result {
             Some(group) => Ok(group),
@@ -39,10 +39,7 @@ impl GroupService {
     }
 
     pub async fn create_group(&self, group: &GroupEntity, ids: &Vec<String>) -> anyhow::Result<()> {
-        let old_info = self
-            .dao
-            .find_one(doc! {"name": group.clone().name,"owner_id": group.clone().owner_id})
-            .await?;
+        let old_info = self.dao.find_one(doc! {"name": group.clone().name,"owner_id": group.clone().owner_id}).await?;
         if old_info.is_some() {
             return Err(anyhow!("group.already.exists"));
         }
@@ -115,8 +112,7 @@ impl GroupService {
 
                 // 添加初始成员
                 if !ids.is_empty() {
-                    let other_members: Vec<String> =
-                        ids.iter().filter(|u| *u != &group.owner_id).cloned().collect();
+                    let other_members: Vec<String> = ids.iter().filter(|u| *u != &group.owner_id).cloned().collect();
                     if !other_members.is_empty() {
                         conn.sadd::<_, _, ()>(&member_key, other_members).await?;
                     }
@@ -175,11 +171,8 @@ impl GroupService {
                 // Step 4: 清理 Redis 缓存
                 let mut conn = RedisPoolTools::get().get().await?;
 
-                let keys_to_delete = vec![
-                    format!("group:members:{}", group_id),
-                    format!("group:admin:{}", group_id),
-                    format!("group:info:{}", group_id),
-                ];
+                let keys_to_delete =
+                    vec![format!("group:members:{}", group_id), format!("group:admin:{}", group_id), format!("group:info:{}", group_id)];
 
                 conn.del::<_, ()>(keys_to_delete).await?;
 
@@ -236,10 +229,7 @@ impl GroupService {
 
         // Step 2: 校验新群主是否是群成员
         let member_service = GroupMemberService::get();
-        member_service
-            .find_by_group_id_and_uid(group_id, new_owner_id)
-            .await
-            .map_err(|_| AppError::BizError("new.owner.not.member".into()))?;
+        member_service.find_by_group_id_and_uid(group_id, new_owner_id).await.map_err(|_| AppError::BizError("new.owner.not.member".into()))?;
 
         // Step 3: 更新群组信息中的群主字段
         let update = doc! {
@@ -273,12 +263,7 @@ impl GroupService {
         });
         conn.set::<_, _, ()>(&info_key, serde_json::to_string(&group_info)?).await?;
 
-        tracing::info!(
-            "✅ 群主转让成功: group_id={} from={} → to={}",
-            group_id,
-            old_owner_id,
-            new_owner_id
-        );
+        tracing::info!("✅ 群主转让成功: group_id={} from={} → to={}", group_id, old_owner_id, new_owner_id);
         Ok(())
     }
 
@@ -295,8 +280,8 @@ impl GroupService {
         }
         Ok(admins)
     }
-    pub fn init(db: Database) {
-        let instance = Self::new(db);
+    pub async fn init(db: Database) {
+        let instance = Self::new(db).await;
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 

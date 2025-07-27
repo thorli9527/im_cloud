@@ -1,10 +1,9 @@
 use crate::handlers::auth::reset_password_handler_dto::{ResetPasswordResponse, ResetPasswordSendRequest, ResetPasswordVerifyRequest};
 use crate::result::{result, result_error_code};
 use actix_web::web::ServiceConfig;
-use actix_web::{HttpResponse, Responder, post, web};
+use actix_web::{post, web, HttpResponse, Responder};
 use biz_service::manager::user_manager_auth::{ResetPasswordType, UserManagerAuth, UserManagerAuthOpt};
 use common::errors::AppError;
-use tracing::log;
 use validator::Validate;
 
 pub fn configure(cfg: &mut ServiceConfig) {
@@ -32,7 +31,9 @@ pub async fn auth_reset_password_send_code(req: web::Json<ResetPasswordSendReque
 
     let user_manager = UserManagerAuth::get();
     match user_manager.reset_password_build_code(&reset_type, &req.user_name).await {
-        Ok(_) => HttpResponse::Ok().json(ResetPasswordResponse { message: "验证码已发送".to_string() }),
+        Ok(_) => HttpResponse::Ok().json(ResetPasswordResponse {
+            message: "验证码已发送".to_string(),
+        }),
         Err(e) => {
             log::error!("重置密码发送验证码失败: {}", e);
             HttpResponse::BadRequest().body("system.error")

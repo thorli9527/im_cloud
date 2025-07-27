@@ -18,12 +18,14 @@ pub struct GroupMessageService {
 }
 
 impl GroupMessageService {
-    pub fn new(db: Database) -> Self {
+    pub async fn new(db: Database) -> Self {
         let collection = db.collection("mq_group_message");
-        Self { dao: BaseRepository::new(db, collection.clone()) }
+        Self {
+            dao: BaseRepository::new(db, collection.clone(), "mq_group_message").await,
+        }
     }
-    pub fn init(db: Database) {
-        let instance = Self::new(db);
+    pub async fn init(db: Database) {
+        let instance = Self::new(db).await;
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 

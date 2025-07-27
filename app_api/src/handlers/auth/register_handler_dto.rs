@@ -51,7 +51,7 @@ fn validate_username(username: &str) -> Result<(), ValidationError> {
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct RegisterVerifyRequest {
     /// 用户名（手机号或邮箱）
-    #[validate(length(min = 8, message = "用户名太短"))]
+    #[validate(length(min = 4, message = "用户名太短"))]
     pub username: String,
 
     /// 登录密码

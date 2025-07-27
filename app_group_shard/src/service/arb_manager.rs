@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use biz_service::protocol::rpc::rpc_arb_models::ShardState::{Migrating, Normal, Preparing, Ready, Registered};
 use biz_service::protocol::rpc::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::AppConfig;
+use once_cell::sync::OnceCell;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -12,6 +13,7 @@ use tokio::sync::RwLock;
 use tokio::time::sleep;
 use tonic::transport::Channel;
 
+#[derive(Debug)]
 pub struct ArbManagerJob {
     pub arb_client: Option<ArbServerRpcServiceClient<Channel>>,
     pub server_host: String,
@@ -22,9 +24,6 @@ pub struct ArbManagerJob {
 #[async_trait]
 /// 分片管理器核心操作定义接口，适用于支持动态迁移、健康上报、状态切换的分布式群组服务。
 pub trait ManagerJobOpt: Send + Sync {
-    /// 初始化管理器（例如加载缓存、连接仲裁器、预拉取分片信息等）
-    async fn init(&mut self) -> anyhow::Result<()>;
-
     /// 注册当前节点到仲裁中心或注册服务，用于初始接入和负载调度识别
     async fn register_node(&mut self) -> anyhow::Result<()>;
     /// 设置某群组迁移状态为“准备中”
@@ -141,4 +140,17 @@ impl ArbManagerJob {
             total: 0,
         }
     }
+
+    pub async fn init() -> anyhow::Result<()> {
+        let mut job = Self::new();
+        job.init_arb_client().await?;
+        INSTANCE_COUNTRY.set(Arc::new(job)).expect("INSTANCE already initialized");
+        Ok(())
+    }
+
+    /// 获取单例
+    pub fn get() -> Arc<Self> {
+        INSTANCE_COUNTRY.get().expect("INSTANCE is not initialized").clone()
+    }
 }
+static INSTANCE_COUNTRY: OnceCell<Arc<ArbManagerJob>> = OnceCell::new();

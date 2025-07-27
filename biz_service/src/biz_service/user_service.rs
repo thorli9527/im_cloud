@@ -1,14 +1,14 @@
 use crate::entitys::user_entity::UserInfoEntity;
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
 use common::config::AppConfig;
 use common::redis::redis_template::RedisTemplate;
 use common::redis::redis_template::ValueOps;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::{build_md5_with_key, build_uuid};
 use common::util::date_util::now;
-use mongodb::Database;
 use mongodb::bson::doc;
+use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 
@@ -18,12 +18,14 @@ pub struct UserService {
 }
 
 impl UserService {
-    pub fn new(db: Database) -> Self {
+    pub async fn new(db: Database) -> Self {
         let collection = db.collection("user_info");
-        Self { dao: BaseRepository::new(db, collection.clone()) }
+        Self {
+            dao: BaseRepository::new(db, collection.clone(), "user_info").await,
+        }
     }
-    pub fn init(db: Database) {
-        let instance = Self::new(db);
+    pub async fn init(db: Database) {
+        let instance = Self::new(db).await;
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
@@ -38,11 +40,7 @@ impl UserService {
         redis_template.ops_for_value().delete(&token_key).await.expect("删除token失败");
         Ok(())
     }
-    pub async fn build_login(
-        &self,
-        user_name: &str,
-        password: &str,
-    ) -> Result<(String, UserInfoEntity)> {
+    pub async fn build_login(&self, user_name: &str, password: &str) -> Result<(String, UserInfoEntity)> {
         let user_info = self.dao.find_one(doc! {"user_name": user_name}).await?;
         if user_info.is_none() {
             return Err(anyhow!("用户不存在"));
@@ -59,11 +57,7 @@ impl UserService {
         let redis_template = RedisTemplate::get();
         let token = build_uuid();
         let token_key = format!("token:{}", token);
-        redis_template
-            .ops_for_value()
-            .set(&token_key, &user_info, Some(30))
-            .await
-            .expect("redis.error");
+        redis_template.ops_for_value().set(&token_key, &user_info, Some(30)).await.expect("redis.error");
 
         Ok((token, user_info))
     }
@@ -76,11 +70,7 @@ impl UserService {
     }
 
     /// 验证用户名和明文密码，匹配则返回用户信息，否则返回None
-    pub async fn authenticate(
-        &self,
-        username: &str,
-        plain_password: &str,
-    ) -> Result<Option<(String, UserInfoEntity)>> {
+    pub async fn authenticate(&self, username: &str, plain_password: &str) -> Result<Option<(String, UserInfoEntity)>> {
         if let Some(user) = self.get_by_username(username).await? {
             // 检查用户状态
             if !user.status {
@@ -93,11 +83,7 @@ impl UserService {
                 let redis_template = RedisTemplate::get();
                 let token = build_uuid();
                 let token_key = format!("token:{}", token);
-                redis_template
-                    .ops_for_value()
-                    .set(&token_key, &user, Some(30))
-                    .await
-                    .expect("redis.error");
+                redis_template.ops_for_value().set(&token_key, &user, Some(30)).await.expect("redis.error");
                 Ok(Some((token, user.clone())))
             } else {
                 Ok(None)
@@ -107,13 +93,7 @@ impl UserService {
         }
     }
     /// 添加新用户（注册功能，密码在外部先加密后传入）
-    pub async fn add_user(
-        &self,
-        username: &str,
-        hashed_password: &str,
-        is_admin: bool,
-        status: bool,
-    ) -> Result<String> {
+    pub async fn add_user(&self, username: &str, hashed_password: &str, is_admin: bool, status: bool) -> Result<String> {
         let entity = UserInfoEntity {
             id: "".into(),
             user_name: username.into(),

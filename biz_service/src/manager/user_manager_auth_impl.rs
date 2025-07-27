@@ -54,8 +54,12 @@ impl UserManagerAuthOpt for UserManagerAuth {
             user_manager.delete_token(&token).await?;
         }
         // 发送登出响应消息
-        let log_out_msg = LogoutRespMsg { message_id: message_id.clone() };
-        kafka_service.send_proto(&ByteMessageType::LogoutRespMsgType, &log_out_msg, &log_out_msg.message_id, &AppConfig::get().get_kafka().topic_group).await?;
+        let log_out_msg = LogoutRespMsg {
+            message_id: message_id.clone(),
+        };
+        kafka_service
+            .send_proto(&ByteMessageType::LogoutRespMsgType, &log_out_msg, &log_out_msg.message_id, &AppConfig::get().get_kafka().topic_group)
+            .await?;
         Ok(())
     }
 
@@ -72,20 +76,32 @@ impl UserManagerAuthOpt for UserManagerAuth {
         let reg_id = build_uuid();
 
         let redis_key = format!("register:verify:uuid:{}", reg_id);
-        let session = VerifySession { user_name: user_name.to_string(), code: code.clone(), reg_type: *reg_type as u8, target: target.to_string() };
+        let session = VerifySession {
+            user_name: user_name.to_string(),
+            code: code.clone(),
+            reg_type: *reg_type as u8,
+            target: target.to_string(),
+        };
         let json_data = serde_json::to_string(&session)?;
 
         let mut conn = UserManager::get().pool.get().await?;
         conn.set_ex::<_, _, ()>(&redis_key, json_data, 300).await?;
 
         // 实际生产应调用短信/邮箱服务
-        log::info!("[注册验证码] 发送到 {}: {}，uuid={}", target, code, reg_id);
+        log::warn!("[注册验证码] 发送到 {}: {}，uuid={}", target, code, reg_id);
 
         // 返回 uuid 给前端
         Ok(reg_id)
     }
 
-    async fn register_verify_code(&self, user_name: &str, password: &str, reg_id: &str, code: &str, reg_type: &UserRegType) -> anyhow::Result<String> {
+    async fn register_verify_code(
+        &self,
+        user_name: &str,
+        password: &str,
+        reg_id: &str,
+        code: &str,
+        reg_type: &UserRegType,
+    ) -> anyhow::Result<String> {
         // 构造 Redis Key
         let redis_key = format!("register:verify:uuid:{}", reg_id);
         let mut conn = UserManager::get().pool.get().await?;
@@ -172,7 +188,13 @@ impl UserManagerAuthOpt for UserManagerAuth {
         Ok(())
     }
 
-    async fn reset_password_verify_code(&self, reset_type: &ResetPasswordType, user_name: &str, code: &str, new_password: &str) -> anyhow::Result<()> {
+    async fn reset_password_verify_code(
+        &self,
+        reset_type: &ResetPasswordType,
+        user_name: &str,
+        code: &str,
+        new_password: &str,
+    ) -> anyhow::Result<()> {
         let redis_key = format!("reset:verify:{}:{}", *reset_type as u8, user_name);
         let mut conn = UserManager::get().pool.get().await?;
         let cached: Option<String> = conn.get(&redis_key).await?;

@@ -45,7 +45,8 @@ impl UserManagerAuth {
         let manager = Self {};
         return manager;
     }
-    pub fn init(&self, instance: UserManagerAuth) {
+    pub fn init() {
+        let instance = UserManagerAuth::new();
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
@@ -60,20 +61,9 @@ static INSTANCE: OnceCell<Arc<UserManagerAuth>> = OnceCell::new();
 #[async_trait]
 pub trait UserManagerAuthOpt: Send + Sync {
     /// 登录用户，将用户标记为在线，并进行必要的缓存更新和事件通知
-    async fn login(
-        &self,
-        message_id: &u64,
-        user_name: &str,
-        password: &str,
-        device_type: &DeviceType,
-    ) -> anyhow::Result<String>;
+    async fn login(&self, message_id: &u64, user_name: &str, password: &str, device_type: &DeviceType) -> anyhow::Result<String>;
 
-    async fn logout(
-        &self,
-        message_id: &u64,
-        user_id: &UserId,
-        device_type: &DeviceType,
-    ) -> anyhow::Result<()>;
+    async fn logout(&self, message_id: &u64, user_id: &UserId, device_type: &DeviceType) -> anyhow::Result<()>;
     /// 注册新用户
     async fn register(
         &self,
@@ -83,36 +73,16 @@ pub trait UserManagerAuthOpt: Send + Sync {
         target: &str,           // 手机号或邮箱
     ) -> anyhow::Result<String>; // 返回用户ID或Token
 
-    async fn register_verify_code(
-        &self,
-        user_name: &str,
-        password: &str,
-        reg_id: &str,
-        code: &str,
-        reg_type: &UserRegType,
-    ) -> anyhow::Result<String>;
+    async fn register_verify_code(&self, user_name: &str, password: &str, reg_id: &str, code: &str, reg_type: &UserRegType)
+    -> anyhow::Result<String>;
 
     /// 修改登录密码
-    async fn change_password(
-        &self,
-        token: &str,
-        old_password: &str,
-        new_password: &str,
-    ) -> anyhow::Result<()>;
+    async fn change_password(&self, token: &str, old_password: &str, new_password: &str) -> anyhow::Result<()>;
 
     /// 构建验证码（发送验证码）
-    async fn reset_password_build_code(
-        &self,
-        reset_type: &ResetPasswordType,
-        user_name: &str,
-    ) -> anyhow::Result<()>;
+    async fn reset_password_build_code(&self, reset_type: &ResetPasswordType, user_name: &str) -> anyhow::Result<()>;
 
     /// 验证验证码并重置密码
-    async fn reset_password_verify_code(
-        &self,
-        reset_type: &ResetPasswordType,
-        user_name: &str,
-        code: &str,
-        new_password: &str,
-    ) -> anyhow::Result<()>;
+    async fn reset_password_verify_code(&self, reset_type: &ResetPasswordType, user_name: &str, code: &str, new_password: &str)
+    -> anyhow::Result<()>;
 }

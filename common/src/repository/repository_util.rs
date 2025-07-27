@@ -9,6 +9,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::cmp::PartialEq;
 use std::marker::PhantomData;
 use utoipa::ToSchema;
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PageResult<T> {
@@ -33,21 +34,10 @@ pub trait Repository<T> {
     async fn save(&self, entity: &T) -> Result<()>;
     async fn un_set(&self, id: &str, property: &str) -> Result<()>;
     async fn update(&self, filter: Document, update: Document) -> Result<u64>;
-    async fn up_property<E: Send + Sync + Serialize>(
-        &self,
-        id: &str,
-        property: &str,
-        value: E,
-    ) -> Result<()>;
+    async fn up_property<E: Send + Sync + Serialize>(&self, id: &str, property: &str, value: E) -> Result<()>;
     async fn delete(&self, filter: Document) -> Result<u64>;
     async fn delete_by_id(&self, id: &str) -> Result<u64>;
-    async fn query_by_page(
-        &self,
-        filter: Document,
-        page_size: i64,
-        order_type: Option<OrderType>,
-        sort_field: &str,
-    ) -> Result<PageResult<T>>;
+    async fn query_by_page(&self, filter: Document, page_size: i64, order_type: Option<OrderType>, sort_field: &str) -> Result<PageResult<T>>;
 }
 
 #[allow(dead_code)]
@@ -58,9 +48,23 @@ pub struct BaseRepository<T: Send + Sync> {
     _marker: PhantomData<T>,
 }
 
-impl<T: Send + Sync> BaseRepository<T> {
-    pub fn new(db: Database, collection: Collection<Document>) -> Self {
-        Self { collection, db, _marker: Default::default() }
+impl<T: Send + Sync> BaseRepository<T> {}
+
+impl<T: Send + Sync> BaseRepository<T>
+where T: Serialize + DeserializeOwned + Unpin + Send + Sync
+{
+    pub async fn new(db: Database, collection: Collection<Document>, name: &str) -> Self {
+        // 如果不存在则自动创建
+        let collections = db.list_collection_names().await.expect("❌ 获取集合列表失败");
+        if !collections.contains(&name.to_string()) {
+            db.create_collection(name).await.unwrap();
+        }
+        let result = Self {
+            collection,
+            db,
+            _marker: Default::default(),
+        };
+        result
     }
 }
 
@@ -76,20 +80,14 @@ where T: Serialize + DeserializeOwned + Unpin + Send + Sync
 
     async fn insert(&self, entity: &T) -> Result<String> {
         let mut doc = bson::to_document(entity)?;
-        if let Some(bson::Bson::String(id_str)) =
-            doc.get_str("id").ok().map(str::to_string).map(bson::Bson::String)
-        {
+        if let Some(bson::Bson::String(id_str)) = doc.get_str("id").ok().map(str::to_string).map(bson::Bson::String) {
             if let Ok(object_id) = ObjectId::parse_str(&id_str) {
                 doc.insert("_id", object_id);
             }
         }
         doc.remove("id");
         let result = self.collection.insert_one(doc).await?;
-        if let Bson::ObjectId(oid) = result.inserted_id {
-            Ok(oid.to_string())
-        } else {
-            Err(anyhow::anyhow!("❌ 插入成功但未返回 ObjectId"))
-        }
+        if let Bson::ObjectId(oid) = result.inserted_id { Ok(oid.to_string()) } else { Err(anyhow::anyhow!("❌ 插入成功但未返回 ObjectId")) }
     }
 
     async fn insert_many(&self, entities: &[T]) -> Result<()> {
@@ -102,9 +100,7 @@ where T: Serialize + DeserializeOwned + Unpin + Send + Sync
         for entity in entities {
             let mut doc = bson::to_document(entity)?;
 
-            if let Some(Bson::String(id_str)) =
-                doc.get_str("id").ok().map(str::to_string).map(Bson::String)
-            {
+            if let Some(Bson::String(id_str)) = doc.get_str("id").ok().map(str::to_string).map(Bson::String) {
                 if let Ok(object_id) = ObjectId::parse_str(&id_str) {
                     doc.insert("_id", object_id);
                 }
@@ -172,12 +168,7 @@ where T: Serialize + DeserializeOwned + Unpin + Send + Sync
         Ok(result.modified_count)
     }
 
-    async fn up_property<E: Send + Sync + Serialize>(
-        &self,
-        id: &str,
-        property: &str,
-        value: E,
-    ) -> Result<()> {
+    async fn up_property<E: Send + Sync + Serialize>(&self, id: &str, property: &str, value: E) -> Result<()> {
         let object_id = ObjectId::parse_str(id)?;
         let filter = doc! {"_id":object_id};
         let update = doc! {
@@ -201,13 +192,7 @@ where T: Serialize + DeserializeOwned + Unpin + Send + Sync
         Ok(result.deleted_count)
     }
 
-    async fn query_by_page(
-        &self,
-        filter: Document,
-        page_size: i64,
-        order_type: Option<OrderType>,
-        sort_field: &str,
-    ) -> Result<PageResult<T>> {
+    async fn query_by_page(&self, filter: Document, page_size: i64, order_type: Option<OrderType>, sort_field: &str) -> Result<PageResult<T>> {
         let mut sort_direction = 0;
         match order_type {
             None => sort_direction = 1,
@@ -221,10 +206,7 @@ where T: Serialize + DeserializeOwned + Unpin + Send + Sync
             }
         };
         let real_limit = page_size + 1;
-        let find_options = FindOptions::builder()
-            .sort(doc! { sort_field: sort_direction })
-            .limit(real_limit)
-            .build();
+        let find_options = FindOptions::builder().sort(doc! { sort_field: sort_direction }).limit(real_limit).build();
 
         let mut cursor = self.collection.find(filter).with_options(find_options).await?;
         let mut results: Vec<T> = vec![];
