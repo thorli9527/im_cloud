@@ -9,7 +9,7 @@ members = [
     "app_main",
     "app_socket",
     "app_api",
-    "app_arb", "app_test", "app_shard", ]
+    "app_arb", "app_test", "app_group_shard", "app_group_message", ]
 [workspace.dependencies]
 # ========================
 # 🌐 Web 框架

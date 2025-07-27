@@ -382,6 +382,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "app_group_message"
+version = "0.1.0"
+dependencies = [
+ "actix-service",
+ "actix-web",
+ "biz_service",
+ "common",
+ "deadpool-redis",
+ "prost 0.13.5",
+ "prost-types 0.13.5",
+ "regex",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tonic",
+ "tracing",
+ "validator",
+]
+
+[[package]]
 name = "app_job"
 version = "0.1.0"
 
