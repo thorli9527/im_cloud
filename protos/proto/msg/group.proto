@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package protocol.group;
-import "common/common.proto"; // 引入全局定义
+import "common.proto"; // 引入全局定义
 /**
  * 群组节点支持的消息类型枚举（用于 MQ 路由 / 类型标识）
  */

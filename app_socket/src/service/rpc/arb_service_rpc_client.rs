@@ -2,6 +2,8 @@
 
 use crate::kafka;
 use biz_service::biz_service::kafka_group_service::KafkaGroupService;
+use biz_service::protocol::rpc::arb_models::{BaseRequest, NodeInfo, NodeType, QueryNodeReq};
+use biz_service::protocol::rpc::arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::{build_md5, hash_index};
 use config::Config;
@@ -12,8 +14,6 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{interval, Duration};
 use tonic::transport::Channel;
-use biz_service::protocol::rpc::rpc_arb_models::{BaseRequest, NodeInfo, NodeType, QueryNodeReq};
-use biz_service::protocol::rpc::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 
 #[derive(Debug, Clone)]
 pub struct ArbClient {

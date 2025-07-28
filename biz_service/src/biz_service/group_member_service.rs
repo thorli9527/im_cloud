@@ -1,4 +1,5 @@
-use crate::protocol::common::{GroupMemberEntity, GroupRoleType};
+use crate::entitys::group_member_entity::GroupMemberEntity;
+use crate::protocol::common::GroupRoleType;
 use anyhow::{anyhow, Result};
 use common::errors::AppError;
 use common::redis::redis_pool::RedisPoolTools;
@@ -20,9 +21,8 @@ pub struct GroupMemberService {
 
 impl GroupMemberService {
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("group_member");
         Self {
-            dao: BaseRepository::new(db.clone(), collection.clone(), "group_member").await,
+            dao: BaseRepository::new(db.clone(), "group_member").await,
             db: db,
         }
     }

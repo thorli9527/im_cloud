@@ -1,17 +1,31 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
-pub struct RequestJoinGroupEntity {
-    pub id: String,                   // 申请记录唯一 ID（如雪花 ID 或 UUID 字符串）
-    pub group_id: String,             // 群组 ID
-    pub applicant_id: String,         // 申请人用户 ID
-    pub apply_reason: Option<String>, // 入群理由（可选）
-    pub status: i8,                   // 审核状态：0 待审核 / 1 同意 / 2 拒绝
-    pub reviewed_by: Option<String>,  // 审核人用户 ID（群主/管理员，可能为空）
-    pub reviewed_at: i64,             // 审核时间戳（Unix 毫秒时间）
-    /// 创建时间（Unix 秒时间戳）
-    pub create_time: i64,
-    /// 最后更新时间（Unix 秒时间戳）
-    pub update_time: i64,
+/// *
+/// 群组基本信息（用于展示和配置）
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, Debug)]
+pub struct GroupEntity {
+    /// 群组唯一ID（由系统生成）
+    pub id: ::prost::alloc::string::String,
+    /// 群组名称（用户可见）
+    pub name: ::prost::alloc::string::String,
+    /// 群头像URL
+    pub avatar: ::prost::alloc::string::String,
+    /// 群简介（支持富文本）
+    pub description: ::prost::alloc::string::String,
+    /// 群公告（群成员可见）
+    pub notice: ::prost::alloc::string::String,
+    /// 加群权限控制
+    pub join_permission: i32,
+    /// 群标签（英文逗号分隔）
+    pub owner_id: ::prost::alloc::string::String,
+    /// 群组类型
+    pub group_type: i32,
+    /// 是否允许通过搜索找到
+    pub allow_search: bool,
+    /// 是否启用
+    pub enable: bool,
+    /// 创建时间
+    pub create_time: u64,
+    /// 更新时间
+    pub update_time: u64,
 }

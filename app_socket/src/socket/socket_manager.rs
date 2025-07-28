@@ -16,7 +16,7 @@ use once_cell::sync::OnceCell;
 use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
-use biz_service::protocol::rpc::rpc_arb_models::NodeInfo;
+use biz_service::protocol::rpc::arb_models::NodeInfo;
 
 /// 客户端连接唯一标识
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]

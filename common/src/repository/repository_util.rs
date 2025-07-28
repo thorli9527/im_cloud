@@ -53,7 +53,8 @@ impl<T: Send + Sync> BaseRepository<T> {}
 impl<T: Send + Sync> BaseRepository<T>
 where T: Serialize + DeserializeOwned + Unpin + Send + Sync
 {
-    pub async fn new(db: Database, collection: Collection<Document>, name: &str) -> Self {
+    pub async fn new(db: Database, name: &str) -> Self {
+        let collection = db.collection::<Document>(name);
         // 如果不存在则自动创建
         let collections = db.list_collection_names().await.expect("❌ 获取集合列表失败");
         if !collections.contains(&name.to_string()) {

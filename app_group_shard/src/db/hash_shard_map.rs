@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use twox_hash::XxHash64;
-use biz_service::protocol::rpc::rpc_arb_models::MemberRef;
+use biz_service::protocol::rpc::arb_models::MemberRef;
 
 #[derive(Debug)]
 struct Shard {

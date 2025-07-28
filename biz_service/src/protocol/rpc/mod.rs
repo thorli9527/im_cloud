@@ -1,10 +1,5 @@
-pub mod rpc_arb_group;
-pub mod rpc_arb_models {
-    include!("rpc_arb_models.rs");
-    // std::default::Default
-}
-pub mod rpc_arb_server;
-pub mod rpc_arb_socket;
-pub mod rpc_shard_server;
-
-pub use crate::protocol::common;
+pub mod arb_group;
+pub mod arb_models;
+pub mod arb_server;
+pub mod arb_socket;
+pub mod shard_service;

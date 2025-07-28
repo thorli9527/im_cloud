@@ -3,7 +3,7 @@ use crate::biz_service::friend_service::UserFriendService;
 use crate::biz_service::kafka_socket_service::KafkaService;
 use crate::manager::user_manager::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
 
-use crate::protocol::common::{ByteMessageType, ClientEntity};
+use crate::protocol::common::ByteMessageType;
 use crate::protocol::msg::auth::{DeviceType, OfflineStatueMsg, OnlineStatusMsg};
 use crate::protocol::msg::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
 use anyhow::{anyhow, Context, Result};
@@ -16,6 +16,7 @@ use common::util::date_util::now;
 use common::{ClientTokenDto, UserId};
 use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
+use crate::entitys::client_entity::ClientEntity;
 
 pub const TOKEN_EXPIRE_SECS: u64 = 60 * 60 * 24 * 7;
 #[async_trait]
@@ -41,8 +42,16 @@ impl UserManagerOpt for UserManager {
 
         if is_first_online {
             let kafka = KafkaService::get();
-            let online_msg = OnlineStatusMsg { message_id: build_snow_id(), uid: user_id.clone(), device_type: *device_type as i32, client_id: "".to_string(), login_time: now() };
-            kafka.send_proto(&ByteMessageType::LogoutRespMsgType, &online_msg, &online_msg.message_id, &AppConfig::get().get_kafka().topic_group).await?;
+            let online_msg = OnlineStatusMsg {
+                message_id: build_snow_id(),
+                uid: user_id.clone(),
+                device_type: *device_type as i32,
+                client_id: "".to_string(),
+                login_time: now(),
+            };
+            kafka
+                .send_proto(&ByteMessageType::LogoutRespMsgType, &online_msg, &online_msg.message_id, &AppConfig::get().get_kafka().topic_group)
+                .await?;
         }
 
         Ok(())
@@ -88,9 +97,17 @@ impl UserManagerOpt for UserManager {
         let is_all_offline = self.is_all_device_offline(user_id).await?;
         if is_all_offline {
             let kafka = KafkaService::get();
-            let offline_msg =
-                OfflineStatueMsg { message_id: build_snow_id(), uid: user_id.clone(), device_type: DeviceType::All as i32, client_id: "".to_string(), logout_time: now(), reason: "".to_string() };
-            kafka.send_proto(&ByteMessageType::LogoutRespMsgType, &offline_msg, &offline_msg.message_id, &AppConfig::get().get_kafka().topic_group).await?;
+            let offline_msg = OfflineStatueMsg {
+                message_id: build_snow_id(),
+                uid: user_id.clone(),
+                device_type: DeviceType::All as i32,
+                client_id: "".to_string(),
+                logout_time: now(),
+                reason: "".to_string(),
+            };
+            kafka
+                .send_proto(&ByteMessageType::LogoutRespMsgType, &offline_msg, &offline_msg.message_id, &AppConfig::get().get_kafka().topic_group)
+                .await?;
         }
 
         Ok(())
@@ -152,7 +169,10 @@ impl UserManagerOpt for UserManager {
         let token_index_key = format!("token:index:{}:{}", uid, *device_type as i32);
         let token_set_key = format!("token:uid:{}", uid);
 
-        let dto = ClientTokenDto { uid: uid.clone(), device_type: *device_type as u8 };
+        let dto = ClientTokenDto {
+            uid: uid.clone(),
+            device_type: *device_type as u8,
+        };
 
         let token_str = serde_json::to_string(&dto).context("序列化 ClientTokenDto 失败")?;
         let mut conn = self.pool.get().await?;

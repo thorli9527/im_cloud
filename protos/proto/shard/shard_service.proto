@@ -1,7 +1,7 @@
 syntax = "proto3";
-package rpc_shard_server;
+package protocol.shard_service;
 import "google/protobuf/empty.proto";
-import "common/common.proto";
+import "common.proto";
 import "arb/arb_models.proto"; // 引入 Arb 模型定义
 
 message IdReq {
@@ -45,7 +45,7 @@ message ChangeRoleReq {
 // ------------------- 响应结构 -------------------
 
 message MemberListResp {
-  repeated rpc_arb_models.MemberRef members = 1;
+  repeated arb_models.MemberRef members = 1;
 }
 
 message UserIdListResp {

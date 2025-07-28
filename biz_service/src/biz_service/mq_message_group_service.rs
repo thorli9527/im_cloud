@@ -1,6 +1,6 @@
 use crate::biz_service::kafka_socket_service::KafkaService;
+use crate::entitys::group_msg_entity::GroupMsgEntity;
 use crate::protocol::common::ByteMessageType;
-use crate::protocol::msg::entity::GroupMsgEntity;
 use crate::protocol::msg::message::Segment;
 use common::config::AppConfig;
 use common::errors::AppError;
@@ -19,9 +19,8 @@ pub struct GroupMessageService {
 
 impl GroupMessageService {
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("mq_group_message");
         Self {
-            dao: BaseRepository::new(db, collection.clone(), "mq_group_message").await,
+            dao: BaseRepository::new(db, "mq_group_message").await,
         }
     }
     pub async fn init(db: Database) {

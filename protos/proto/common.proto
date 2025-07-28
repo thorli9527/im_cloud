@@ -79,7 +79,7 @@ message GroupEntity {
   string owner_id = 7;                   // 群标签（英文逗号分隔）
   GroupType group_type = 8;                 // 群组类型
   bool allow_search = 9;                     // 是否允许通过搜索找到
-  bool enable= 10;                        // 是否启用
+  bool enable = 10;                        // 是否启用
   uint64 create_time = 11;            // 创建时间
   uint64 update_time = 12;            // 更新时间
 }
@@ -172,39 +172,39 @@ enum GroupType {
 // 这些类型用于消息路由和分发，确保消息被正确处理
 // 消息类型枚举：用于标识通信协议中的消息分类
 enum ByteMessageType {
-  UNKNOWN_BYTE_MESSAGE_TYPE       = 0;    // 未知消息类型（默认）：用于解析错误或未定义处理
+  UNKNOWN_BYTE_MESSAGE_TYPE = 0;    // 未知消息类型（默认）：用于解析错误或未定义处理
   // 系统基础通信（1~9）
-  HeartbeatMsgType                = 1;    // 心跳消息：保持连接活跃
-  LoginReqMsgType                 = 2;    // 认证请求：客户端发起身份验证
-  LoginRespMsgType                = 3;    // 认证响应：服务端返回认证结果
-  LogoutReqMsgType                = 4;    // 登出请求：客户端主动断开连接
-  LogoutRespMsgType               = 5;    // 登出响应：服务端确认登出状态
-  SendVerificationCodeReqMsgType  = 6;    // 验证码请求：短信/邮件验证码发送请求
-  SendVerificationCodeRepMsgType  = 7;    // 验证码响应：验证码发送处理结果
-  SystemNotificationMsgType       = 8;    // 系统通知：平台或服务级消息
-  UserFlushMsgType                = 9;    // 用户刷新：资料/状态/配置变更通知
+  HeartbeatMsgType = 1;    // 心跳消息：保持连接活跃
+  LoginReqMsgType = 2;    // 认证请求：客户端发起身份验证
+  LoginRespMsgType = 3;    // 认证响应：服务端返回认证结果
+  LogoutReqMsgType = 4;    // 登出请求：客户端主动断开连接
+  LogoutRespMsgType = 5;    // 登出响应：服务端确认登出状态
+  SendVerificationCodeReqMsgType = 6;    // 验证码请求：短信/邮件验证码发送请求
+  SendVerificationCodeRepMsgType = 7;    // 验证码响应：验证码发送处理结果
+  SystemNotificationMsgType = 8;    // 系统通知：平台或服务级消息
+  UserFlushMsgType = 9;    // 用户刷新：资料/状态/配置变更通知
 
   // 用户在线状态（10~19）
-  OnlineStatusMsgType             = 10;   // 用户上线通知
-  OfflineStatusMsgType            = 11;   // 用户下线通知
+  OnlineStatusMsgType = 10;   // 用户上线通知
+  OfflineStatusMsgType = 11;   // 用户下线通知
 
   // 聊天消息（20~29）
-  UserMsgType                     = 20;   // 单聊消息
-  GroupMsgType                    = 21;   // 群聊消息
+  UserMsgType = 20;   // 单聊消息
+  GroupMsgType = 21;   // 群聊消息
 
   // 好友 / 群组事件（30~39）
-  FriendEventMsgType              = 30;   // 好友事件：申请、同意、删除等
-  GroupCreateMsgType              = 31;   // 群创建通知
-  GroupDismissMsgType             = 32;   // 群解散通知
+  FriendEventMsgType = 30;   // 好友事件：申请、同意、删除等
+  GroupCreateMsgType = 31;   // 群创建通知
+  GroupDismissMsgType = 32;   // 群解散通知
 
   ReConnectMsgType = 99;   // 重连消息：客户端重连时发送，包含上次未处理的消息 ID
 
   ACKMsgType = 200;  // ACK 确认消息：用于确认消息接收状态
 }
 enum Gender{
-    Unknown=0;// 未知
-    Male=1;   // 男性
-    Female=2; // 女性
+  Unknown = 0;// 未知
+  Male = 1;   // 男性
+  Female = 2; // 女性
 }
 
 
@@ -224,28 +224,4 @@ enum ClientUserType{
   USER_TYPE_NORMAL = 1;
   //机器人
   USER_TYPE_ROBOT = 2;
-}
-// ==========================
-// 👤 客户端用户实体定义
-// ==========================
-message ClientEntity {
-  string id = 1;                         // 用户 ID（全局唯一，用于主键或索引）
-  string name = 2;                   // 用户名（可用于登录名或展示名，需唯一或具唯一性约束）
-  string password = 3;                   // 用户密码（建议加密存储，仅服务器端处理）
-  string uid = 4;                        // 客户端用户 ID（可与设备、App 安装等绑定）
-
-  optional string email = 5;             // 邮箱地址（可选，用于验证、找回密码、通知等）
-  optional string phone = 6;             // 手机号码（可选，可用于登录、验证、通知等）
-  optional string language = 7;          // 用户首选语言（如 "zh-CN", "en-US" 等）
-
-  string avatar = 8;                     // 用户头像 URL（可为空字符串表示无头像；建议提供默认头像逻辑）
-  FriendPolicy allow_add_friend = 9;    // 加好友策略（如允许任何人、仅限手机号、需要验证等）
-
-  Gender gender = 10;                    // 性别枚举（如男、女、保密等）
-  ClientUserType user_type = 11;         // 用户类型（如普通用户、机器人、游客、测试账户等）
-
-  map<string, string> profile_fields = 12; // 扩展信息字段（如学校、职业、自定义标签等，键值对形式）
-
-  uint64 create_time = 13;              // 创建时间（Unix 秒时间戳，用于记录账号创建时间）
-  uint64 update_time = 14;              // 最后更新时间（Unix 秒时间戳，用于缓存刷新或数据同步）
 }

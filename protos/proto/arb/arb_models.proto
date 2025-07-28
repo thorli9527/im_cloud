@@ -1,7 +1,7 @@
 syntax = "proto3";
 
-package rpc_arb_models;
-import "common/common.proto";
+package protocol.arb_models;
+import "common.proto";
 // =====================
 // 枚举：分片节点状态定义
 // =====================

@@ -1,8 +1,9 @@
 use crate::biz_service::client_service::ClientService;
 use crate::biz_service::kafka_socket_service::KafkaService;
+use crate::entitys::client_entity::ClientEntity;
 use crate::manager::user_manager::{UserManager, UserManagerOpt};
 use crate::manager::user_manager_auth::{ResetPasswordType, UserManagerAuth, UserManagerAuthOpt, UserRegType};
-use crate::protocol::common::{ByteMessageType, ClientEntity};
+use crate::protocol::common::ByteMessageType;
 use crate::protocol::msg::auth::{DeviceType, LoginRespMsg, LogoutRespMsg};
 use anyhow::anyhow;
 use async_trait::async_trait;

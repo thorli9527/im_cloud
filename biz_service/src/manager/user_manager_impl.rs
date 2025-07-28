@@ -1,4 +1,5 @@
-use crate::protocol::common::{GroupEntity, GroupMemberEntity};
+use crate::entitys::group_entity::GroupEntity;
+use crate::entitys::group_member_entity::GroupMemberEntity;
 use common::redis::redis_pool::RedisPoolTools;
 use deadpool_redis::redis::{cmd, AsyncCommands};
 use once_cell::sync::OnceCell;
@@ -24,7 +25,7 @@ impl UserManager {
     /// - `group_map`: 预初始化的分片群组缓存结构
     pub fn new() -> Self {
         let manager = Self {
-            pool:RedisPoolTools::get().clone(),
+            pool: RedisPoolTools::get().clone(),
             is_initialized: Arc::new(AtomicBool::new(false)),
             init_notify: Arc::new(Notify::new()),
             friend_map: Arc::new(DashMap::<String, DashMap<UserId, ()>>::new()),
@@ -33,21 +34,15 @@ impl UserManager {
         return manager;
     }
     /// 初始化用户管理器   计算分片索引
- 
+
     pub async fn initialize_from_redis(&self) -> anyhow::Result<()> {
         let mut conn = self.pool.get().await?;
 
         // ----------------- 加载用户在线状态 -----------------
         let mut cursor = 0u64;
         loop {
-            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
-                .arg(cursor)
-                .arg("MATCH")
-                .arg("online:user:*")
-                .arg("COUNT")
-                .arg(100)
-                .query_async(&mut conn)
-                .await?;
+            let (next_cursor, keys): (u64, Vec<String>) =
+                cmd("SCAN").arg(cursor).arg("MATCH").arg("online:user:*").arg("COUNT").arg(100).query_async(&mut conn).await?;
 
             for key in keys {
                 if let Some(key) = key.strip_prefix("online:user:") {
@@ -69,14 +64,8 @@ impl UserManager {
         // ----------------- 加载群组信息 -----------------
         let mut cursor = 0u64;
         loop {
-            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
-                .arg(cursor)
-                .arg("MATCH")
-                .arg("group:info:*")
-                .arg("COUNT")
-                .arg(100)
-                .query_async(&mut conn)
-                .await?;
+            let (next_cursor, keys): (u64, Vec<String>) =
+                cmd("SCAN").arg(cursor).arg("MATCH").arg("group:info:*").arg("COUNT").arg(100).query_async(&mut conn).await?;
 
             for key in keys {
                 let json: Option<String> = conn.get(&key).await?;
@@ -95,14 +84,8 @@ impl UserManager {
         // ----------------- 加载群组成员和成员元信息 -----------------
         let mut cursor = 0u64;
         loop {
-            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
-                .arg(cursor)
-                .arg("MATCH")
-                .arg("group:member:*")
-                .arg("COUNT")
-                .arg(100)
-                .query_async(&mut conn)
-                .await?;
+            let (next_cursor, keys): (u64, Vec<String>) =
+                cmd("SCAN").arg(cursor).arg("MATCH").arg("group:member:*").arg("COUNT").arg(100).query_async(&mut conn).await?;
 
             for key in keys {
                 if let Some(group_id) = key.strip_prefix("group:member:") {
@@ -110,8 +93,7 @@ impl UserManager {
 
                     // 获取成员元信息哈希表
                     let meta_key = format!("group:meta:{}", group_id);
-                    let metas: HashMap<String, String> =
-                        conn.hgetall(&meta_key).await.unwrap_or_default();
+                    let metas: HashMap<String, String> = conn.hgetall(&meta_key).await.unwrap_or_default();
 
                     for uid in members {
                         if let Some(meta_json) = metas.get(&uid) {
@@ -157,14 +139,8 @@ impl UserManager {
         // ----------------- 加载好友信息 -----------------
         cursor = 0u64;
         loop {
-            let (next_cursor, keys): (u64, Vec<String>) = cmd("SCAN")
-                .arg(cursor)
-                .arg("MATCH")
-                .arg("friend:user:*")
-                .arg("COUNT")
-                .arg(100)
-                .query_async(&mut conn)
-                .await?;
+            let (next_cursor, keys): (u64, Vec<String>) =
+                cmd("SCAN").arg(cursor).arg("MATCH").arg("friend:user:*").arg("COUNT").arg(100).query_async(&mut conn).await?;
 
             for key in keys {
                 if let Some(suffix) = key.strip_prefix("friend:user:") {
@@ -194,16 +170,16 @@ impl UserManager {
     }
     // 获取 Redis 分片索引
     pub fn get_redis_shard_index(&self, user_id: &str) -> usize {
-        let key = format!("{}",  user_id);
-        let mut hasher = XxHash64::with_seed(0);  // 可选固定种子
+        let key = format!("{}", user_id);
+        let mut hasher = XxHash64::with_seed(0); // 可选固定种子
         key.hash(&mut hasher);
         (hasher.finish() % SHARD_SIZE as u64) as usize
     }
     // 生成在线状态键
     pub fn make_online_key(&self, user_id: &UserId) -> (String, String) {
-        let shard = self.get_redis_shard_index( user_id);
+        let shard = self.get_redis_shard_index(user_id);
         let redis_key = format!("online:user:shard:{}", shard);
-        let redis_field = format!("{}",  user_id);
+        let redis_field = format!("{}", user_id);
         (redis_key, redis_field)
     }
     pub async fn start_stream_event_consumer(&self) -> anyhow::Result<()> {
@@ -215,17 +191,12 @@ impl UserManager {
     }
 
     pub fn init(&self, instance: UserManager) {
-        INSTANCE
-            .set(Arc::new(instance))
-            .expect("INSTANCE already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     /// 获取全局实例（未初始化会 panic）
     pub fn get() -> Arc<Self> {
-        INSTANCE
-            .get()
-            .expect("UserManager is not initialized")
-            .clone()
+        INSTANCE.get().expect("UserManager is not initialized").clone()
     }
 }
 

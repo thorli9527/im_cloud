@@ -1,6 +1,6 @@
 use crate::biz_service::kafka_socket_service::KafkaService;
+use crate::entitys::user_msg_entity::UserMsgEntity;
 use crate::protocol::common::ByteMessageType;
-use crate::protocol::msg::entity::UserMsgEntity;
 use crate::protocol::msg::message::Segment;
 use common::config::AppConfig;
 use common::errors::AppError;
@@ -19,9 +19,8 @@ pub struct UserMessageService {
 
 impl UserMessageService {
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("mq_user_message");
         Self {
-            dao: BaseRepository::new(db, collection.clone(), "mq_user_message").await,
+            dao: BaseRepository::new(db, "mq_user_message").await,
         }
     }
     pub async fn init(db: Database) {

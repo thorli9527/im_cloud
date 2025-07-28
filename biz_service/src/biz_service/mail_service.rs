@@ -17,9 +17,8 @@ pub struct MailService {
 
 impl MailService {
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("mail");
         Self {
-            dao: BaseRepository::new(db, collection.clone(), "mail").await,
+            dao: BaseRepository::new(db, "mail").await,
         }
     }
 

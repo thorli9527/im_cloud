@@ -10,9 +10,8 @@ pub struct CountryService {
 
 impl CountryService {
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("country");
         Self {
-            dao: BaseRepository::new(db, collection.clone(), "country").await,
+            dao: BaseRepository::new(db, "country").await,
         }
     }
     pub async fn init(db: Database) {

@@ -15,9 +15,8 @@ pub struct UserRoleService {
 
 impl UserRoleService {
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("user_role");
         Self {
-            dao: BaseRepository::new(db, collection, "user_role").await,
+            dao: BaseRepository::new(db, "user_role").await,
         }
     }
 

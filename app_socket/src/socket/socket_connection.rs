@@ -5,7 +5,6 @@ use crate::socket::socket_manager::{get_socket_manager, ConnectionId, Connection
 use anyhow::{anyhow, Result};
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeReqMsg};
-use biz_service::protocol::msg::entity::{GroupMsgEntity, UserMsgEntity};
 use biz_service::protocol::msg::friend::FriendEventMsg;
 use biz_service::protocol::msg::group::{CreateGroupMsg, DestroyGroupMsg};
 use biz_service::protocol::msg::status::{AckMsg, HeartbeatMsg};
@@ -21,6 +20,8 @@ use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
+use biz_service::entitys::group_msg_entity::GroupMsgEntity;
+use biz_service::entitys::user_msg_entity::UserMsgEntity;
 
 /// 客户端连接处理入口
 pub async fn handle_connection(stream: TcpStream) -> Result<()> {
@@ -33,7 +34,14 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
     let last_heartbeat = Arc::new(AtomicU64::new(now() as u64));
     let conn_key = ConnectionId(conn_id.clone());
 
-    let connection = ConnectionInfo { meta: ConnectionMeta { uid: None, device_type: None }, sender: tx.clone(), last_heartbeat: last_heartbeat.clone() };
+    let connection = ConnectionInfo {
+        meta: ConnectionMeta {
+            uid: None,
+            device_type: None,
+        },
+        sender: tx.clone(),
+        last_heartbeat: last_heartbeat.clone(),
+    };
 
     let manager = get_socket_manager();
     manager.insert(conn_key.clone(), connection);
@@ -60,7 +68,11 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
 }
 
 /// 读取客户端数据 & 处理消息
-async fn read_loop(reader: &mut FramedRead<tokio::net::tcp::OwnedReadHalf, LengthDelimitedCodec>, conn_id: &ConnectionId, last_heartbeat: Arc<AtomicU64>) -> Result<()> {
+async fn read_loop(
+    reader: &mut FramedRead<tokio::net::tcp::OwnedReadHalf, LengthDelimitedCodec>,
+    conn_id: &ConnectionId,
+    last_heartbeat: Arc<AtomicU64>,
+) -> Result<()> {
     while let Some(frame) = reader.next().await {
         let mut bytes = frame?;
 

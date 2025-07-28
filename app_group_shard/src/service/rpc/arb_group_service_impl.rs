@@ -1,5 +1,8 @@
 use crate::service::shard_manager::ShardManager;
 use biz_service::protocol::common::CommonResp;
+use biz_service::protocol::rpc::arb_group::arb_group_service_server::ArbGroupServiceServer;
+use biz_service::protocol::rpc::arb_group::{arb_group_service_server, UpdateVersionReq};
+use biz_service::protocol::rpc::arb_models::SyncListGroup;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
@@ -7,10 +10,6 @@ use log::info;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use tonic::{Request, Response, Status};
-use biz_service::protocol::rpc::rpc_arb_group;
-use biz_service::protocol::rpc::rpc_arb_group::arb_group_service_server::ArbGroupServiceServer;
-use biz_service::protocol::rpc::rpc_arb_group::UpdateVersionReq;
-use biz_service::protocol::rpc::rpc_arb_models::SyncListGroup;
 
 /// arb 组 客户端接口
 pub struct ArbGroupServiceImpl {}
@@ -28,7 +27,7 @@ impl ArbGroupServiceImpl {
     }
 }
 #[tonic::async_trait]
-impl rpc_arb_group::arb_group_service_server::ArbGroupService for ArbGroupServiceImpl {
+impl arb_group_service_server::ArbGroupService for ArbGroupServiceImpl {
     async fn update_version(&self, request: Request<UpdateVersionReq>) -> Result<Response<CommonResp>, Status> {
         let req = request.into_inner();
         let shard_manager = ShardManager::get();

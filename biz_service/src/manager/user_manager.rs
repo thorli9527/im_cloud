@@ -1,4 +1,4 @@
-use crate::protocol::common::ClientEntity;
+use crate::entitys::client_entity::ClientEntity;
 use crate::protocol::msg::auth::DeviceType;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -58,11 +58,7 @@ pub trait UserManagerOpt: Send + Sync {
     /// 清空某用户所有 token
     async fn clear_tokens_by_user(&self, user_id: &UserId) -> Result<()>;
     /// 查询用户token
-    async fn get_token_by_uid_device(
-        &self,
-        user_id: &UserId,
-        device_type: &DeviceType,
-    ) -> Result<Option<String>>;
+    async fn get_token_by_uid_device(&self, user_id: &UserId, device_type: &DeviceType) -> Result<Option<String>>;
     /// 获取用户的访问令牌信息
     async fn get_client_token(&self, token: &str) -> Result<ClientTokenDto>;
     /// 根据令牌查找用户信息

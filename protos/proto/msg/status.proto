@@ -1,6 +1,6 @@
 syntax = "proto3";
 package protocol.status;
-import "common/common.proto";
+import "common.proto";
 // ======================================
 // 📊 状态相关协议定义文件
 // ======================================

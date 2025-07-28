@@ -1,8 +1,8 @@
 use crate::service::rpc::arb_group_service_impl::ArbGroupServiceImpl;
 use crate::service::shard_manager::ShardManager;
 use async_trait::async_trait;
-use biz_service::protocol::rpc::rpc_arb_models::ShardState::{Migrating, Normal, Preparing, Ready, Registered};
-use biz_service::protocol::rpc::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
+use biz_service::protocol::rpc::arb_models::ShardState::{Migrating, Normal, Preparing, Ready, Registered};
+use biz_service::protocol::rpc::arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::AppConfig;
 use once_cell::sync::OnceCell;
 use std::net::SocketAddr;

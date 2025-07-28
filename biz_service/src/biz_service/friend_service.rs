@@ -16,11 +16,10 @@ pub struct UserFriendService {
 
 impl UserFriendService {
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("user_friend");
         let vec = FriendEntity::index_models();
 
         let owner = Self {
-            dao: BaseRepository::new(db, collection.clone(), "user_friend").await,
+            dao: BaseRepository::new(db, "user_friend").await,
         };
 
         return owner;

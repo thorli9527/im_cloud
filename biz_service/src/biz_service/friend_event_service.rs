@@ -22,10 +22,9 @@ pub struct FriendEventService {
 impl FriendEventService {
     /// 创建服务实例
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("friend_event");
         Self {
             db: db.clone(),
-            dao: BaseRepository::new(db, collection.clone(), "friend_event").await,
+            dao: BaseRepository::new(db, "friend_event").await,
         }
     }
 

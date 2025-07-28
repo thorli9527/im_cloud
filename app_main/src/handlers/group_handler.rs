@@ -1,7 +1,8 @@
 use crate::result::{result, result_error};
-use actix_web::{Responder, post, web};
+use actix_web::{post, web, Responder};
 use biz_service::biz_service::group_service::GroupService;
-use biz_service::protocol::common::{GroupEntity, GroupType, JoinPermission};
+use biz_service::entitys::group_entity::GroupEntity;
+use biz_service::protocol::common::{GroupType, JoinPermission};
 use biz_service::protocol::msg::group::{ChangeGroupMsg, CreateGroupMsg, GroupNodeMsgType};
 use biz_service::rpc_client::client_util::ArbServerClient;
 use common::errors::AppError;
@@ -59,9 +60,7 @@ pub async fn group_add(req: web::Json<CreateGroupMsg>) -> Result<impl Responder,
                 avatar: req.avatar.clone(),
                 creator_id: req.creator_id.clone(),
             };
-            arb_server
-                .send_msg(&group_id, &GroupNodeMsgType::CreateGroupMsgType, &msg, &group_id)
-                .await?;
+            arb_server.send_msg(&group_id, &GroupNodeMsgType::CreateGroupMsgType, &msg, &group_id).await?;
 
             Ok(result())
         }

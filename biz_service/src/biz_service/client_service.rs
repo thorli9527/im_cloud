@@ -1,4 +1,4 @@
-use crate::protocol::common::ClientEntity;
+use crate::entitys::client_entity::ClientEntity;
 use common::repository_util::BaseRepository;
 use mongodb::Database;
 use once_cell::sync::OnceCell;
@@ -11,9 +11,8 @@ pub struct ClientService {
 
 impl ClientService {
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("client");
         let result = Self {
-            dao: BaseRepository::new(db, collection.clone(), "client").await,
+            dao: BaseRepository::new(db, "client").await,
         };
         return result;
     }

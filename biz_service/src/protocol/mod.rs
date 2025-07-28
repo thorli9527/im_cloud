@@ -1,35 +1,45 @@
+pub mod common;
 pub mod rpc;
+
+// pub mod rpc {
+//     pub mod rpc_arb_models {
+//         include!("./rpc/arb_models.rs");
+//     }
+//     pub mod rpc_arb_group {
+//         include!("./rpc/arb_group.rs");
+//     }
+//     pub mod rpc_arb_server {
+//         include!("./rpc/arb_server.rs");
+//     }
+//     pub mod rpc_arb_socket {
+//         include!("./rpc/arb_socket.rs");
+//     }
+//     pub mod rpc_shard_server {
+//         include!("./rpc/shard_service.rs");
+//     }
+// }
 
 pub mod msg {
     pub mod auth {
-        include!("auth.rs");
-    }
-    pub mod entity {
-        include!("entity.rs");
+        include!("msg/auth.rs");
     }
     pub mod group {
-        include!("group.rs");
+        include!("msg/group.rs");
     }
     pub mod friend {
-        include!("friend.rs");
+        include!("msg/friend.rs");
     }
     pub mod system {
-        include!("system.rs");
+        include!("msg/system.rs");
     }
     pub mod user {
-        include!("user.rs");
+        include!("msg/user.rs");
     }
     pub mod message {
-        include!("message.rs");
+        include!("msg/message.rs");
     }
 
     pub mod status {
-        include!("status.rs");
+        include!("msg/status.rs");
     }
-    pub mod common {
-        include!("common.rs");
-    }
-}
-pub mod common {
-    include!("common.rs");
 }

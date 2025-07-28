@@ -1,6 +1,8 @@
 use crate::biz_service::group_member_service::GroupMemberService;
 use crate::biz_service::user_service::UserService;
-use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};
+use crate::entitys::group_entity::GroupEntity;
+use crate::entitys::group_member_entity::GroupMemberEntity;
+use crate::protocol::common::GroupRoleType;
 use anyhow::{anyhow, Result};
 use common::errors::AppError;
 use common::redis::redis_pool::RedisPoolTools;
@@ -23,9 +25,8 @@ pub struct GroupService {
 
 impl GroupService {
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("group_info");
         Self {
-            dao: BaseRepository::new(db.clone(), collection.clone(), "group_info").await,
+            dao: BaseRepository::new(db.clone(), "group_info").await,
             db,
         }
     }

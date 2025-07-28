@@ -5,7 +5,7 @@ use twox_hash::XxHash64;
 
 use crate::db::member::member_shard::MemberShard;
 use biz_service::protocol::common::GroupRoleType;
-use biz_service::protocol::rpc::rpc_arb_models::MemberRef;
+use biz_service::protocol::rpc::arb_models::MemberRef;
 
 #[derive(Debug, Clone)]
 pub struct ShardedMemberList {

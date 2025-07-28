@@ -19,9 +19,8 @@ pub struct UserService {
 
 impl UserService {
     pub async fn new(db: Database) -> Self {
-        let collection = db.collection("user_info");
         Self {
-            dao: BaseRepository::new(db, collection.clone(), "user_info").await,
+            dao: BaseRepository::new(db, "user_info").await,
         }
     }
     pub async fn init(db: Database) {

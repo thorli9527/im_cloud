@@ -8,8 +8,8 @@ use tonic::transport::Channel;
 
 use crate::biz_service::kafka_group_service::KafkaGroupService;
 use crate::protocol::msg::group::GroupNodeMsgType;
-use crate::protocol::rpc::rpc_arb_models::{NodeType, QueryNodeReq};
-use crate::protocol::rpc::rpc_arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
+use crate::protocol::rpc::arb_models::{NodeType, QueryNodeReq};
+use crate::protocol::rpc::arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package protocol.message;
 
-import "common/common.proto"; // 引入公共类型，如 UserProfile、MediaMeta 可自定义
+import "common.proto"; // 引入公共类型，如 UserProfile、MediaMeta 可自定义
 
 // ======================================
 // 💬 消息协议定义文件

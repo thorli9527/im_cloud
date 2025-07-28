@@ -4,7 +4,7 @@ use crate::db::member::simple_member_list::SimpleMemberList;
 use arc_swap::ArcSwap;
 use biz_service::protocol::common::GroupRoleType;
 use std::sync::Arc;
-use biz_service::protocol::rpc::rpc_arb_models::MemberRef;
+use biz_service::protocol::rpc::arb_models::MemberRef;
 
 #[derive(Debug)]
 enum MemberListImpl {
