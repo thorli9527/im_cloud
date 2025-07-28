@@ -1,9 +1,11 @@
-use crate::protocol::common::CommonResp;
-use crate::protocol::rpc_arb_group::arb_group_service_client::ArbGroupServiceClient;
-use crate::protocol::rpc_arb_group::UpdateVersionReq;
-use crate::protocol::rpc_arb_models::{BaseRequest, ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, ShardState, UpdateShardStateRequest};
-use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcService;
-use crate::protocol::rpc_arb_socket::arb_socket_service_client::ArbSocketServiceClient;
+use biz_service::protocol::common::CommonResp;
+use biz_service::protocol::rpc::arb_group::arb_group_service_client::ArbGroupServiceClient;
+use biz_service::protocol::rpc::arb_group::UpdateVersionReq;
+use biz_service::protocol::rpc::arb_models::{
+    BaseRequest, ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, ShardState, UpdateShardStateRequest,
+};
+use biz_service::protocol::rpc::arb_server::arb_server_rpc_service_server::ArbServerRpcService;
+use biz_service::protocol::rpc::arb_socket::arb_socket_service_client::ArbSocketServiceClient;
 use common::util::date_util::now;
 use dashmap::DashMap;
 use std::clone;
@@ -116,7 +118,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         if req.node_type == NodeType::GroupNode as i32 {
             // 如果已存在，返回已有信息
             if let Some(node_info) = self.shard_nodes.get(&node_addr) {
-                return Ok(Response::new(crate::protocol::rpc_arb_models::NodeInfo {
+                return Ok(Response::new(NodeInfo {
                     node_addr: node_info.node_addr.clone(),
                     total: self.shard_nodes.len() as i32,
                     version: node_info.version,
@@ -168,7 +170,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
         } else {
             // 如果已存在，返回已有信息
             if let Some(node_info) = self.socket_nodes.get(&node_addr) {
-                return Ok(Response::new(crate::protocol::rpc_arb_models::NodeInfo {
+                return Ok(Response::new(NodeInfo {
                     node_addr: node_info.node_addr.clone(),
                     total: self.socket_nodes.len() as i32,
                     version: node_info.version,

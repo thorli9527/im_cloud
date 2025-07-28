@@ -1,9 +1,8 @@
-mod protocol;
 mod service;
 
-use crate::protocol::rpc_arb_models::ShardState;
-use crate::protocol::rpc_arb_server::arb_server_rpc_service_server::ArbServerRpcServiceServer;
 use crate::service::rpc::arb_service_impl::ArbiterServiceImpl;
+use biz_service::protocol::rpc::arb_models::ShardState;
+use biz_service::protocol::rpc::arb_server::arb_server_rpc_service_server::ArbServerRpcServiceServer;
 use common::config::AppConfig;
 use std::net::SocketAddr;
 use std::str::FromStr;

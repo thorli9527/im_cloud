@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 common = { path = "../common" }
+biz_service = { path = "../biz_service" }
 tokio.workspace = true
 tonic.workspace = true
 prost.workspace = true
