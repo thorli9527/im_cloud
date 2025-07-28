@@ -67,14 +67,12 @@ pub trait UserManagerAuthOpt: Send + Sync {
     /// 注册新用户
     async fn register(
         &self,
-        user_name: &str,
         password: &str,
         reg_type: &UserRegType, // 注册方式
         target: &str,           // 手机号或邮箱
     ) -> anyhow::Result<String>; // 返回用户ID或Token
 
-    async fn register_verify_code(&self, user_name: &str, password: &str, reg_id: &str, code: &str, reg_type: &UserRegType)
-    -> anyhow::Result<String>;
+    async fn register_verify_code(&self, password: &str, reg_id: &str, code: &str, reg_type: &UserRegType) -> anyhow::Result<String>;
 
     /// 修改登录密码
     async fn change_password(&self, token: &str, old_password: &str, new_password: &str) -> anyhow::Result<()>;

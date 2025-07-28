@@ -17,11 +17,11 @@ use deadpool_redis::redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-struct VerifySession {
-    user_name: String,
-    code: String,
-    reg_type: u8,
-    target: String,
+pub struct VerifySession {
+    pub user_name: String,
+    pub code: String,
+    pub reg_type: u8,
+    pub target: String,
 }
 #[async_trait]
 impl UserManagerAuthOpt for UserManagerAuth {
@@ -64,9 +64,15 @@ impl UserManagerAuthOpt for UserManagerAuth {
         Ok(())
     }
 
-    async fn register(&self, user_name: &str, password: &str, reg_type: &UserRegType, target: &str) -> anyhow::Result<String> {
+    async fn register(&self, password: &str, reg_type: &UserRegType, target: &str) -> anyhow::Result<String> {
         let client_service = ClientService::get();
-        let existed = client_service.dao.find_one(doc! { "name": user_name }).await?.is_some();
+        let mut client = Option::<ClientEntity>::None;
+        if reg_type == &UserRegType::Phone {
+            client = client_service.dao.find_one(doc! { "phone": target }).await?;
+        } else if reg_type == &UserRegType::Email {
+            client = client_service.dao.find_one(doc! { "email": target }).await?;
+        }
+        let existed = client.is_some();
 
         if existed {
             return Err(anyhow!("用户名已存在"));
@@ -78,7 +84,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
 
         let redis_key = format!("register:verify:uuid:{}", reg_id);
         let session = VerifySession {
-            user_name: user_name.to_string(),
+            user_name: target.to_string(),
             code: code.clone(),
             reg_type: *reg_type as u8,
             target: target.to_string(),
@@ -95,14 +101,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
         Ok(reg_id)
     }
 
-    async fn register_verify_code(
-        &self,
-        user_name: &str,
-        password: &str,
-        reg_id: &str,
-        code: &str,
-        reg_type: &UserRegType,
-    ) -> anyhow::Result<String> {
+    async fn register_verify_code(&self, password: &str, reg_id: &str, code: &str, reg_type: &UserRegType) -> anyhow::Result<String> {
         // 构造 Redis Key
         let redis_key = format!("register:verify:uuid:{}", reg_id);
         let mut conn = UserManager::get().pool.get().await?;
@@ -118,17 +117,19 @@ impl UserManagerAuthOpt for UserManagerAuth {
             return Err(anyhow!("验证码错误"));
         }
 
-        if session.user_name != user_name {
-            return Err(anyhow!("用户名与验证码不一致"));
-        }
-
         if session.reg_type != *reg_type as u8 {
             return Err(anyhow!("注册方式与验证码不一致"));
         }
-
         // Step 2: 检查用户名是否已存在
         let client_service = ClientService::get();
-        let existed = client_service.dao.find_one(doc! { "name": user_name }).await?.is_some();
+        let mut client = Option::<ClientEntity>::None;
+        if reg_type == &UserRegType::Phone {
+            client = client_service.dao.find_one(doc! { "phone": session.target.clone() }).await?;
+        } else if reg_type == &UserRegType::Email {
+            client = client_service.dao.find_one(doc! { "email": session.target.clone()  }).await?;
+        }
+
+        let existed = client.is_some();
         if existed {
             return Err(anyhow!("用户名已存在"));
         }
@@ -141,7 +142,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
         let client = ClientEntity {
             id: "".to_string(),
             uid: uid.clone(),
-            name: user_name.to_string(),
+            name: "".to_string(),
             password: hashed_pwd,
             email: if matches!(reg_type, UserRegType::Email) { Some(session.target.clone()) } else { None },
             phone: if matches!(reg_type, UserRegType::Phone) { Some(session.target.clone()) } else { None },

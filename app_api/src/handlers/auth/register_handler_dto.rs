@@ -4,10 +4,6 @@ use validator::{Validate, ValidateEmail, ValidationError};
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct RegisterRequest {
-    /// 用户名（3-20位，字母数字下划线）
-    #[validate(custom(function = "validate_username"))]
-    pub username: String,
-
     /// 密码（至少8位，含字母和数字）
     #[validate(length(min = 8, message = "密码至少8位"))]
     #[validate(custom(function = "validate_password"))]
