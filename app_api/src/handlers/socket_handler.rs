@@ -1,10 +1,10 @@
 use crate::handlers::common_handler::status;
-use crate::protocol::rpc_arb_models::{NodeType, QueryNodeReq};
 use crate::service::arb_client::ArbClient;
-use actix_web::{HttpRequest, HttpResponse, Responder, get, web};
+use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use common::errors::AppError;
 use common::util::common_utils::hash_index;
 use serde::Serialize;
+use biz_service::protocol::rpc::arb_models::{NodeType, QueryNodeReq};
 
 pub struct SocketHandler;
 #[derive(Serialize)]
@@ -21,12 +21,16 @@ pub async fn get_socket_address(req: HttpRequest) -> Result<impl Responder, AppE
     let ip = req.peer_addr().unwrap().ip().to_string(); // fallback
 
     let mut arb_client = ArbClient::new().await;
-    let query = QueryNodeReq { node_type: NodeType::SocketNode as i32 };
+    let query = QueryNodeReq {
+        node_type: NodeType::SocketNode as i32,
+    };
     let list = arb_client.client.list_all_nodes(query).await.unwrap().into_inner();
     let i = list.nodes.len() as i32;
     let index = hash_index(&ip, i);
     let address = list.nodes[index as usize].socket_addr.clone();
-    Ok(HttpResponse::Ok().json(SocketAddrResponse { address: address.unwrap() }))
+    Ok(HttpResponse::Ok().json(SocketAddrResponse {
+        address: address.unwrap(),
+    }))
 }
 
 fn select_best_region(country: &str) -> Vec<&'static str> {

@@ -69,7 +69,7 @@ pub struct MemberRef {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
     /// 成员角色
-    #[prost(enumeration = "super::common::GroupRoleType", tag = "3")]
+    #[prost(enumeration = "super::super::common::GroupRoleType", tag = "3")]
     pub role: i32,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
