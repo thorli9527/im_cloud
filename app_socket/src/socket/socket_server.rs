@@ -22,12 +22,12 @@ pub async fn start_server(listener: TcpListener, kafka_cfg: &KafkaConfig) -> any
         });
     }
 
-    log::info!("✅ TCP 服务器已启动，开始监听连接...");
+    log::warn!("✅ TCP 服务器已启动，开始监听连接...");
 
     loop {
         match listener.accept().await {
             Ok((stream, addr)) => {
-                log::info!("📡 新连接建立 [{}]", addr);
+                log::warn!("📡 新连接建立 [{}]", addr);
 
                 tokio::spawn(async move {
                     if let Err(e) = handle_connection(stream).await {

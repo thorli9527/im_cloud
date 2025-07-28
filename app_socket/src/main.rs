@@ -1,10 +1,8 @@
-use app_socket::scheduler::job_manager;
 use app_socket::service::rpc::arb_socket_server_impl::ArbSocketRpcServiceImpl;
-use app_socket::socket::socket_manager::{get_socket_manager, SocketManager};
 use app_socket::socket::socket_server::start_server;
 use biz_service::biz_service::kafka_socket_service::KafkaService;
 use common::config::AppConfig;
-use std::sync::Arc;
+use log::warn;
 use tokio::net::TcpListener;
 
 /// 写通道类型，用于发送 protobuf 编码好的消息
@@ -20,14 +18,17 @@ async fn main() -> anyhow::Result<()> {
     //初始化业务
     biz_service::init_service().await;
     biz_service::manager::init();
-    let manager: Arc<SocketManager> = get_socket_manager();
-    tokio::spawn(job_manager::start_heartbeat_cleaner(manager.clone(), 30));
+    // let manager: Arc<SocketManager> = get_socket_manager();
+    // tokio::spawn(job_manager::start_heartbeat_cleaner(manager.clone(), 30));
 
-    //启动 group rpc 服务
-    ArbSocketRpcServiceImpl::start().await;
-
+    // ✅ 并行启动 RPC 服务
+    tokio::spawn(async {
+        ArbSocketRpcServiceImpl::start().await;
+    });
     //socket-web-server
-    let bind_cfg = format!("{}:{}", &config.get_server().host, &config.get_server().port);
+    let bind_cfg = &config.socket.clone().unwrap().node_addr;
+    println!(" - Socket 地址: {}", bind_cfg);
+    warn!("socket-web-server bind: {}", bind_cfg.clone());
     let listener = TcpListener::bind(bind_cfg).await?;
     start_server(listener, &config.get_kafka().clone()).await
 }

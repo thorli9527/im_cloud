@@ -28,7 +28,7 @@ pub enum ResetPasswordType {
     Email = 2,
 }
 
-use crate::protocol::msg::auth::DeviceType;
+use crate::protocol::msg::auth::{AuthType, DeviceType};
 use async_trait::async_trait;
 use common::UserId;
 use once_cell::sync::OnceCell;
@@ -60,8 +60,16 @@ static INSTANCE: OnceCell<Arc<UserManagerAuth>> = OnceCell::new();
 
 #[async_trait]
 pub trait UserManagerAuthOpt: Send + Sync {
+    async fn login_by_type(&self, password: &str, reg_type: &UserRegType, target: &str, device_type: &DeviceType) -> anyhow::Result<String>;
     /// 登录用户，将用户标记为在线，并进行必要的缓存更新和事件通知
-    async fn login(&self, message_id: &u64, user_name: &str, password: &str, device_type: &DeviceType) -> anyhow::Result<String>;
+    async fn login(
+        &self,
+        message_id: &u64,
+        auth_type: &AuthType,
+        auth_content: &str,
+        password: &str,
+        device_type: &DeviceType,
+    ) -> anyhow::Result<String>;
 
     async fn logout(&self, message_id: &u64, user_id: &UserId, device_type: &DeviceType) -> anyhow::Result<()>;
     /// 注册新用户

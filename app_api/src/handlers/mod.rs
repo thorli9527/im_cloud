@@ -13,4 +13,5 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     swagger::configure(cfg);
     auth::register_handler::configure(cfg);
     auth::reset_password_handler::configure(cfg);
+    auth::login_handler::configure(cfg);
 }

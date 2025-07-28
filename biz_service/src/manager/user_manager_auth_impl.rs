@@ -4,7 +4,7 @@ use crate::entitys::client_entity::ClientEntity;
 use crate::manager::user_manager::{UserManager, UserManagerOpt};
 use crate::manager::user_manager_auth::{ResetPasswordType, UserManagerAuth, UserManagerAuthOpt, UserRegType};
 use crate::protocol::common::ByteMessageType;
-use crate::protocol::msg::auth::{DeviceType, LoginRespMsg, LogoutRespMsg};
+use crate::protocol::msg::auth::{AuthType, DeviceType, LoginRespMsg, LogoutRespMsg};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use bson::doc;
@@ -25,22 +25,50 @@ pub struct VerifySession {
 }
 #[async_trait]
 impl UserManagerAuthOpt for UserManagerAuth {
-    async fn login(&self, message_id: &u64, user_name: &str, password: &str, device_type: &DeviceType) -> anyhow::Result<String> {
-        let user_manager = UserManager::get();
-        let client_info = user_manager.get_user_info_by_name(user_name).await?;
-
-        if client_info.is_none() {
-            return Err(anyhow::anyhow!("user.or.password.error"));
+    async fn login_by_type(&self, password: &str, reg_type: &UserRegType, target: &str, device_type: &DeviceType) -> anyhow::Result<String> {
+        let client_service = ClientService::get();
+        let mut client: Option<ClientEntity> = Option::None;
+        if reg_type == &UserRegType::Phone {
+            client = client_service.dao.find_one(doc! { "phone": target }).await?;
+        } else if reg_type == &UserRegType::Email {
+            client = client_service.dao.find_one(doc! { "email": target }).await?;
         }
         let app_config = AppConfig::get();
-
-        let string = build_md5_with_key(password, &app_config.get_sys().md5_key.unwrap());
-        let client = client_info.unwrap();
-        if &client.password != &string {
-            return Err(anyhow::anyhow!("user.or.password.error"));
+        let hashed_password = build_md5_with_key(password, &app_config.get_sys().md5_key.clone().unwrap());
+        let entity = client.unwrap();
+        if hashed_password != entity.password {
+            return Err(anyhow!("user.or.password.error"));
         }
-        let user_id = client.id.clone() as UserId;
-        user_manager.online(&user_id, device_type).await?;
+        let user_id = entity.id.clone() as UserId;
+        let user_manager = UserManager::get();
+
+        let token = user_manager.build_token(&user_id, device_type).await?;
+        Ok(token)
+    }
+
+    async fn login(
+        &self,
+        message_id: &u64,
+        auth_type: &AuthType,
+        auth_content: &str,
+        password: &str,
+        device_type: &DeviceType,
+    ) -> anyhow::Result<String> {
+        let client_service = ClientService::get();
+        let mut client: Option<ClientEntity> = Option::None;
+        if auth_type == &AuthType::Phone {
+            client = client_service.dao.find_one(doc! { "phone": auth_content }).await?;
+        } else if auth_type == &AuthType::Email {
+            client = client_service.dao.find_one(doc! { "email": auth_content }).await?;
+        }
+        let app_config = AppConfig::get();
+        let hashed_password = build_md5_with_key(password, &app_config.get_sys().md5_key.clone().unwrap());
+        let entity = client.unwrap();
+        if hashed_password != entity.password {
+            return Err(anyhow!("user.or.password.error"));
+        }
+        let user_id = entity.id.clone() as UserId;
+        let user_manager = UserManager::get();
 
         let token = user_manager.build_token(&user_id, device_type).await?;
         Ok(token)

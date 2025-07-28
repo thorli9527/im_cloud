@@ -3,6 +3,7 @@ use crate::biz_service::friend_service::UserFriendService;
 use crate::biz_service::kafka_socket_service::KafkaService;
 use crate::manager::user_manager::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
 
+use crate::entitys::client_entity::ClientEntity;
 use crate::protocol::common::ByteMessageType;
 use crate::protocol::msg::auth::{DeviceType, OfflineStatueMsg, OnlineStatusMsg};
 use crate::protocol::msg::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
@@ -16,7 +17,6 @@ use common::util::date_util::now;
 use common::{ClientTokenDto, UserId};
 use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
-use crate::entitys::client_entity::ClientEntity;
 
 pub const TOKEN_EXPIRE_SECS: u64 = 60 * 60 * 24 * 7;
 #[async_trait]
@@ -164,6 +164,10 @@ impl UserManagerOpt for UserManager {
 
     /// 构建 Token：写入主数据、索引、集合（反向查找用）
     async fn build_token(&self, uid: &UserId, device_type: &DeviceType) -> Result<String> {
+        // 清除原有设备类型的 token
+        if let Some(existing_token) = self.get_token_by_uid_device(uid, device_type).await? {
+            self.delete_token(&existing_token).await?;
+        }
         let token_key = build_uuid();
         let token_data_key = format!("token:{}", token_key);
         let token_index_key = format!("token:index:{}:{}", uid, *device_type as i32);

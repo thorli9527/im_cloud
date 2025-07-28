@@ -3,6 +3,8 @@ use crate::socket::handlers::auth::logout_handler::handle_logout;
 use crate::socket::handlers::heartbeat_handler::start_global_heartbeat_checker;
 use crate::socket::socket_manager::{get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta};
 use anyhow::{anyhow, Result};
+use biz_service::entitys::group_msg_entity::GroupMsgEntity;
+use biz_service::entitys::user_msg_entity::UserMsgEntity;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeReqMsg};
 use biz_service::protocol::msg::friend::FriendEventMsg;
@@ -20,8 +22,6 @@ use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-use biz_service::entitys::group_msg_entity::GroupMsgEntity;
-use biz_service::entitys::user_msg_entity::UserMsgEntity;
 
 /// 客户端连接处理入口
 pub async fn handle_connection(stream: TcpStream) -> Result<()> {
@@ -86,11 +86,11 @@ async fn read_loop(
         match message_type {
             ByteMessageType::LoginReqMsgType => {
                 log::info!("🛂 收到w登录请求");
-                let login_req = LoginReqMsg::decode(bytes)?;
-                let i = login_req.device_type as i32;
+                let login = LoginReqMsg::decode(bytes)?;
+                let i = login.device_type as i32;
                 let device_type = DeviceType::try_from(i)?;
-                let message_id = login_req.message_id;
-                handle_login(conn_id, &message_id, &login_req.username, &login_req.password, &device_type).await;
+                let message_id = login.message_id;
+                handle_login(conn_id, &message_id, &login.auth_type(), &login.auth_content, &login.password, &device_type).await;
             }
             ByteMessageType::LogoutReqMsgType => {
                 let logout_req = LogoutReqMsg::decode(bytes)?;

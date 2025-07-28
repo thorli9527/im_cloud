@@ -27,16 +27,21 @@ enum DeviceType {
   WEB = 3;             // 浏览器 Web 客户端（H5）
   ALL = 100;              // 智能音箱、IoT 设备等
 }
+enum AuthType{
+  AUTH_TYPE_UNKNOWN = 0;
+  AUTH_TYPE_EMAIL = 1;
+  AUTH_TYPE_PHONE = 2;
+}
 // ================================
 // 📦 登录
 // ================================
 // 登录请求
 message LoginReqMsg {
   uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
-  string username = 2;    // 用户名或手机号
-  string password = 3;    // 密码（明文或加密）
-  DeviceType device_type = 4; // 登录设备类型（枚举，如 iOS/Android/Web）
-  string app_key = 5;     // 应用标识或来源渠道（可用于多 App 区分）
+  AuthType auth_type = 2;    // 登录方式 邮箱或 电话
+  string auth_content = 3;   // 登录内容 邮箱或/电话
+  string password = 4;    // 密码（明文或加密）
+  DeviceType device_type = 5; // 登录设备类型（枚举，如 iOS/Android/Web）
 }
 // ================================
 // 📦 登录返回

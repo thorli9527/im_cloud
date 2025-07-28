@@ -10,18 +10,18 @@ pub struct LoginReqMsg {
     /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
     pub message_id: u64,
-    /// 用户名或手机号
-    #[prost(string, tag = "2")]
-    pub username: ::prost::alloc::string::String,
-    /// 密码（明文或加密）
+    /// 登录方式 邮箱或 电话
+    #[prost(enumeration = "AuthType", tag = "2")]
+    pub auth_type: i32,
+    /// 登录内容 邮箱或/电话
     #[prost(string, tag = "3")]
+    pub auth_content: ::prost::alloc::string::String,
+    /// 密码（明文或加密）
+    #[prost(string, tag = "4")]
     pub password: ::prost::alloc::string::String,
     /// 登录设备类型（枚举，如 iOS/Android/Web）
-    #[prost(enumeration = "DeviceType", tag = "4")]
+    #[prost(enumeration = "DeviceType", tag = "5")]
     pub device_type: i32,
-    /// 应用标识或来源渠道（可用于多 App 区分）
-    #[prost(string, tag = "5")]
-    pub app_key: ::prost::alloc::string::String,
 }
 /// ================================
 /// 📦 登录返回
@@ -200,6 +200,37 @@ impl DeviceType {
             "DESKTOP" => Some(Self::Desktop),
             "WEB" => Some(Self::Web),
             "ALL" => Some(Self::All),
+            _ => None,
+        }
+    }
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum AuthType {
+    Unknown = 0,
+    Email = 1,
+    Phone = 2,
+}
+impl AuthType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unknown => "AUTH_TYPE_UNKNOWN",
+            Self::Email => "AUTH_TYPE_EMAIL",
+            Self::Phone => "AUTH_TYPE_PHONE",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "AUTH_TYPE_UNKNOWN" => Some(Self::Unknown),
+            "AUTH_TYPE_EMAIL" => Some(Self::Email),
+            "AUTH_TYPE_PHONE" => Some(Self::Phone),
             _ => None,
         }
     }

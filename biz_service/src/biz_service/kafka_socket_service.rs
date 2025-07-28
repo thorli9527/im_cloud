@@ -50,12 +50,10 @@ impl KafkaService {
                 Ok(name) => println!("✅ Created topic: {}", name),
                 Err((name, err)) if err.to_string().contains("TopicAlreadyExists") => {
                     if err.to_string().contains("TopicAlreadyExists") {
-                        println!("🔁 Topic [{}] already exists, skipping", name);
                         continue;
                     }
                 }
                 Err((name, err)) => {
-                    eprintln!("❌ Failed to create topic [{}]: {}", name, err);
                     std::process::exit(1);
                 }
             }

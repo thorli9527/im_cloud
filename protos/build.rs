@@ -2,9 +2,9 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
-    build_arb_service();
+    // build_arb_service();
     build_biz_service();
-    build_api_service();
+    // build_api_service();
 }
 
 fn build_api_service() {
@@ -111,7 +111,7 @@ fn build_biz_service() {
         .build_client(true) // 如无需生成 gRPC Client 代码
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
-        .out_dir("../biz_service/src/protocol/rpc") // 输出 Rust 模块到该目录
+        .out_dir("../biz_service/src/protocol/rpc/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
                 "proto/common.proto",
@@ -126,7 +126,7 @@ fn build_biz_service() {
         .expect("💥 Proto 编译失败，请检查路径和语法！");
 
     //删除 ../biz_service/src/protocol/arb/common.rs
-    if let Err(e) = fs::remove_file("../biz_service/src/protocol/rpc/common.rs") {}
+    fs::remove_file("../biz_service/src/protocol/rpc/common.rs").expect("删除失败");
 
     let out_dir = PathBuf::from("../biz_service/src/protocol/rpc");
     for entry in fs::read_dir(&out_dir).expect("无法读取目录") {
