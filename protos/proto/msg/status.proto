@@ -49,6 +49,8 @@ message HeartbeatMsg {
 message AckMsg {
   uint64 message_id = 1;       // 被确认接收的消息 ID
   common.ByteMessageType ack_type = 2;  // 确认类型
+  bool success = 3;             // 确认结果
+  int32 error_code = 5;         // 错误码
 }
 
 // =======================================

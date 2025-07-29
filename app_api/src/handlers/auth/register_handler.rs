@@ -40,7 +40,7 @@ pub async fn auth_register(payload: web::Json<RegisterRequest>) -> Result<impl R
 
     let user_manager = UserManagerAuth::get();
 
-    match user_manager.register(&payload.password, &reg_type, &payload.target).await {
+    match user_manager.register(&payload.name, &payload.password, &reg_type, &payload.target).await {
         Ok(reg_id) => {
             let body = json!({
                 "regId": reg_id.to_string(),
@@ -80,7 +80,7 @@ pub async fn auth_register_verify(req: web::Json<RegisterVerifyRequest>) -> Resu
 
     let user_manager = UserManagerAuth::get();
 
-    return match user_manager.register_verify_code(&req.password, &req.reg_id, &req.code, &reg_type).await {
+    return match user_manager.register_verify_code(&req.name, &req.password, &req.reg_id, &req.code, &reg_type).await {
         Ok(uid) => {
             let body = json!({
                 "uid": uid.to_string(),

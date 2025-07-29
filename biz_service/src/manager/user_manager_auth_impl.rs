@@ -5,6 +5,7 @@ use crate::manager::user_manager::{UserManager, UserManagerOpt};
 use crate::manager::user_manager_auth::{ResetPasswordType, UserManagerAuth, UserManagerAuthOpt, UserRegType};
 use crate::protocol::common::ByteMessageType;
 use crate::protocol::msg::auth::{AuthType, DeviceType, LoginRespMsg, LogoutRespMsg};
+use crate::protocol::msg::status::AckMsg;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use bson::doc;
@@ -53,13 +54,16 @@ impl UserManagerAuthOpt for UserManagerAuth {
         auth_content: &str,
         password: &str,
         device_type: &DeviceType,
-    ) -> anyhow::Result<String> {
+    ) -> anyhow::Result<(String, ClientEntity)> {
         let client_service = ClientService::get();
         let mut client: Option<ClientEntity> = Option::None;
         if auth_type == &AuthType::Phone {
             client = client_service.dao.find_one(doc! { "phone": auth_content }).await?;
         } else if auth_type == &AuthType::Email {
             client = client_service.dao.find_one(doc! { "email": auth_content }).await?;
+        }
+        if client.is_none() {
+            return Err(anyhow!("user.or.password.error"));
         }
         let app_config = AppConfig::get();
         let hashed_password = build_md5_with_key(password, &app_config.get_sys().md5_key.clone().unwrap());
@@ -71,7 +75,8 @@ impl UserManagerAuthOpt for UserManagerAuth {
         let user_manager = UserManager::get();
 
         let token = user_manager.build_token(&user_id, device_type).await?;
-        Ok(token)
+
+        Ok((token, entity))
     }
 
     async fn logout(&self, message_id: &u64, uid: &UserId, device_type: &DeviceType) -> anyhow::Result<()> {
@@ -92,7 +97,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
         Ok(())
     }
 
-    async fn register(&self, password: &str, reg_type: &UserRegType, target: &str) -> anyhow::Result<String> {
+    async fn register(&self, name: &str, password: &str, reg_type: &UserRegType, target: &str) -> anyhow::Result<String> {
         let client_service = ClientService::get();
         let mut client = Option::<ClientEntity>::None;
         if reg_type == &UserRegType::Phone {
@@ -103,7 +108,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
         let existed = client.is_some();
 
         if existed {
-            return Err(anyhow!("用户名已存在"));
+            return Err(anyhow!("账户已存在"));
         }
 
         // 生成验证码
@@ -129,7 +134,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
         Ok(reg_id)
     }
 
-    async fn register_verify_code(&self, password: &str, reg_id: &str, code: &str, reg_type: &UserRegType) -> anyhow::Result<String> {
+    async fn register_verify_code(&self, name: &str, password: &str, reg_id: &str, code: &str, reg_type: &UserRegType) -> anyhow::Result<String> {
         // 构造 Redis Key
         let redis_key = format!("register:verify:uuid:{}", reg_id);
         let mut conn = UserManager::get().pool.get().await?;
@@ -170,7 +175,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
         let client = ClientEntity {
             id: "".to_string(),
             uid: uid.clone(),
-            name: "".to_string(),
+            name: name.to_string(),
             password: hashed_pwd,
             email: if matches!(reg_type, UserRegType::Email) { Some(session.target.clone()) } else { None },
             phone: if matches!(reg_type, UserRegType::Phone) { Some(session.target.clone()) } else { None },

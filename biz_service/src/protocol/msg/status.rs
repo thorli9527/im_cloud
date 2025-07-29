@@ -62,6 +62,12 @@ pub struct AckMsg {
     /// 确认类型
     #[prost(enumeration = "super::super::common::ByteMessageType", tag = "2")]
     pub ack_type: i32,
+    /// 确认结果
+    #[prost(bool, tag = "3")]
+    pub success: bool,
+    /// 错误码
+    #[prost(int32, tag = "5")]
+    pub error_code: i32,
 }
 /// =======================================
 /// 🔗 重连消息（ReConnectMsg）

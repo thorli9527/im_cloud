@@ -7,7 +7,7 @@
 pub struct ClientEntity {
     /// 用户 ID（全局唯一，用于主键或索引）
     pub id: ::prost::alloc::string::String,
-    /// 用户名（可用于登录名或展示名，需唯一或具唯一性约束）
+    /// 别名
     pub name: ::prost::alloc::string::String,
     /// 用户密码（建议加密存储，仅服务器端处理）
     pub password: ::prost::alloc::string::String,

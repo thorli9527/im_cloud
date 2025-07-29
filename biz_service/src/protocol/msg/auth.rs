@@ -43,6 +43,14 @@ pub struct LoginRespMsg {
     /// 是否成功
     #[prost(bool, tag = "4")]
     pub success: bool,
+    #[prost(string, tag = "5")]
+    pub msg: ::prost::alloc::string::String,
+    #[prost(string, tag = "6")]
+    pub uid: ::prost::alloc::string::String,
+    #[prost(string, tag = "7")]
+    pub nickname: ::prost::alloc::string::String,
+    #[prost(string, tag = "8")]
+    pub avatar: ::prost::alloc::string::String,
 }
 /// ========================================
 ///   退出请求

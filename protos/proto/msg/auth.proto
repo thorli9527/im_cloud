@@ -42,6 +42,7 @@ message LoginReqMsg {
   string auth_content = 3;   // 登录内容 邮箱或/电话
   string password = 4;    // 密码（明文或加密）
   DeviceType device_type = 5; // 登录设备类型（枚举，如 iOS/Android/Web）
+
 }
 // ================================
 // 📦 登录返回
@@ -52,6 +53,10 @@ message LoginRespMsg {
   string token = 2; // 刷新凭证
   uint64 expires_at = 3;  // 过期时间
   bool success = 4;       // 是否成功
+  string msg = 5;
+  string uid = 6;
+  string nickname = 7;
+  string avatar = 8;
 }
 
 // ========================================
