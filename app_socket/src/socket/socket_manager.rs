@@ -7,6 +7,7 @@ use crate::socket::socket_error::SendError;
 use anyhow::Result;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::DeviceType;
+use biz_service::protocol::rpc::arb_models::NodeInfo;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::UserId;
@@ -16,7 +17,10 @@ use once_cell::sync::OnceCell;
 use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
-use biz_service::protocol::rpc::arb_models::NodeInfo;
+static MESSAGE_CACHE: OnceCell<Arc<DashMap<MessageId, (CachedResponse, u64)>>> = OnceCell::new();
+
+type MessageId = u64;
+type CachedResponse = Bytes;
 
 /// 客户端连接唯一标识
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -65,6 +69,10 @@ impl SocketManager {
         }
     }
 
+    pub fn get_message_cache(&self) -> Arc<DashMap<MessageId, (CachedResponse, u64)>> {
+        MESSAGE_CACHE.get_or_init(|| Arc::new(DashMap::new())).clone()
+    }
+
     /// 新增连接
     pub fn insert(&self, id: impl Into<ConnectionId>, conn: ConnectionInfo) {
         let id = id.into();
@@ -109,11 +117,24 @@ impl SocketManager {
         conn.sender.send(bytes).map_err(|_| SendError::ChannelClosed)
     }
     ///发送消息到指定连接（使用 ByteMessageType 前缀）
-    pub fn send_to_connection_proto<M: Message>(&self, id: &ConnectionId, msg_type: &ByteMessageType, msg: &M) -> Result<(), SendError> {
+    pub fn send_to_connection_proto<M: Message>(
+        &self,
+        message_id: &Option<u64>,
+        id: &ConnectionId,
+        msg_type: &ByteMessageType,
+        msg: &M,
+    ) -> Result<(), SendError> {
         let mut buf = Vec::with_capacity(128);
-        buf.push(*msg_type as u8); // 消息类型前缀
+        buf.push(*msg_type as u8);
         msg.encode(&mut buf).map_err(|_| SendError::EncodeError)?;
-        self.send_to_connection(id, Bytes::from(buf))
+        let bytes = Bytes::from(buf);
+
+        if let Some(message_id) = message_id {
+            let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+            self.get_message_cache().insert(*message_id, (bytes.clone(), now));
+        }
+
+        self.send_to_connection(id, bytes)
     }
 
     pub fn send_to_user_proto<M: Message>(

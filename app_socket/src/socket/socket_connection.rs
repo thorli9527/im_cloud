@@ -1,7 +1,7 @@
 use crate::socket::handlers::auth::login_handler::handle_login;
 use crate::socket::handlers::auth::logout_handler::handle_logout;
 use crate::socket::handlers::heartbeat_handler::start_global_heartbeat_checker;
-use crate::socket::socket_manager::{get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta};
+use crate::socket::socket_manager::{get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta, SocketManager};
 use anyhow::{anyhow, Result};
 use biz_service::entitys::group_msg_entity::GroupMsgEntity;
 use biz_service::entitys::user_msg_entity::UserMsgEntity;
@@ -13,6 +13,7 @@ use biz_service::protocol::msg::status::{AckMsg, HeartbeatMsg};
 use biz_service::protocol::msg::system::SystemNotificationMsg;
 use biz_service::protocol::msg::user::UserFlushMsg;
 use bytes::Buf;
+use common::errors::AppError;
 use common::util::common_utils::build_uuid;
 use common::util::date_util::now;
 use futures::{SinkExt, StreamExt};
@@ -81,8 +82,9 @@ async fn read_loop(
         }
 
         let type_code = bytes.get_u8();
-        let message_type = ByteMessageType::from_i32(type_code as i32).unwrap_or(ByteMessageType::UnknownByteMessageType);
+        let message_type = ByteMessageType::try_from(type_code as i32).unwrap_or(ByteMessageType::UnknownByteMessageType);
 
+        let socket_manager = SocketManager::get();
         match message_type {
             ByteMessageType::LoginReqMsgType => {
                 log::info!("🛂 收到w登录请求");
@@ -90,6 +92,15 @@ async fn read_loop(
                 let i = login.device_type as i32;
                 let device_type = DeviceType::try_from(i)?;
                 let message_id = login.message_id;
+                if let Some(cached) = socket_manager.get_message_cache().get(&message_id) {
+                    // 直接发送缓存的响应
+                    log::info!("🔄 使用缓存响应，message_id: {}", message_id);
+                    let (cache, _) = cached.value();
+                    if let Err(e) = socket_manager.send_to_connection(conn_id, cache.clone()) {
+                        log::error!("❌ 发送缓存响应失败：{}", "login");
+                    }
+                    return Ok(());
+                }
                 handle_login(conn_id, &message_id, &login.auth_type(), &login.auth_content, &login.password, &device_type).await;
             }
             ByteMessageType::LogoutReqMsgType => {
@@ -107,58 +118,59 @@ async fn read_loop(
                 }
             }
             ByteMessageType::SendVerificationCodeReqMsgType => {
-                let _ = SendVerificationCodeReqMsg::decode(bytes)?;
+                let msg = SendVerificationCodeReqMsg::decode(bytes)?;
                 log::debug!("📨 处理验证码发送请求");
             }
-            ByteMessageType::SystemNotificationMsgType => {
-                let _ = SystemNotificationMsg::decode(bytes)?;
-                log::info!("📢 系统通知消息");
-            }
+            // ByteMessageType::SystemNotificationMsgType => {
+            //     let msg = SystemNotificationMsg::decode(bytes)?;
+            //     log::info!("📢 系统通知消息");
+            //     0 as u64
+            // }
             ByteMessageType::UserFlushMsgType => {
-                let _ = UserFlushMsg::decode(bytes)?;
+                let msg = UserFlushMsg::decode(bytes)?;
                 log::debug!("🔄 用户信息刷新");
             }
             ByteMessageType::OnlineStatusMsgType => {
-                let _ = OnlineStatusMsg::decode(bytes)?;
+                let msg = OnlineStatusMsg::decode(bytes)?;
                 log::debug!("🟢 用户上线");
             }
             ByteMessageType::OfflineStatusMsgType => {
-                let _ = OfflineStatueMsg::decode(bytes)?;
+                let msg = OfflineStatueMsg::decode(bytes)?;
                 log::debug!("🔴 用户下线");
             }
             ByteMessageType::UserMsgType => {
-                let _ = UserMsgEntity::decode(bytes)?;
+                let msg = UserMsgEntity::decode(bytes)?;
                 log::debug!("📨 普通消息处理");
             }
             ByteMessageType::GroupMsgType => {
-                let _ = GroupMsgEntity::decode(bytes)?;
+                let msg = GroupMsgEntity::decode(bytes)?;
                 log::debug!("👥 群聊消息处理");
             }
             ByteMessageType::FriendEventMsgType => {
-                let _ = FriendEventMsg::decode(bytes)?;
+                let msg = FriendEventMsg::decode(bytes)?;
                 log::debug!("👥 好友事件处理");
             }
             ByteMessageType::GroupCreateMsgType => {
-                let _ = CreateGroupMsg::decode(bytes)?;
+                let msg = CreateGroupMsg::decode(bytes)?;
                 log::info!("👥 创建群组事件处理");
             }
             ByteMessageType::GroupDismissMsgType => {
-                let _ = DestroyGroupMsg::decode(bytes)?;
+                let msg = DestroyGroupMsg::decode(bytes)?;
                 log::info!("👋 群组解散事件处理");
             }
             ByteMessageType::HeartbeatMsgType => {
-                let _ = HeartbeatMsg::decode(bytes)?;
+                let msg = HeartbeatMsg::decode(bytes)?;
                 last_heartbeat.store(now() as u64, Ordering::Relaxed);
                 log::debug!("🫀 收到客户端心跳");
             }
             ByteMessageType::AckMsgType => {
-                let ack_msg = AckMsg::decode(bytes)?;
+                let msg = AckMsg::decode(bytes)?;
                 log::debug!("ACK 消息处理");
             }
             _ => {
                 log::warn!("⚠️ 未知消息类型: {type_code}");
             }
-        }
+        };
     }
 
     Ok(())

@@ -9,19 +9,22 @@
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UserFlushMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 被更新的用户 ID（资料发生变更的对象）
-    #[prost(string, tag = "1")]
+    #[prost(string, tag = "2")]
     pub uid: ::prost::alloc::string::String,
     /// 操作者 ID（通常为本人，也可能为管理员或系统）
-    #[prost(string, tag = "2")]
+    #[prost(string, tag = "3")]
     pub operator_id: ::prost::alloc::string::String,
     /// 更新字段列表（键值对）
-    #[prost(map = "string, string", tag = "3")]
+    #[prost(map = "string, string", tag = "4")]
     pub fields: ::std::collections::HashMap<
         ::prost::alloc::string::String,
         ::prost::alloc::string::String,
     >,
     /// 本次更新的时间戳（毫秒）
-    #[prost(int64, tag = "4")]
+    #[prost(int64, tag = "5")]
     pub timestamp: i64,
 }

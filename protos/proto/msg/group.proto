@@ -38,7 +38,7 @@ enum GroupNodeMsgType {
  * 创建群组请求
  */
 message CreateGroupMsg {
-  string id = 1;                      // 消息唯一标识（用于追踪或幂等）
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;               // 新群组 ID
   repeated string uids = 3;    // 初始成员列表（包含创建者）
   string name = 4;                   // 群名称
@@ -50,7 +50,7 @@ message CreateGroupMsg {
  * 解散群组请求
  */
 message DestroyGroupMsg {
-  string id = 1;                      // 消息唯一标识
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;               // 被解散的群组 ID
   string operator_id = 3;            // 操作者 ID（必须为群主）
 }
@@ -59,7 +59,7 @@ message DestroyGroupMsg {
  * 修改群组信息（可用于名称、头像、公告等更新）
  */
 message ChangeGroupMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;               // 群组 ID
   string name = 3;                   // 群名称（可选变更）
   string avatar = 4;                 // 群头像 URL
@@ -73,7 +73,7 @@ message ChangeGroupMsg {
  * 用户申请加入群组（通常由客户端发起）
  */
 message RequestJoinGroupMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;               // 目标群组 ID
   repeated string uids = 3;    // 发起加入请求的用户 ID（支持批量申请）
 }
@@ -82,7 +82,7 @@ message RequestJoinGroupMsg {
  * 管理员处理入群申请
  */
 message HandleJoinRequestMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;               // 群组 ID
   string uid = 3;              // 被处理的申请用户 ID
   bool accept = 4;                   // 是否同意加入（true = 接受）
@@ -94,7 +94,7 @@ message HandleJoinRequestMsg {
  * 邀请成员加入群组（管理员或群主）
  */
 message InviteMembersMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;
   repeated string uids = 3;    // 被邀请成员 ID 列表
   string reason = 4;                 // 邀请理由（可选）
@@ -105,7 +105,7 @@ message InviteMembersMsg {
  * 被邀请成员处理邀请
  */
 message HandleInviteMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;
   string uid = 3;              // 被邀请者 ID
   bool accept = 4;                   // 是否接受邀请
@@ -116,7 +116,7 @@ message HandleInviteMsg {
  * 移除成员（管理员操作）
  */
 message RemoveMembersMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;
   repeated string uids = 3;    // 被移除成员列表
   string reason = 4;                 // 踢出原因（可选）
@@ -127,7 +127,7 @@ message RemoveMembersMsg {
  * 成员主动退出群组
  */
 message ExitGroupMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;
   string uid = 3;              // 退出用户 ID
   string reason = 4;                 // 退出原因（可选）
@@ -137,7 +137,7 @@ message ExitGroupMsg {
  * 修改成员角色（设为管理员、降权等）
  */
 message ChangeMemberRoleMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;
   string uid = 3;              // 目标成员 ID
   common.GroupRoleType role = 4;     // 新角色（如 ADMIN、MEMBER）
@@ -149,7 +149,7 @@ message ChangeMemberRoleMsg {
  * 设置或取消成员禁言
  */
 message MuteMemberMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;
   repeated string uids = 3;    // 被操作成员（支持多人）
   bool mute = 4;                     // true = 禁言，false = 取消禁言
@@ -161,7 +161,7 @@ message MuteMemberMsg {
  * 修改成员资料（如群昵称、头像等）
  */
 message UpdateMemberProfileMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;
   string uid = 3;
   string alias = 4;                  // 群昵称
@@ -172,7 +172,7 @@ message UpdateMemberProfileMsg {
  * 转让群主权限
  */
 message TransferOwnershipMsg {
-  uint64 id = 1;
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;
   string new_owner_id = 3;           // 新群主 ID
   string reason = 4;                 // 转让说明
@@ -182,14 +182,14 @@ message TransferOwnershipMsg {
  * 群成员在线状态
  */
 message MemberOnlineMsg{
-  uint64 id = 1;                      // 消息唯一标识
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;               // 群组 ID
   string uid = 3;              // 成员 ID
 
 }
 // 群成员下线消息
 message MemberOfflineMsg{
-  uint64 id = 1;                      // 消息唯一标识
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
   string group_id = 2;               // 群组 ID
   string uid = 3;              // 成员 ID
 }

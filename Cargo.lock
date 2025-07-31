@@ -509,8 +509,35 @@ dependencies = [
 name = "app_test"
 version = "0.1.0"
 dependencies = [
+ "actix-web",
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "common",
+ "config",
+ "deadpool-redis",
+ "env_logger",
+ "futures",
+ "hex",
+ "lazy_static",
+ "log",
+ "md-5",
  "mongodb",
+ "once_cell",
+ "quote",
+ "rand 0.9.2",
+ "regex",
+ "serde",
+ "serde_json",
+ "syn 2.0.104",
+ "tempfile",
+ "thiserror 2.0.12",
  "tokio",
+ "twox-hash",
+ "utoipa",
+ "uuid",
+ "validator",
+ "walkdir",
 ]
 
 [[package]]

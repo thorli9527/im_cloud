@@ -26,6 +26,10 @@ pub fn build_snow_id() -> u64 {
     let mut generator = SafeSnowflake::new(1, 1);
     return generator.generate();
 }
+fn current_timestamp() -> u64 {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    now.as_millis() as u64 // 单位：毫秒
+}
 // 计算字符串的哈希值并返回在指定范围内的索引
 pub fn hash_index(key: &str, total: i32) -> i32 {
     let mut hasher1 = XxHash64::with_seed(0);
@@ -104,5 +108,8 @@ impl SafeSnowflake {
             | ((self.node_id & 0x1F) << 7)  // 5 bits
             | ((self.worker_id & 0x1F) << 2) // 5 bits
             | (self.sequence & 0x03) // 2 bits
+    }
+    pub fn extract_timestamp(message_id: u64) -> u64 {
+        message_id >> 12 // 右移12位，提取高41位的时间戳
     }
 }

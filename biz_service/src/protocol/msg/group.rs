@@ -5,9 +5,9 @@
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateGroupMsg {
-    /// 消息唯一标识（用于追踪或幂等）
-    #[prost(string, tag = "1")]
-    pub id: ::prost::alloc::string::String,
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 新群组 ID
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
@@ -30,9 +30,9 @@ pub struct CreateGroupMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DestroyGroupMsg {
-    /// 消息唯一标识
-    #[prost(string, tag = "1")]
-    pub id: ::prost::alloc::string::String,
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
+    #[prost(uint64, tag = "1")]
+    pub message_id: u64,
     /// 被解散的群组 ID
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
@@ -46,8 +46,9 @@ pub struct DestroyGroupMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ChangeGroupMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     /// 群组 ID
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
@@ -76,8 +77,9 @@ pub struct ChangeGroupMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RequestJoinGroupMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     /// 目标群组 ID
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
@@ -91,8 +93,9 @@ pub struct RequestJoinGroupMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HandleJoinRequestMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     /// 群组 ID
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
@@ -115,8 +118,9 @@ pub struct HandleJoinRequestMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InviteMembersMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
     /// 被邀请成员 ID 列表
@@ -135,8 +139,9 @@ pub struct InviteMembersMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HandleInviteMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
     /// 被邀请者 ID
@@ -155,8 +160,9 @@ pub struct HandleInviteMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RemoveMembersMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
     /// 被移除成员列表
@@ -175,8 +181,9 @@ pub struct RemoveMembersMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExitGroupMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
     /// 退出用户 ID
@@ -192,8 +199,9 @@ pub struct ExitGroupMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ChangeMemberRoleMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
     /// 目标成员 ID
@@ -215,8 +223,9 @@ pub struct ChangeMemberRoleMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MuteMemberMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
     /// 被操作成员（支持多人）
@@ -238,8 +247,9 @@ pub struct MuteMemberMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateMemberProfileMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
     #[prost(string, tag = "3")]
@@ -257,8 +267,9 @@ pub struct UpdateMemberProfileMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransferOwnershipMsg {
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
     /// 新群主 ID
@@ -277,9 +288,9 @@ pub struct TransferOwnershipMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberOnlineMsg {
-    /// 消息唯一标识
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     /// 群组 ID
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,
@@ -292,9 +303,9 @@ pub struct MemberOnlineMsg {
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberOfflineMsg {
-    /// 消息唯一标识
+    /// 当前消息的唯一 ID，用于追踪、ACK 等
     #[prost(uint64, tag = "1")]
-    pub id: u64,
+    pub message_id: u64,
     /// 群组 ID
     #[prost(string, tag = "2")]
     pub group_id: ::prost::alloc::string::String,

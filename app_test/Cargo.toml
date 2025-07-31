@@ -4,5 +4,64 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-mongodb.workspace = true
-tokio= { version = "1.13.1", features = ["full"] }
+common = { path = "../common" }
+
+# ========================
+# 🌐 Web 框架
+# ========================
+actix-web.workspace = true                     # Web 服务主框架
+
+# ========================
+# 🗄 数据库与缓存
+# ========================
+mongodb.workspace = true                       # MongoDB 客户端
+deadpool-redis.workspace = true                # Redis 异步连接池
+
+# ========================
+# ⚙️ 配置、日志、时间
+# ========================
+config.workspace = true                        # 配置加载
+log.workspace = true                           # 日志抽象接口
+env_logger.workspace = true                    # 日志实现（按环境过滤）
+chrono.workspace = true                        # 日期时间处理
+
+# ========================
+# 📦 异步 + 错误处理
+# ========================
+tokio = "1.46.1"                                # 异步运行时（指定独立版本）
+async-trait.workspace = true                   # 异步 trait 支持
+futures.workspace = true                       # 异步 Future 工具
+anyhow.workspace = true                        # 错误封装
+thiserror.workspace = true                     # 错误派生宏
+
+# ========================
+# 🔧 序列化、验证、工具
+# ========================
+serde.workspace = true                         # 序列化框架
+serde_json.workspace = true                    # JSON 支持
+validator.workspace = true                     # 请求字段验证
+uuid.workspace = true                          # UUID 唯一 ID
+hex.workspace = true                           # 十六进制转换
+md-5.workspace = true                          # MD5 哈希
+twox-hash.workspace = true                     # 高效哈希函数（hashmap 优化）
+once_cell = "1.21.3"                            # 静态延迟初始化
+rand = "0.9.1"                                  # 随机数生成器
+
+# ========================
+# 🧩 宏/代码生成
+# ========================
+quote.workspace = true                         # 宏代码生成工具
+syn.workspace = true                           # Rust 语法分析（用于宏）
+
+# ========================
+# 🧪 工具 & 辅助功能
+# ========================
+walkdir.workspace = true                       # 文件系统递归遍历
+tempfile.workspace = true                      # 临时文件支持
+
+# ========================
+# 📘 OpenAPI 文档生成
+# ========================
+utoipa.workspace = true
+regex = "1.11.1"
+lazy_static = "1.5.0"

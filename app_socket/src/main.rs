@@ -1,3 +1,4 @@
+use app_socket::scheduler;
 use app_socket::service::rpc::arb_socket_server_impl::ArbSocketRpcServiceImpl;
 use app_socket::socket::socket_server::start_server;
 use biz_service::biz_service::kafka_socket_service::KafkaService;
@@ -17,6 +18,8 @@ async fn main() -> anyhow::Result<()> {
     KafkaService::init(&config.get_kafka()).await;
     //初始化业务
     biz_service::init_service().await;
+    //启动任务
+    scheduler::configure();
     biz_service::manager::init();
     // let manager: Arc<SocketManager> = get_socket_manager();
     // tokio::spawn(job_manager::start_heartbeat_cleaner(manager.clone(), 30));

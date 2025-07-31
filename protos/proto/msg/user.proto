@@ -17,10 +17,11 @@ package protocol.user;
 // 常见触发：用户主动修改资料、后台修改资料、服务端同步触发。
 // 客户端收到后应刷新本地缓存信息。
 message UserFlushMsg {
-  string uid = 1;                   // 被更新的用户 ID（资料发生变更的对象）
-  string operator_id = 2;           // 操作者 ID（通常为本人，也可能为管理员或系统）
+  uint64 message_id = 1;        // 当前消息的唯一 ID，用于追踪、ACK 等
+  string uid = 2;                   // 被更新的用户 ID（资料发生变更的对象）
+  string operator_id = 3;           // 操作者 ID（通常为本人，也可能为管理员或系统）
 
-  map<string, string> fields = 3;   // 更新字段列表（键值对）
+  map<string, string> fields = 4;   // 更新字段列表（键值对）
   // 示例：
   // {
   //   "nickname": "小明",
@@ -28,5 +29,5 @@ message UserFlushMsg {
   //   "gender": "male"
   // }
 
-  int64 timestamp = 4;              // 本次更新的时间戳（毫秒）
+  int64 timestamp = 5;              // 本次更新的时间戳（毫秒）
 }

@@ -20,7 +20,7 @@ pub async fn handle_login(
         success: false,
         error_code: 0,
     };
-    let result = socket_manager.send_to_connection_proto(conn_id, &ByteMessageType::AckMsgType, &ack_msg);
+    let result = socket_manager.send_to_connection_proto(&Option::None, conn_id, &ByteMessageType::AckMsgType, &ack_msg);
     match result {
         Ok(_) => {
             log::info!("✅ 登录成功，发送登录成功消息给客户端");
@@ -45,7 +45,7 @@ pub async fn handle_login(
                 nickname: client.name,
                 avatar: client.avatar,
             };
-            socket_manager.send_to_connection_proto(conn_id, &ByteMessageType::LoginRespMsgType, &msg).unwrap();
+            socket_manager.send_to_connection_proto(&Some(*message_id), conn_id, &ByteMessageType::LoginRespMsgType, &msg).unwrap();
         }
         Err(e) => {
             warn!("Login failed: {}", e);
@@ -59,7 +59,7 @@ pub async fn handle_login(
                 success: false,
                 avatar: "".to_string(),
             };
-            socket_manager.send_to_connection_proto(conn_id, &ByteMessageType::LoginRespMsgType, &msg).unwrap();
+            socket_manager.send_to_connection_proto(&Some(*message_id), conn_id, &ByteMessageType::LoginRespMsgType, &msg).unwrap();
         }
     }
 }
