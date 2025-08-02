@@ -1,7 +1,6 @@
 pub enum KafkaServerType {
     Socket,
     Group,
-    ALL,
 }
 /// 表示一条 Kafka 消息实体结构，用于封装消息发送的元数据与内容。
 pub struct KafkaMsgEntity {
