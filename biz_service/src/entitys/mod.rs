@@ -6,6 +6,7 @@ pub mod group_entity;
 pub mod group_join_req_entity;
 pub mod group_member_entity;
 pub mod group_msg_entity;
+mod kafka_msg_entity;
 pub mod mail_entity;
 pub mod read_index;
 pub mod role_entity;
