@@ -347,6 +347,7 @@ dependencies = [
  "deadpool-redis",
  "env_logger",
  "log",
+ "moka",
  "mongo_macro",
  "mongodb",
  "once_cell",
@@ -382,6 +383,10 @@ dependencies = [
  "tracing",
  "utoipa",
 ]
+
+[[package]]
+name = "app_friend_message"
+version = "0.1.0"
 
 [[package]]
 name = "app_group_message"

@@ -1,7 +1,10 @@
 use crate::entitys::group_member_entity::GroupMemberEntity;
 use crate::protocol::common::GroupRoleType;
+use crate::util::db_index_util;
 use anyhow::{anyhow, Result};
+use bson::Document;
 use common::errors::AppError;
+use common::index_trait::MongoIndexModelProvider;
 use common::redis::redis_pool::RedisPoolTools;
 use common::repository_util::{BaseRepository, OrderType, PageResult, Repository};
 use common::util::date_util::now;
@@ -9,7 +12,7 @@ use common::UserId;
 use deadpool_redis::redis;
 use deadpool_redis::redis::AsyncCommands;
 use mongodb::bson::doc;
-use mongodb::{Collection, Database};
+use mongodb::{Collection, Database, IndexModel};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 
@@ -21,12 +24,13 @@ pub struct GroupMemberService {
 
 impl GroupMemberService {
     pub async fn new(db: Database) -> Self {
+        db_index_util::index_create(db.collection("group_member"), GroupMemberEntity::index_models()).await;
+        let repository = BaseRepository::new(db.clone(), "group_member").await;
         Self {
-            dao: BaseRepository::new(db.clone(), "group_member").await,
+            dao: repository,
             db: db,
         }
     }
-
     pub async fn init(db: Database) {
         let instance = Self::new(db).await;
         INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");

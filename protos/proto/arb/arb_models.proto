@@ -21,6 +21,7 @@ enum ShardState {
 enum NodeType{
   GROUP_NODE = 0;
   SOCKET_NODE = 1;
+  ALL = 2;
 }
 
 // =====================
@@ -30,7 +31,17 @@ enum NodeType{
 message BaseRequest {
   string node_addr = 1;   // 节点地址（如 192.168.1.10:9000）
   NodeType node_type = 2; // 节点类型
-  optional string socket_addr = 3; // Socket 地址（可选，用于实时通信）
+}
+
+
+// =====================
+// 通用结构体定义
+// =====================
+// 基础请求，仅包含节点地址
+message RegRequest {
+  string node_addr = 1;   // 节点地址（如 192.168.1.10:9000）
+  NodeType node_type = 2; // 节点类型
+  optional string kafka_addr = 3;  // Kafka 地址（可选，用于消息队列）
 }
 
 // =====================
@@ -54,7 +65,6 @@ message NodeInfo {
   int32 total = 6;                   // 分片总数
   NodeType node_type = 7;           // 节点类型
   optional string kafka_addr = 8;   // Kafka 地址（可选，用于消息传递）
-  optional string socket_addr = 9;  // Socket 地址（可选，用于实时通信）
 }
 //同步数据请求类型
 enum SyncDataType {

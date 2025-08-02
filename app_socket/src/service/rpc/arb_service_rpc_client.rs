@@ -2,7 +2,7 @@
 
 use crate::kafka;
 use biz_service::biz_service::kafka_group_service::KafkaGroupService;
-use biz_service::protocol::rpc::arb_models::{BaseRequest, NodeInfo, NodeType, QueryNodeReq};
+use biz_service::protocol::rpc::arb_models::{BaseRequest, NodeInfo, NodeType, QueryNodeReq, RegRequest};
 use biz_service::protocol::rpc::arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::{build_md5, hash_index};
@@ -71,10 +71,10 @@ impl ArbClient {
         Err(anyhow::anyhow!("no shard node"))
     }
     pub async fn register(&mut self) -> anyhow::Result<NodeInfo> {
-        let req = BaseRequest {
+        let req = RegRequest {
             node_addr: self.node_addr.clone(),
             node_type: NodeType::SocketNode as i32,
-            socket_addr: Some(self.socket_addr.clone()),
+            kafka_addr: Some(self.socket_addr.clone()),
         };
         let resp = self.arb_client.register_node(req).await?.into_inner();
         Ok(resp)
@@ -90,7 +90,7 @@ impl ArbClient {
         self.shard_kafka_list.clear();
         // 获取最新仲裁节点列表
         let req = QueryNodeReq {
-            node_type: NodeType::GroupNode as i32,
+            node_type: NodeType::All as i32,
         };
 
         let resp = self.arb_client.list_all_nodes(req).await.map_err(|e| anyhow::anyhow!("Failed to list group nodes: {}", e))?.into_inner();
@@ -100,7 +100,7 @@ impl ArbClient {
 
         //重新排序 list_addrs
         for node_addr in resp.nodes.iter() {
-            let addr = &node_addr.clone().socket_addr.unwrap();
+            let addr = &node_addr.kafka_addr.clone().unwrap();
             let kafka_service = KafkaGroupService::new(addr).await?;
             self.shard_kafka_list.insert(hash_index(addr, resp.nodes.len() as i32), kafka_service);
         }
@@ -123,7 +123,6 @@ impl ArbClient {
                 let req = BaseRequest {
                     node_addr: node_addr.clone(),
                     node_type: NodeType::SocketNode as i32,
-                    socket_addr: Some(node_addr.clone()),
                 };
                 match client.heartbeat(req).await {
                     Ok(_) => log::info!("[Heartbeat] Sent heartbeat for node: {}", node_addr),

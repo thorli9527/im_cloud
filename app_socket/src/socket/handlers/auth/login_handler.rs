@@ -1,4 +1,5 @@
 use crate::socket::socket_manager::{ConnectionId, SocketManager};
+use biz_service::manager::user_manager::{UserManager, UserManagerOpt};
 use biz_service::manager::user_manager_auth::{UserManagerAuth, UserManagerAuthOpt};
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::{AuthType, DeviceType, LoginRespMsg};
@@ -41,7 +42,7 @@ pub async fn handle_login(
                 expires_at: 0,
                 msg: "".to_string(),
                 success: true,
-                uid: client.uid,
+                uid: client.uid.clone(),
                 nickname: client.name,
                 avatar: client.avatar,
             };

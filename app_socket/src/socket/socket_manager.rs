@@ -216,8 +216,8 @@ impl SocketManager {
             let idx = hash_index(&conn_id.0, node_count as i32);
 
             match socket_list.get(idx as usize) {
-                Some(target_node) if target_node.socket_addr.as_ref().unwrap() != &socket_addr => {
-                    log::info!("🚧 连接不属于本节点，迁移中: conn_id={:?}, 分配节点={}", conn_id.0, target_node.socket_addr.as_ref().unwrap(),);
+                Some(target_node) if target_node.node_addr != socket_addr => {
+                    log::info!("🚧 连接不属于本节点，迁移中: conn_id={:?}, 分配节点={}", conn_id.0, target_node.node_addr,);
 
                     // 可使用 RECONNECT 消息结构替代裸字符串
                     let _ = conn_info.sender.send(Bytes::from("RECONNECT"));
@@ -245,6 +245,6 @@ pub fn get_socket_manager() -> Arc<SocketManager> {
 
 // 对节点列表进行排序 按照地址
 fn sort_nodes(mut nodes: Vec<NodeInfo>) -> Vec<NodeInfo> {
-    nodes.sort_by(|a, b| a.socket_addr.as_ref().cmp(&b.socket_addr.as_ref()));
+    nodes.sort_by(|a, b| a.node_addr.cmp(&b.node_addr));
     nodes
 }

@@ -13,35 +13,38 @@ pub fn expand_index_model_provider(input: proc_macro::TokenStream) -> proc_macro
                 let mut fields = vec![];
                 let mut is_unique = false;
                 let mut sort_order = 1i32;
+                let mut index_name: Option<String> = None;
 
-                let input = meta.input;
-                while !input.is_empty() {
-                    let path: syn::Path = match input.parse() {
-                        Ok(p) => p,
-                        Err(_) => break,
-                    };
+                meta.parse_nested_meta(|meta| {
+                    let path = meta.path;
 
                     if path.is_ident("fields") {
-                        let content;
-                        syn::bracketed!(content in input);
-                        while let Ok(Lit::Str(lit)) = content.parse() {
+                        let nested;
+                        syn::bracketed!(nested in meta.input);
+                        while let Ok(Lit::Str(lit)) = nested.parse() {
                             fields.push(lit.value());
-                            let _ = content.parse::<syn::Token![,]>();
+                            let _ = nested.parse::<syn::Token![,]>();
                         }
                     } else if path.is_ident("unique") {
                         is_unique = true;
                     } else if path.is_ident("order") {
                         let content;
-                        syn::parenthesized!(content in input);
+                        syn::parenthesized!(content in meta.input);
                         if let Ok(Lit::Str(lit)) = content.parse() {
                             if lit.value().eq_ignore_ascii_case("desc") {
                                 sort_order = -1;
                             }
                         }
+                    } else if path.is_ident("name") {
+                        let content;
+                        syn::parenthesized!(content in meta.input);
+                        if let Ok(Lit::Str(lit)) = content.parse() {
+                            index_name = Some(lit.value());
+                        }
                     }
 
-                    let _ = input.parse::<syn::Token![,]>();
-                }
+                    Ok(())
+                })?;
 
                 let mut key_doc = quote! { bson::doc! {} };
                 for field in &fields {
@@ -55,11 +58,14 @@ pub fn expand_index_model_provider(input: proc_macro::TokenStream) -> proc_macro
                     };
                 }
 
-                let options = if is_unique {
-                    quote! { Some(mongodb::options::IndexOptions::builder().unique(true).build()) }
-                } else {
-                    quote! { None }
-                };
+                let mut options = quote! { mongodb::options::IndexOptions::builder() };
+                if is_unique {
+                    options = quote! { #options.unique(true) };
+                }
+                if let Some(ref name) = index_name {
+                    options = quote! { #options.name(Some(#name.to_string())) };
+                }
+                let options = quote! { Some(#options.build()) };
 
                 let model = quote! {
                     mongodb::IndexModel::builder()
@@ -69,7 +75,6 @@ pub fn expand_index_model_provider(input: proc_macro::TokenStream) -> proc_macro
                 };
 
                 index_exprs.push(model);
-
                 Ok(())
             });
         }

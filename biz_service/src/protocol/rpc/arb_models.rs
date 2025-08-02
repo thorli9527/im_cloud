@@ -13,9 +13,24 @@ pub struct BaseRequest {
     /// 节点类型
     #[prost(enumeration = "NodeType", tag = "2")]
     pub node_type: i32,
-    /// Socket 地址（可选，用于实时通信）
+}
+/// =====================
+/// 通用结构体定义
+/// =====================
+/// 基础请求，仅包含节点地址
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RegRequest {
+    /// 节点地址（如 192.168.1.10:9000）
+    #[prost(string, tag = "1")]
+    pub node_addr: ::prost::alloc::string::String,
+    /// 节点类型
+    #[prost(enumeration = "NodeType", tag = "2")]
+    pub node_type: i32,
+    /// Kafka 地址（可选，用于消息队列）
     #[prost(string, optional, tag = "3")]
-    pub socket_addr: ::core::option::Option<::prost::alloc::string::String>,
+    pub kafka_addr: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// =====================
 /// 通用结构体定义
@@ -57,9 +72,6 @@ pub struct NodeInfo {
     /// Kafka 地址（可选，用于消息传递）
     #[prost(string, optional, tag = "8")]
     pub kafka_addr: ::core::option::Option<::prost::alloc::string::String>,
-    /// Socket 地址（可选，用于实时通信）
-    #[prost(string, optional, tag = "9")]
-    pub socket_addr: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -185,6 +197,7 @@ impl ShardState {
 pub enum NodeType {
     GroupNode = 0,
     SocketNode = 1,
+    All = 2,
 }
 impl NodeType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -195,6 +208,7 @@ impl NodeType {
         match self {
             Self::GroupNode => "GROUP_NODE",
             Self::SocketNode => "SOCKET_NODE",
+            Self::All => "ALL",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -202,6 +216,7 @@ impl NodeType {
         match value {
             "GROUP_NODE" => Some(Self::GroupNode),
             "SOCKET_NODE" => Some(Self::SocketNode),
+            "ALL" => Some(Self::All),
             _ => None,
         }
     }

@@ -1,10 +1,10 @@
 use crate::service::arb_manager::{ArbManagerJob, ManagerJobOpt};
 use crate::service::shard_manager::{ShardManager, MEMBER_SHARD_SIZE};
+use biz_service::protocol::rpc::arb_models::{BaseRequest, NodeType, QueryNodeReq, RegRequest, ShardState, SyncListGroup, UpdateShardStateRequest};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
 use tonic::async_trait;
-use biz_service::protocol::rpc::arb_models::{BaseRequest, NodeType, QueryNodeReq, ShardState, SyncListGroup, UpdateShardStateRequest};
 
 #[async_trait]
 impl ManagerJobOpt for ArbManagerJob {
@@ -13,10 +13,11 @@ impl ManagerJobOpt for ArbManagerJob {
         let shard_manager = ShardManager::get();
         self.shard_address = config1.clone().shard_address.unwrap();
         let client = self.init_arb_client().await?;
-        let request = BaseRequest {
+        let kafka_config = &AppConfig::get().clone().kafka;
+        let request = RegRequest {
             node_addr: config1.clone().shard_address.unwrap(),
             node_type: NodeType::GroupNode as i32,
-            socket_addr: None,
+            kafka_addr: Some(kafka_config.clone().unwrap().brokers),
         };
         let response = client.register_node(request).await?;
 
@@ -258,7 +259,6 @@ impl ManagerJobOpt for ArbManagerJob {
         let request = BaseRequest {
             node_addr: shard_address,
             node_type: NodeType::GroupNode as i32,
-            socket_addr: None,
         };
         client.heartbeat(request).await?;
         Ok(())

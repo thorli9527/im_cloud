@@ -11,7 +11,7 @@ service ArbServerRpcService {
   rpc UpdateShardState(arb_models.UpdateShardStateRequest) returns (common.CommonResp);          // 更新分片状态
 
   // === 节点注册与生命周期 ===
-  rpc RegisterNode(arb_models.BaseRequest) returns (arb_models.NodeInfo);                          // 节点注册
+  rpc RegisterNode(arb_models.RegRequest) returns (arb_models.NodeInfo);                          // 节点注册
   rpc ListAllNodes(arb_models.QueryNodeReq) returns (arb_models.ListAllNodesResponse);            // 查询所有节点视图
 
   // === 节点状态与控制 ===

@@ -127,7 +127,7 @@ pub mod arb_server_rpc_service_client {
         /// === 节点注册与生命周期 ===
         pub async fn register_node(
             &mut self,
-            request: impl tonic::IntoRequest<super::super::arb_models::BaseRequest>,
+            request: impl tonic::IntoRequest<super::super::arb_models::RegRequest>,
         ) -> std::result::Result<
             tonic::Response<super::super::arb_models::NodeInfo>,
             tonic::Status,
@@ -267,7 +267,7 @@ pub mod arb_server_rpc_service_server {
         /// === 节点注册与生命周期 ===
         async fn register_node(
             &self,
-            request: tonic::Request<super::super::arb_models::BaseRequest>,
+            request: tonic::Request<super::super::arb_models::RegRequest>,
         ) -> std::result::Result<
             tonic::Response<super::super::arb_models::NodeInfo>,
             tonic::Status,
@@ -431,7 +431,7 @@ pub mod arb_server_rpc_service_server {
                     struct RegisterNodeSvc<T: ArbServerRpcService>(pub Arc<T>);
                     impl<
                         T: ArbServerRpcService,
-                    > tonic::server::UnaryService<super::super::arb_models::BaseRequest>
+                    > tonic::server::UnaryService<super::super::arb_models::RegRequest>
                     for RegisterNodeSvc<T> {
                         type Response = super::super::arb_models::NodeInfo;
                         type Future = BoxFuture<
@@ -440,9 +440,7 @@ pub mod arb_server_rpc_service_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<
-                                super::super::arb_models::BaseRequest,
-                            >,
+                            request: tonic::Request<super::super::arb_models::RegRequest>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {

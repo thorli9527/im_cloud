@@ -38,7 +38,6 @@ impl UserManagerOpt for UserManager {
 
         let new_value = devices.into_iter().collect::<Vec<_>>().join(",");
         let _: () = conn.hset(&redis_key, &field_key, &new_value).await?;
-        let _: () = conn.expire(&redis_key, USER_ONLINE_TTL_SECS as i64).await?;
 
         if is_first_online {
             let kafka = KafkaService::get();

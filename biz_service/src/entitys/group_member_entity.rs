@@ -1,8 +1,11 @@
+use common::index_trait::MongoIndexModelProvider;
+use mongo_macro::MongoIndexModelProvider as MongoDeriveMongoIndex;
 /// *
 /// 群组成员详细信息
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, MongoDeriveMongoIndex)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, Debug)]
+#[mongo_index(name("idx_group_uid"),fields["group_id","uid"], unique)]
 pub struct GroupMemberEntity {
     /// 成员记录ID（内部持久化用）
     pub id: ::prost::alloc::string::String,
