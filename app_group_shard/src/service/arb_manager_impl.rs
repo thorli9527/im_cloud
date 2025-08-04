@@ -242,7 +242,6 @@ impl ManagerJobOpt for ArbManagerJob {
     }
 
     async fn change_offline(&mut self) -> anyhow::Result<()> {
-        let shard_manager = ShardManager::get();
         let shard_address = self.shard_address.clone();
         let client = self.init_arb_client().await?;
         let state_request = UpdateShardStateRequest {
