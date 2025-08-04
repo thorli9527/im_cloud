@@ -14,6 +14,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 mod db;
+mod error;
 mod service;
 
 #[actix_web::main]
