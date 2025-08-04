@@ -3,7 +3,8 @@ use crate::error::member_list_error::MemberListError;
 use arc_swap::ArcSwap;
 use biz_service::protocol::common::GroupRoleType;
 use biz_service::protocol::rpc::arb_models::MemberRef;
-use rand::{rng, Rng};
+use dashmap::{DashMap, DashSet};
+use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -13,7 +14,7 @@ use twox_hash::XxHash64;
 
 #[derive(Debug)]
 struct Shard {
-    inner: ArcSwap<HashMap<String, Arc<MemberListWrapper>>>, // lock-free COW map per shard
+    inner: ArcSwap<HashMap<Arc<str>, Arc<MemberListWrapper>>>, // key is Arc<str>
 }
 
 impl Default for Shard {
@@ -27,8 +28,9 @@ impl Default for Shard {
 #[derive(Debug, Clone)]
 pub struct HashShardMap {
     shards: Arc<Vec<Shard>>,
-    /// legacy 兼容字段：每 group 期望的 shard 用途（如果不再手动驱动可以删掉）
     pub per_group_shard: usize,
+    user_to_groups: DashMap<String, DashSet<Arc<str>>>, // user_id -> set of group keys
+    group_key_intern: DashMap<String, Arc<str>>,        // intern pool
 }
 
 impl HashShardMap {
@@ -37,6 +39,23 @@ impl HashShardMap {
         Self {
             shards: Arc::new(shards),
             per_group_shard,
+            user_to_groups: DashMap::new(),
+            group_key_intern: DashMap::new(),
+        }
+    }
+
+    /// Intern and dedupe group keys to shared Arc<str>
+    fn intern_group_key(&self, key: &str) -> Arc<str> {
+        if let Some(existing) = self.group_key_intern.get(key) {
+            return existing.clone();
+        }
+        let arc: Arc<str> = Arc::from(key.to_string().into_boxed_str());
+        match self.group_key_intern.entry(key.to_string()) {
+            dashmap::mapref::entry::Entry::Occupied(o) => o.get().clone(),
+            dashmap::mapref::entry::Entry::Vacant(v) => {
+                v.insert(arc.clone());
+                arc
+            }
         }
     }
 
@@ -46,173 +65,206 @@ impl HashShardMap {
         (hasher.finish() as usize) % self.shards.len()
     }
 
-    /// 获取或创建对应 key 的 MemberListWrapper（无锁，用 CAS 循环插入）
+    /// 获取或创建 wrapper，key 用 Arc<str> 共享
     fn get_or_create_wrapper(&self, key: &str) -> Arc<MemberListWrapper> {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
         loop {
-            let current = shard.inner.load_full(); // Arc<HashMap<...>>
-            if let Some(existing) = current.get(key) {
+            let current = shard.inner.load_full(); // Arc<HashMap<Arc<str>, ...>>
+            if let Some(existing) = current.get(&group_arc) {
                 return existing.clone();
             }
-            // 插入新 wrapper（CAS copy-on-write）
             let mut new_map = (*current).clone();
             let wrapper = Arc::new(MemberListWrapper::new_simple());
-            new_map.insert(key.to_string(), wrapper.clone());
+            new_map.insert(group_arc.clone(), wrapper.clone());
             let new_arc = Arc::new(new_map);
             let prev = shard.inner.compare_and_swap(&current, new_arc);
             if Arc::ptr_eq(&prev, &current) {
                 return wrapper;
             }
-            // 否则重试
+            // else retry
         }
     }
-    /// 通用重试工具函数，支持指数退避（Exponential Backoff）与随机抖动（Jitter）。
-    /// 用于临时性错误（如 Redis 写冲突、乐观锁冲突等）场景的自动重试。
-    ///
-    /// # 参数
-    /// - `op`: 待执行的闭包操作，返回 `Result<T, MemberListError>`
-    ///         若返回 `Ok(T)` 表示成功，立即返回结果；
-    ///         若返回 `Err(MemberListError::Retry)` 则触发重试机制；
-    ///         若返回其他错误类型则立即返回该错误。
-    ///
-    /// # 返回值
-    /// - 成功：返回操作闭包的 `Ok(T)`
-    /// - 重试失败：达到最大重试次数后仍失败，则返回 `Err(MemberListError::Retry)`
-    /// - 非重试错误：直接返回 `op()` 返回的其他 `Err(e)`
-    ///
-    /// # 行为说明
-    /// - 初始等待时间为 `INITIAL_BACKOFF_MS` 毫秒（100ms）
-    /// - 每次失败后，等待时间指数增长（乘以2），最大不超过 `MAX_BACKOFF_MS`（1000ms）
-    /// - 在每次等待中加入随机抖动（jitter）以避免雪崩式重试
-    fn retry_op<T>(&self, mut op: impl FnMut() -> Result<T, MemberListError>) -> Result<T, MemberListError> {
-        const MAX_RETRIES: usize = 5; // 最大重试次数
-        const INITIAL_BACKOFF_MS: u64 = 100; // 初始退避时间：100ms
-        const MAX_BACKOFF_MS: u64 = 1000; // 最大退避上限：1秒
 
-        let mut backoff = INITIAL_BACKOFF_MS;
+    /// 通用重试：指数退避 + jitter（初始 10ms，上限 1s，最多 5 次）
+    fn retry_op<T>(&self, mut op: impl FnMut() -> Result<T, MemberListError>) -> Result<T, MemberListError> {
+        const MAX_RETRIES: usize = 5;
+        let mut backoff = 10u64;
+        const MAX_BACKOFF: u64 = 1000;
 
         for attempt in 0..MAX_RETRIES {
             match op() {
-                Ok(res) => return Ok(res), // 成功，直接返回结果
+                Ok(res) => return Ok(res),
                 Err(MemberListError::Retry) => {
-                    if attempt == MAX_RETRIES - 1 {
-                        break; // 最后一次失败后不再继续
+                    if attempt + 1 == MAX_RETRIES {
+                        break;
                     }
-                    self.sleep_with_jitter(backoff); // 加入退避等待
-                    backoff = (backoff * 2).min(MAX_BACKOFF_MS); // 指数增长并限制最大值
+                    let mut rng = thread_rng();
+                    let jitter: u64 = rng.gen_range(0..backoff);
+                    thread::sleep(Duration::from_millis(backoff + jitter));
+                    backoff = (backoff * 2).min(MAX_BACKOFF);
                 }
-                Err(e) => return Err(e), // 非重试错误，直接返回
+                Err(e) => return Err(e),
             }
         }
-        Err(MemberListError::Retry) // 达到最大重试次数仍失败，返回最终错误
-    }
-
-    /// 在基础退避时间上加入随机抖动，避免集群中多个节点同步重试导致雪崩效应。
-    ///
-    /// # 参数
-    /// - `base_ms`: 当前退避的基础毫秒数（如100、200等）
-    ///
-    /// # 行为
-    /// - 在 `base_ms` 基础上，额外增加 `[0, base_ms)` 范围的随机毫秒数
-    /// - 最终实际等待时间为 `base_ms + jitter`
-    /// - 使用阻塞式 `thread::sleep`，若在异步环境中应改为 `tokio::time::sleep`
-    fn sleep_with_jitter(&self, base_ms: u64) {
-        let mut rng = rng(); // 使用全局 rng() 工具函数（可能是 thread_local 封装）
-        let jitter = rng.gen_range(0..base_ms); // 随机抖动：0 ~ base_ms - 1
-        let dur = Duration::from_millis(base_ms + jitter);
-        thread::sleep(dur); // 阻塞等待
+        Err(MemberListError::Retry)
     }
 
     pub fn insert(&self, key: String, member: MemberRef) -> Result<(), MemberListError> {
         if key.is_empty() {
             return Ok(());
         }
+        // use shared Arc<str> as group key
+        let group_arc = self.intern_group_key(&key);
         let wrapper = self.get_or_create_wrapper(&key);
-        self.retry_op(|| wrapper.add(member.clone()))
+        self.retry_op(|| wrapper.add(member.clone()))?;
+        self.user_to_groups.entry(member.id.clone()).or_insert_with(DashSet::new).insert(group_arc.clone());
+        Ok(())
     }
 
     pub fn insert_many(&self, key: &str, members: Vec<MemberRef>) -> Result<(), MemberListError> {
         if key.is_empty() {
             return Ok(());
         }
+        let group_arc = self.intern_group_key(key);
         let wrapper = self.get_or_create_wrapper(key);
-        self.retry_op(|| wrapper.add_many(members.clone()))
+        self.retry_op(|| wrapper.add_many(members.clone()))?;
+        for m in members {
+            self.user_to_groups.entry(m.id.clone()).or_insert_with(DashSet::new).insert(group_arc.clone());
+        }
+        Ok(())
     }
 
     pub fn get_page(&self, key: &str, page: usize, page_size: usize) -> Option<Vec<MemberRef>> {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
-        shard.inner.load().get(key).map(|entry| entry.get_page(page, page_size))
+        shard.inner.load().get(&group_arc).map(|entry| entry.get_page(page, page_size))
     }
 
     pub fn get_online_ids(&self, key: &str) -> Vec<String> {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
-        shard.inner.load().get(key).map(|entry| entry.get_online_ids()).unwrap_or_default()
+        shard.inner.load().get(&group_arc).map(|entry| entry.get_online_ids()).unwrap_or_default()
     }
 
     pub fn get_online_page(&self, key: &str, page: usize, page_size: usize) -> Vec<String> {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
-        shard.inner.load().get(key).map(|entry| entry.get_online_page(page, page_size)).unwrap_or_default()
+        shard.inner.load().get(&group_arc).map(|entry| entry.get_online_page(page, page_size)).unwrap_or_default()
     }
 
     pub fn get_online_count(&self, key: &str) -> usize {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
-        shard.inner.load().get(key).map(|entry| entry.get_online_count()).unwrap_or(0)
+        shard.inner.load().get(&group_arc).map(|entry| entry.get_online_count()).unwrap_or(0)
     }
 
     pub fn remove(&self, key: &str, user_id: &str) -> Result<bool, MemberListError> {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
-        if let Some(wrapper) = shard.inner.load().get(key) {
-            // 使用 retry helper 让逻辑一致
-            return self.retry_op(|| wrapper.remove(user_id));
+        if let Some(wrapper) = shard.inner.load().get(&group_arc) {
+            let removed = self.retry_op(|| wrapper.remove(user_id))?;
+            if removed {
+                if let Some(mut set) = self.user_to_groups.get_mut(user_id) {
+                    set.remove(&group_arc);
+                    if set.is_empty() {
+                        self.user_to_groups.remove(user_id);
+                    }
+                }
+            }
+            return Ok(removed);
         }
         Ok(false)
     }
 
     pub fn set_online(&self, key: &str, user_id: &str, online: bool) -> Result<(), MemberListError> {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
-        if let Some(entry) = shard.inner.load().get(key) {
+        if let Some(entry) = shard.inner.load().get(&group_arc) {
             return self.retry_op(|| entry.set_online(user_id, online));
         }
         Ok(())
     }
 
     pub fn change_role(&self, key: &str, user_id: &str, role: GroupRoleType) -> Result<(), MemberListError> {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
-        if let Some(entry) = shard.inner.load().get(key) {
+        if let Some(entry) = shard.inner.load().get(&group_arc) {
             return self.retry_op(|| entry.change_role(user_id, role));
         }
         Ok(())
     }
 
-    /// 所有 group key（可能很多，慎用）
-    pub fn all_keys(&self) -> Vec<String> {
+    /// 所有 group keys（shared Arc<str>，避免重复 alloc）
+    pub fn all_keys(&self) -> Vec<Arc<str>> {
         self.shards.iter().flat_map(|shard| shard.inner.load().keys().cloned().collect::<Vec<_>>()).collect()
     }
 
     pub fn get_member_by_key(&self, key: &str) -> Vec<MemberRef> {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
-        shard.inner.load().get(key).map(|entry| entry.get_all()).unwrap_or_default()
+        shard.inner.load().get(&group_arc).map(|entry| entry.get_all()).unwrap_or_default()
     }
 
     pub fn get_member_count_by_key(&self, key: &str) -> usize {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
-        shard.inner.load().get(key).map(|entry| entry.len()).unwrap_or(0)
+        shard.inner.load().get(&group_arc).map(|entry| entry.len()).unwrap_or(0)
     }
 
-    /// 清掉某个 key 的 wrapper（整个 group 清除）
+    /// 清掉某个 group（包括反向索引更新）
     pub fn clear(&self, key: &str) {
+        let group_arc = self.intern_group_key(key);
         let shard = &self.shards[self.get_shard_index(key)];
+
+        if let Some(wrapper) = shard.inner.load().get(&group_arc) {
+            let user_ids: Vec<String> = wrapper.get_all().into_iter().map(|m| m.id.clone()).collect();
+            for uid in user_ids {
+                if let Some(mut set) = self.user_to_groups.get_mut(&uid) {
+                    set.remove(&group_arc);
+                    if set.is_empty() {
+                        self.user_to_groups.remove(&uid);
+                    }
+                }
+            }
+        }
+
         loop {
             let current = shard.inner.load_full();
-            if !current.contains_key(key) {
+            if !current.contains_key(&group_arc) {
                 return;
             }
             let mut new_map = (*current).clone();
-            new_map.remove(key);
+            new_map.remove(&group_arc);
             let new_arc = Arc::new(new_map);
             let prev = shard.inner.compare_and_swap(&current, new_arc);
             if Arc::ptr_eq(&prev, &current) {
                 return;
+            }
+        }
+    }
+
+    /// 高效查某 user 属于哪些 groups（不排序）
+    pub fn groups_for_user(&self, user_id: &str) -> Vec<Arc<str>> {
+        if let Some(set) = self.user_to_groups.get(user_id) { set.iter().map(|r| r.clone()).collect() } else { Vec::new() }
+    }
+
+    /// 高效查某 user 的 group，返回排序后版本（稳定顺序）
+    pub fn groups_for_user_sorted(&self, user_id: &str) -> Vec<Arc<str>> {
+        let mut v = self.groups_for_user(user_id);
+        v.sort();
+        v
+    }
+
+    /// 重建反向索引（drift recovery）
+    pub fn rebuild_user_index(&self) {
+        self.user_to_groups.clear();
+        for shard in self.shards.iter() {
+            for (group, wrapper) in shard.inner.load().iter() {
+                let members = wrapper.get_all();
+                for m in members {
+                    self.user_to_groups.entry(m.id.clone()).or_insert_with(DashSet::new).insert(group.clone());
+                }
             }
         }
     }

@@ -145,7 +145,7 @@ impl ManagerJobOpt for ArbManagerJob {
 
             let member_list = snapshot.shard_map.get_member_by_key(&key);
             let sync_data = SyncListGroup {
-                group_id: key.clone(),
+                group_id: key.to_string(),
                 members: member_list,
                 on_line_ids: snapshot.shard_map.get_online_ids(&key),
             };

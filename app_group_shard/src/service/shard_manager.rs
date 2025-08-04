@@ -3,11 +3,12 @@ use anyhow::Result;
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use biz_service::protocol::common::GroupRoleType;
+use biz_service::protocol::rpc::arb_models::{MemberRef, ShardState};
 use common::config::ShardConfig;
 use common::{GroupId, UserId};
 use std::hash::Hash;
+use std::sync::Arc;
 use tokio::sync::RwLock;
-use biz_service::protocol::rpc::arb_models::{MemberRef, ShardState};
 
 pub const GROUP_SHARD_SIZE: usize = 64;
 pub const MEMBER_SHARD_SIZE: usize = 16;
@@ -72,7 +73,8 @@ pub trait ShardManagerOpt: Send + Sync {
     fn get_on_line_member(&self, group_id: &GroupId) -> Vec<UserId>;
     ///修改角色
     fn change_role(&self, group_id: &GroupId, uid: &UserId, role: GroupRoleType) -> Result<()>;
-
+    /// 获取用户所在的群组
+    fn get_user_groups(&self, uid: &UserId) -> anyhow::Result<Vec<Arc<str>>>;
     /// 获取在线管理员
     async fn get_admin_member(&self, group_id: &GroupId) -> Result<Option<Vec<UserId>>>;
 }

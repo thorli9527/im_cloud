@@ -6,13 +6,14 @@ use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::entitys::group_member_entity::GroupMemberEntity;
 use biz_service::protocol::common::GroupRoleType;
+use biz_service::protocol::rpc::arb_models::{MemberRef, NodeType, QueryNodeReq};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::{GroupId, UserId};
 use futures_util::StreamExt;
 use mongodb::bson::doc;
 use mongodb::options::FindOptions;
-use biz_service::protocol::rpc::arb_models::{MemberRef, NodeType, QueryNodeReq};
+use std::sync::Arc;
 
 #[async_trait]
 impl ShardManagerOpt for ShardManager {
@@ -148,5 +149,10 @@ impl ShardManagerOpt for ShardManager {
         let group_service = GroupService::get();
         let admin_member = group_service.query_admin_member_by_group_id(group_id).await?;
         Ok(Some(admin_member))
+    }
+
+    fn get_user_groups(&self, uid: &UserId) -> anyhow::Result<Vec<Arc<str>>> {
+        let group_service = self.current.load().shard_map.groups_for_user(uid);
+        Ok(group_service)
     }
 }
