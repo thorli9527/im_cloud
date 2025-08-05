@@ -1,8 +1,0 @@
-syntax = "proto3";
-import "common.proto";
-import "google/protobuf/empty.proto";
-package protocol.arb_socket;
-service ArbSocketService {
-  rpc flushShardList(google.protobuf.Empty) returns (common.CommonResp);
-  rpc flushSocketList(google.protobuf.Empty) returns (common.CommonResp);
-}

@@ -1,5 +1,5 @@
 [package]
-name = "app_group_message"
+name = "app_group_msg"
 version = "0.1.0"
 edition = "2024"
 

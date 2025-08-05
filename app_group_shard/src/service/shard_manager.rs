@@ -75,6 +75,7 @@ pub trait ShardManagerOpt: Send + Sync {
     fn change_role(&self, group_id: &GroupId, uid: &UserId, role: GroupRoleType) -> Result<()>;
     /// 获取用户所在的群组
     fn get_user_groups(&self, uid: &UserId) -> anyhow::Result<Vec<Arc<str>>>;
+
     /// 获取在线管理员
     async fn get_admin_member(&self, group_id: &GroupId) -> Result<Option<Vec<UserId>>>;
 }

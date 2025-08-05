@@ -1,21 +1,21 @@
 syntax = "proto3";
 
 package protocol.arb_server;
-import "google/protobuf/empty.proto";
+
 import "arb/arb_models.proto";
 import "common.proto"; // 引入全局定义
 // ============================
 // 仲裁服务接口定义
 // ============================
 service ArbServerRpcService {
-  rpc UpdateShardState(arb_models.UpdateShardStateRequest) returns (common.CommonResp);          // 更新分片状态
-
+  // === 分片状态更新 ===
+  rpc UpdateShardState(arb_models.UpdateShardStateRequest) returns (common.CommonResp);
   // === 节点注册与生命周期 ===
-  rpc RegisterNode(arb_models.RegRequest) returns (arb_models.NodeInfo);                          // 节点注册
-  rpc ListAllNodes(arb_models.QueryNodeReq) returns (arb_models.ListAllNodesResponse);            // 查询所有节点视图
-
-  // === 节点状态与控制 ===
-  rpc GracefulLeave(arb_models.BaseRequest) returns (common.CommonResp);                         // 节点优雅退出
-
-  rpc heartbeat(arb_models.BaseRequest) returns (common.CommonResp);                            // 节点心跳检测
+  rpc RegisterNode(arb_models.RegRequest) returns (arb_models.NodeInfo);
+  /// 节点注册
+  rpc ListAllNodes(arb_models.QueryNodeReq) returns (arb_models.ListAllNodesResponse);
+  /// === 节点状态与控制-节点优雅退出 ===
+  rpc GracefulLeave(arb_models.BaseRequest) returns (common.CommonResp);
+  /// 节点心跳检测
+  rpc heartbeat(arb_models.BaseRequest) returns (common.CommonResp);
 }

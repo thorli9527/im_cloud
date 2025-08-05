@@ -1,10 +1,10 @@
 use app_socket::scheduler;
-use app_socket::service::rpc::arb_socket_server_impl::ArbSocketRpcServiceImpl;
 use app_socket::socket::socket_server::start_server;
 use biz_service::biz_service::kafka_socket_service::KafkaService;
 use common::config::AppConfig;
 use log::warn;
 use tokio::net::TcpListener;
+use app_socket::service::rpc::arb_socket_server_impl::ArbClientRpcServiceImpl;
 
 /// 写通道类型，用于发送 protobuf 编码好的消息
 
@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
 
     // ✅ 并行启动 RPC 服务
     tokio::spawn(async {
-        ArbSocketRpcServiceImpl::start().await;
+        ArbClientRpcServiceImpl::start().await;
     });
     //socket-web-server
     let bind_cfg = &config.socket.clone().unwrap().node_addr;

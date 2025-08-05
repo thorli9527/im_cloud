@@ -1,8 +1,8 @@
 use crate::service::shard_manager::ShardManager;
 use biz_service::protocol::common::CommonResp;
-use biz_service::protocol::rpc::arb_group::arb_group_service_server::ArbGroupServiceServer;
-use biz_service::protocol::rpc::arb_group::{arb_group_service_server, UpdateVersionReq};
-use biz_service::protocol::rpc::arb_models::SyncListGroup;
+use biz_service::protocol::rpc::arb_group::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
+use biz_service::protocol::rpc::arb_group::UpdateVersionReq;
+use biz_service::protocol::rpc::arb_models::{ListAllNodesResponse, SyncListGroup};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
@@ -12,8 +12,8 @@ use std::str::FromStr;
 use tonic::{Request, Response, Status};
 
 /// arb 组 客户端接口
-pub struct ArbGroupServiceImpl {}
-impl ArbGroupServiceImpl {
+pub struct ArbClientServiceImpl {}
+impl ArbClientServiceImpl {
     pub fn new() -> Self {
         Self {}
     }
@@ -21,13 +21,13 @@ impl ArbGroupServiceImpl {
         // 读取配置文件
         let app_cfg = AppConfig::get();
         let addr = SocketAddr::from_str(&app_cfg.get_shard().server_host.unwrap()).expect("Invalid address");
-        let svc = ArbGroupServiceImpl {};
-        tonic::transport::Server::builder().add_service(ArbGroupServiceServer::new(svc)).serve(addr).await.expect("Failed to start server");
+        let svc = ArbClientServiceImpl {};
+        tonic::transport::Server::builder().add_service(ArbClientServiceServer::new(svc)).serve(addr).await.expect("Failed to start server");
         log::warn!("ArbGroupServiceServer started");
     }
 }
 #[tonic::async_trait]
-impl arb_group_service_server::ArbGroupService for ArbGroupServiceImpl {
+impl ArbClientService for ArbClientServiceImpl {
     async fn update_version(&self, request: Request<UpdateVersionReq>) -> Result<Response<CommonResp>, Status> {
         let req = request.into_inner();
         let shard_manager = ShardManager::get();
@@ -62,5 +62,9 @@ impl arb_group_service_server::ArbGroupService for ArbGroupServiceImpl {
             success: true,
             message: format!("Sync success: {} groups, {} members", sync_data.group_id, member_len),
         }))
+    }
+
+    async fn flush_nodes(&self, request: Request<()>) -> Result<Response<CommonResp>, Status> {
+        todo!()
     }
 }

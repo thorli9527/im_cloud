@@ -90,7 +90,7 @@ impl ArbClient {
         self.shard_kafka_list.clear();
         // 获取最新仲裁节点列表
         let req = QueryNodeReq {
-            node_type: NodeType::All as i32,
+            node_type: NodeType::SocketNode as i32,
         };
 
         let resp = self.arb_client.list_all_nodes(req).await.map_err(|e| anyhow::anyhow!("Failed to list group nodes: {}", e))?.into_inner();

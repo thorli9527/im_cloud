@@ -1,6 +1,8 @@
 use crate::db::hash_shard_map::HashShardMap;
 use crate::service::shard_manager::{MemData, ShardInfo, ShardManager, ShardManagerOpt, GROUP_SHARD_SIZE, MEMBER_SHARD_SIZE};
 use arc_swap::ArcSwap;
+use biz_service::protocol::rpc::arb_group::arb_client_service_client::ArbClientServiceClient;
+use biz_service::protocol::rpc::arb_models::ShardState;
 use common::config::{AppConfig, ShardConfig};
 use common::util::common_utils::hash_index;
 use once_cell::sync::OnceCell;
@@ -10,8 +12,6 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tonic::transport::Channel;
 use twox_hash::XxHash64;
-use biz_service::protocol::rpc::arb_group::arb_group_service_client::ArbGroupServiceClient;
-use biz_service::protocol::rpc::arb_models::ShardState;
 
 impl ShardManager {
     pub fn new(shard_config: ShardConfig) -> Self {
@@ -47,7 +47,7 @@ impl ShardManager {
     pub async fn init_grpc_clients(
         &self,
         endpoints: Vec<String>,
-    ) -> std::result::Result<HashMap<i32, ArbGroupServiceClient<Channel>>, Box<dyn std::error::Error>> {
+    ) -> std::result::Result<HashMap<i32, ArbClientServiceClient<Channel>>, Box<dyn std::error::Error>> {
         let mut clients = HashMap::new();
         let size = endpoints.len();
         for endpoint in endpoints {
@@ -56,7 +56,7 @@ impl ShardManager {
                 continue;
             }
             let channel = Channel::from_shared(format!("http://{}", endpoint))?.connect().await?;
-            let client = ArbGroupServiceClient::new(channel);
+            let client = ArbClientServiceClient::new(channel);
             clients.insert(hash_index(&endpoint, size as i32), client);
         }
         Ok(clients)

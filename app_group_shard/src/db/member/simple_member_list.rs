@@ -6,14 +6,17 @@ use std::sync::Arc;
 /// 简单的成员列表，适用于成员量较小时，内部用 dashmap 做并发。
 #[derive(Debug, Default)]
 pub struct SimpleMemberList {
-    members: DashMap<String, Arc<MemberRef>>, // user_id -> MemberRef
-    online: DashSet<String>,                  // online user_ids
+    /// user_id (Arc<str>) -> MemberRef
+    members: DashMap<Arc<str>, Arc<MemberRef>>,
+    /// 在线 user_id 集合 (Arc<str>)
+    online: DashSet<Arc<str>>,
 }
 
 impl SimpleMemberList {
     pub fn add(&self, member: MemberRef) {
-        let id = member.id.clone();
-        self.members.insert(id, Arc::new(member));
+        // 将 String 转为 Arc<str> 作为键
+        let id_arc: Arc<str> = Arc::from(member.id.clone().into_boxed_str());
+        self.members.insert(id_arc.clone(), Arc::new(member));
     }
 
     pub fn add_many(&self, items: Vec<MemberRef>) {
@@ -23,9 +26,10 @@ impl SimpleMemberList {
     }
 
     pub fn remove(&self, id: &str) -> bool {
-        let removed = self.members.remove(id);
-        self.online.remove(id);
-        removed.is_some()
+        let key = Arc::from(id.to_string().into_boxed_str());
+        let removed = self.members.remove(&key).is_some();
+        self.online.remove(&key);
+        removed
     }
 
     pub fn len(&self) -> usize {
@@ -49,15 +53,17 @@ impl SimpleMemberList {
     }
 
     pub fn set_online(&self, id: &str) {
-        self.online.insert(id.to_string());
+        let key = Arc::from(id.to_string().into_boxed_str());
+        self.online.insert(key);
     }
 
     pub fn set_offline(&self, id: &str) {
-        self.online.remove(id);
+        let key = Arc::from(id.to_string().into_boxed_str());
+        self.online.remove(&key);
     }
 
     pub fn get_online_all(&self) -> Vec<String> {
-        let mut all: Vec<String> = self.online.iter().map(|entry| entry.key().clone()).collect();
+        let mut all: Vec<String> = self.online.iter().map(|entry| entry.key().to_string()).collect();
         all.sort();
         all
     }
@@ -67,7 +73,7 @@ impl SimpleMemberList {
     }
 
     pub fn get_online_page(&self, page: usize, page_size: usize) -> Vec<String> {
-        let mut all = self.get_online_all();
+        let all = self.get_online_all();
         let start = page.saturating_mul(page_size);
         if start >= all.len() {
             return Vec::new();
@@ -77,8 +83,8 @@ impl SimpleMemberList {
     }
 
     pub fn set_role(&self, id: &str, role: GroupRoleType) {
-        if let Some(mut entry) = self.members.get_mut(id) {
-            // clone, modify, replace to keep Arc semantics
+        let key = Arc::from(id.to_string().into_boxed_str());
+        if let Some(mut entry) = self.members.get_mut(&key) {
             let mut updated = (*entry).as_ref().clone();
             updated.role = role as i32;
             *entry = Arc::new(updated);

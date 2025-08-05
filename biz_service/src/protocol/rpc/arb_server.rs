@@ -93,6 +93,7 @@ pub mod arb_server_rpc_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
+        /// === 分片状态更新 ===
         pub async fn update_shard_state(
             &mut self,
             request: impl tonic::IntoRequest<
@@ -154,6 +155,7 @@ pub mod arb_server_rpc_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// / 节点注册
         pub async fn list_all_nodes(
             &mut self,
             request: impl tonic::IntoRequest<super::super::arb_models::QueryNodeReq>,
@@ -183,7 +185,7 @@ pub mod arb_server_rpc_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
-        /// === 节点状态与控制 ===
+        /// / === 节点状态与控制-节点优雅退出 ===
         pub async fn graceful_leave(
             &mut self,
             request: impl tonic::IntoRequest<super::super::arb_models::BaseRequest>,
@@ -213,6 +215,7 @@ pub mod arb_server_rpc_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// / 节点心跳检测
         pub async fn heartbeat(
             &mut self,
             request: impl tonic::IntoRequest<super::super::arb_models::BaseRequest>,
@@ -257,6 +260,7 @@ pub mod arb_server_rpc_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with ArbServerRpcServiceServer.
     #[async_trait]
     pub trait ArbServerRpcService: std::marker::Send + std::marker::Sync + 'static {
+        /// === 分片状态更新 ===
         async fn update_shard_state(
             &self,
             request: tonic::Request<super::super::arb_models::UpdateShardStateRequest>,
@@ -272,6 +276,7 @@ pub mod arb_server_rpc_service_server {
             tonic::Response<super::super::arb_models::NodeInfo>,
             tonic::Status,
         >;
+        /// / 节点注册
         async fn list_all_nodes(
             &self,
             request: tonic::Request<super::super::arb_models::QueryNodeReq>,
@@ -279,7 +284,7 @@ pub mod arb_server_rpc_service_server {
             tonic::Response<super::super::arb_models::ListAllNodesResponse>,
             tonic::Status,
         >;
-        /// === 节点状态与控制 ===
+        /// / === 节点状态与控制-节点优雅退出 ===
         async fn graceful_leave(
             &self,
             request: tonic::Request<super::super::arb_models::BaseRequest>,
@@ -287,6 +292,7 @@ pub mod arb_server_rpc_service_server {
             tonic::Response<super::super::super::common::CommonResp>,
             tonic::Status,
         >;
+        /// / 节点心跳检测
         async fn heartbeat(
             &self,
             request: tonic::Request<super::super::arb_models::BaseRequest>,

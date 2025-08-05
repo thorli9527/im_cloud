@@ -197,7 +197,8 @@ impl ShardState {
 pub enum NodeType {
     GroupNode = 0,
     SocketNode = 1,
-    All = 2,
+    MsgGateway = 2,
+    SocketGateway = 3,
 }
 impl NodeType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -208,7 +209,8 @@ impl NodeType {
         match self {
             Self::GroupNode => "GROUP_NODE",
             Self::SocketNode => "SOCKET_NODE",
-            Self::All => "ALL",
+            Self::MsgGateway => "MSG_GATEWAY",
+            Self::SocketGateway => "SOCKET_GATEWAY",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -216,7 +218,8 @@ impl NodeType {
         match value {
             "GROUP_NODE" => Some(Self::GroupNode),
             "SOCKET_NODE" => Some(Self::SocketNode),
-            "ALL" => Some(Self::All),
+            "MSG_GATEWAY" => Some(Self::MsgGateway),
+            "SOCKET_GATEWAY" => Some(Self::SocketGateway),
             _ => None,
         }
     }

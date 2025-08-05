@@ -389,7 +389,7 @@ name = "app_friend_message"
 version = "0.1.0"
 
 [[package]]
-name = "app_group_message"
+name = "app_group_msg"
 version = "0.1.0"
 dependencies = [
  "actix-service",
@@ -442,10 +442,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "app_msg_gateway"
+version = "0.1.0"
+dependencies = [
+ "actix-files",
+ "actix-service",
+ "actix-web",
+ "anyhow",
+ "chrono",
+ "common",
+ "config",
+ "dashmap",
+ "deadpool-redis",
+ "env_logger",
+ "log",
+ "moka",
+ "mongo_macro",
+ "mongodb",
+ "once_cell",
+ "prost 0.13.5",
+ "rdkafka",
+ "regex",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tonic",
+ "utoipa",
+ "validator",
+]
+
+[[package]]
 name = "app_shard_db"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "ahash",
  "anyhow",
  "arc-swap",
  "async-trait",

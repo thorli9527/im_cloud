@@ -1,19 +1,19 @@
 use biz_service::protocol::common::CommonResp;
-use biz_service::protocol::rpc::arb_group::arb_group_service_client::ArbGroupServiceClient;
+use biz_service::protocol::rpc::arb_group::arb_client_service_client::ArbClientServiceClient;
 use biz_service::protocol::rpc::arb_group::UpdateVersionReq;
 use biz_service::protocol::rpc::arb_models::{
     BaseRequest, ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, RegRequest, ShardState, UpdateShardStateRequest,
 };
 use biz_service::protocol::rpc::arb_server::arb_server_rpc_service_server::ArbServerRpcService;
-use biz_service::protocol::rpc::arb_socket::arb_socket_service_client::ArbSocketServiceClient;
 use common::util::date_util::now;
 use dashmap::DashMap;
 use std::clone;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tokio::io::Empty;
 use tonic::transport::Channel;
-use tonic::{Request, Response, Status};
+use tonic::{IntoRequest, Request, Response, Status};
 use tracing::log;
 
 /// 分片节点状态信息
@@ -29,7 +29,7 @@ pub struct ArbiterServiceImpl {
 }
 
 impl ArbiterServiceImpl {
-    pub async fn init_socket_clients(&self) -> Result<Vec<ArbSocketServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn init_socket_clients(&self) -> Result<Vec<ArbClientServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
         let mut endpoints = Vec::new();
         for ref node in self.socket_nodes.iter() {
             let node_info = node.value();
@@ -38,12 +38,12 @@ impl ArbiterServiceImpl {
         let mut clients = Vec::new();
         for endpoint in endpoints {
             let channel = Channel::from_shared(format!("http://{}", endpoint.clone()))?.connect().await?;
-            let client = ArbSocketServiceClient::new(channel);
+            let client = ArbClientServiceClient::new(channel);
             clients.push(client);
         }
         Ok(clients)
     }
-    pub async fn init_shard_clients(&self) -> Result<Vec<ArbGroupServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn init_shard_clients(&self) -> Result<Vec<ArbClientServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
         let mut endpoints = Vec::new();
         for ref node in self.shard_nodes.iter() {
             let node_info = node.value();
@@ -52,7 +52,7 @@ impl ArbiterServiceImpl {
         let mut clients = Vec::new();
         for endpoint in endpoints {
             let channel = Channel::from_shared(format!("http://{}", endpoint.clone()))?.connect().await?;
-            let client = ArbGroupServiceClient::new(channel);
+            let client = ArbClientServiceClient::new(channel);
             clients.push(client);
         }
         Ok(clients)
@@ -92,7 +92,7 @@ impl ArbServerRpcService for ArbiterServiceImpl {
                             // 通知所有 socket 节点刷新 shard 列表
                             if let Ok(mut socket_clients) = self.init_socket_clients().await {
                                 for client in socket_clients.iter_mut() {
-                                    let _ = client.flush_shard_list(Request::new(())).await;
+                                    let _ = client.flush_nodes(()).await;
                                 }
                             }
                         } else {

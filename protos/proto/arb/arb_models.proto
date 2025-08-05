@@ -21,7 +21,8 @@ enum ShardState {
 enum NodeType{
   GROUP_NODE = 0;
   SOCKET_NODE = 1;
-  ALL = 2;
+  MSG_GATEWAY = 2;
+  SOCKET_GATEWAY = 3;
 }
 
 // =====================

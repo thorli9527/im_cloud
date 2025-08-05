@@ -1,0 +1,10 @@
+[shard]
+server_host = "127.0.0.1:50000"
+[database]
+url = "mongodb://localhost:27017"
+db_name = "gateway_msg"
+[sys]
+log_leve = "trace"  #trace debug info error warn
+[server]
+host = "127.0.0.1"
+port = 8094

@@ -152,7 +152,7 @@ impl ShardManagerOpt for ShardManager {
     }
 
     fn get_user_groups(&self, uid: &UserId) -> anyhow::Result<Vec<Arc<str>>> {
-        let group_service = self.current.load().shard_map.groups_for_user(uid);
+        let group_service = self.current.load().shard_map.user_group_list(uid);
         Ok(group_service)
     }
 }

@@ -1,10 +1,10 @@
 use crate::config::DatabaseConfig;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use mongodb::options::ClientOptions;
 use mongodb::{Client, Database};
 use once_cell::sync::OnceCell;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Db {
     pub db: Database,
 }
@@ -12,17 +12,16 @@ pub struct Db {
 impl Db {
     /// 创建新实例
     pub fn new(db: Database) -> Self {
-        Self { db }
+        Self {
+            db,
+        }
     }
 
     /// 初始化 MongoDB 数据库连接（全局只允许初始化一次）
     pub async fn init(config: &DatabaseConfig) -> Result<()> {
-        let client_options = ClientOptions::parse(&config.url)
-            .await
-            .map_err(|e| anyhow!("MongoDB URI parse error: {}", e))?;
+        let client_options = ClientOptions::parse(&config.url).await.map_err(|e| anyhow!("MongoDB URI parse error: {}", e))?;
 
-        let client = Client::with_options(client_options)
-            .map_err(|e| anyhow!("MongoDB client init error: {}", e))?;
+        let client = Client::with_options(client_options).map_err(|e| anyhow!("MongoDB client init error: {}", e))?;
 
         let db = client.database(&config.db_name);
         let instance = Self::new(db);

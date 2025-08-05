@@ -2,7 +2,7 @@ syntax = "proto3";
 package protocol.arb_group;
 import "arb/arb_models.proto";
 import "common.proto"; // 引入全局定义
-
+import "google/protobuf/empty.proto";
 
 message UpdateVersionReq {
   string node_addr = 1;                   // 所属节点地址
@@ -11,10 +11,12 @@ message UpdateVersionReq {
   uint64 last_update_time = 4;            // 最后更新时间戳（毫秒）
   int32 total = 6;
 }
-service ArbGroupService {
+service ArbClientService {
   //更新版本号
   rpc updateVersion(UpdateVersionReq) returns (common.CommonResp);
   //同步数据
   rpc syncData(arb_models.SyncListGroup) returns (common.CommonResp);
+  //刷新节点
+  rpc flushNodes(google.protobuf.Empty) returns (common.CommonResp);
 
 }

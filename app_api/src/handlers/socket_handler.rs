@@ -34,7 +34,7 @@ pub async fn get_socket_address(req: HttpRequest) -> Result<impl Responder, AppE
     // Step 3: 查询 ARB
     let mut arb_client = ArbClient::new().await;
     let query = QueryNodeReq {
-        node_type: NodeType::SocketNode as i32,
+        node_type: NodeType::SocketGateway as i32,
     };
     let list = arb_client.client.list_all_nodes(query).await.map_err(|e| AppError::Internal(format!("query arb failed: {}", e)))?.into_inner();
 
