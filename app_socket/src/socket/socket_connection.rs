@@ -42,6 +42,7 @@ pub async fn handle_connection(stream: TcpStream) -> Result<()> {
         },
         sender: tx.clone(),
         last_heartbeat: last_heartbeat.clone(),
+        focus_target: None,
     };
 
     let manager = get_socket_manager();

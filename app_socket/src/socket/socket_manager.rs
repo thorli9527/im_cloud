@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::socket::socket_error::SendError;
 use anyhow::Result;
-use biz_service::protocol::common::ByteMessageType;
+use biz_service::protocol::common::{ByteMessageType, ChatTargetType};
 use biz_service::protocol::msg::auth::DeviceType;
 use biz_service::protocol::rpc::arb_models::NodeInfo;
 use common::config::AppConfig;
@@ -25,7 +25,11 @@ type CachedResponse = Bytes;
 /// 客户端连接唯一标识
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct ConnectionId(pub String);
-
+#[derive(Clone, Debug)]
+pub enum FocusTarget {
+    User(Arc<str>),
+    Group(Arc<str>),
+}
 /// 连接元信息（用户、设备、客户端等）
 #[derive(Clone)]
 pub struct ConnectionMeta {
@@ -39,6 +43,7 @@ pub struct ConnectionInfo {
     pub meta: ConnectionMeta,
     pub sender: mpsc::UnboundedSender<Bytes>,
     pub last_heartbeat: Arc<AtomicU64>,
+    pub focus_target: Option<FocusTarget>,
 }
 
 /// Socket连接管理器：用于统一管理所有在线连接、用户索引及群组关系
