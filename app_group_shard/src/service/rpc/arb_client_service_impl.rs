@@ -1,7 +1,7 @@
 use crate::service::shard_manager::ShardManager;
 use biz_service::protocol::common::CommonResp;
-use biz_service::protocol::rpc::arb_group::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
-use biz_service::protocol::rpc::arb_group::UpdateVersionReq;
+use biz_service::protocol::rpc::arb_client::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
+use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
 use biz_service::protocol::rpc::arb_models::{ListAllNodesResponse, SyncListGroup};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;

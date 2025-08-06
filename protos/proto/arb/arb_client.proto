@@ -1,5 +1,5 @@
 syntax = "proto3";
-package protocol.arb_group;
+package protocol.arb_client;
 import "arb/arb_models.proto";
 import "common.proto"; // 引入全局定义
 import "google/protobuf/empty.proto";

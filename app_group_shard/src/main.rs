@@ -4,7 +4,6 @@ use actix_web::middleware::Logger;
 use actix_web::web::service;
 use actix_web::{App, HttpServer};
 use biz_service::manager;
-use biz_service::protocol::rpc::arb_group::arb_client_service_server::ArbClientServiceServer;
 use common::config::AppConfig;
 use log::warn;
 use std::net::SocketAddr;

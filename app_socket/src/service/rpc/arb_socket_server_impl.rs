@@ -1,8 +1,8 @@
 use crate::service::rpc::arb_service_rpc_client::ArbClient;
 use crate::socket::socket_manager::SocketManager;
 use biz_service::protocol::common::CommonResp;
-use biz_service::protocol::rpc::arb_group::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
-use biz_service::protocol::rpc::arb_group::UpdateVersionReq;
+use biz_service::protocol::rpc::arb_client::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
+use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
 use biz_service::protocol::rpc::arb_models::{ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, SyncListGroup};
 use common::config::AppConfig;
 use futures::future::err;

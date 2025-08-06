@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
-    build_message_gateway();
+    // build_message_gateway();
     build_biz_service();
 }
 
@@ -116,7 +116,13 @@ fn build_biz_service() {
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
         .out_dir("../biz_service/src/protocol/rpc/") // 输出 Rust 模块到该目录
         .compile_protos(
-            &["proto/common.proto", "proto/arb/arb_models.proto", "proto/arb/arb_client.proto", "proto/arb/arb_server.proto"],
+            &[
+                "proto/common.proto",
+                "proto/arb/arb_models.proto",
+                "proto/arb/arb_client.proto",
+                "proto/shard/shard_service.proto",
+                "proto/arb/arb_server.proto",
+            ],
             &["proto"], // proto 根目录
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");

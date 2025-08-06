@@ -1,7 +1,5 @@
 use crate::service::rpc::arb_server_client::ArbServerClient;
 use biz_service::protocol::common::CommonResp;
-use biz_service::protocol::rpc::arb_group::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
-use biz_service::protocol::rpc::arb_group::UpdateVersionReq;
 use biz_service::protocol::rpc::arb_models::{ListAllNodesResponse, NodeType, QueryNodeReq, RegRequest, SyncListGroup};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
@@ -18,6 +16,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tonic::{transport, Request, Response, Status};
+use biz_service::protocol::rpc::arb_client::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
+use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
 
 /// arb 组 客户端接口
 #[derive(Debug, Clone)]
