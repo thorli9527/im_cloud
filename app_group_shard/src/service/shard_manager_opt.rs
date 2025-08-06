@@ -130,7 +130,7 @@ impl ShardManagerOpt for ShardManager {
         return Ok(count as usize);
     }
     fn online(&self, group_id: &GroupId, uid: &UserId) -> Result<()> {
-        self.current.load().shard_map.set_online(group_id, uid, true);
+        self.current.load().shard_map.set_online(group_id, uid, true).unwrap();
         return Ok(());
     }
 

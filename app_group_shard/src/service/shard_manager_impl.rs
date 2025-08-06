@@ -1,8 +1,9 @@
 use crate::db::hash_shard_map::HashShardMap;
 use crate::service::shard_manager::{MemData, ShardInfo, ShardManager, ShardManagerOpt, GROUP_SHARD_SIZE, MEMBER_SHARD_SIZE};
 use arc_swap::ArcSwap;
+use biz_service::protocol::rpc::arb_client::arb_client_service_client::ArbClientServiceClient;
 use biz_service::protocol::rpc::arb_models::ShardState;
-use common::config::{AppConfig, ShardConfig};
+use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
@@ -11,16 +12,16 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tonic::transport::Channel;
 use twox_hash::XxHash64;
-use biz_service::protocol::rpc::arb_client::arb_client_service_client::ArbClientServiceClient;
 
 impl ShardManager {
-    pub fn new(shard_config: ShardConfig) -> Self {
+    pub fn new() -> Self {
+        let shard_config = &AppConfig::get().shard;
         let shard_info = shard_config.clone();
         let mut info = ShardInfo::default();
         info.state = ShardState::Registered;
         let manager = Self {
             snapshot: ArcSwap::new(Arc::new(MemData::new())),
-            shard_config: shard_info,
+            shard_config: shard_info.unwrap(),
             current: ArcSwap::new(Arc::new(MemData::new())),
         };
         return manager;
@@ -80,15 +81,14 @@ impl ShardManager {
     }
 
     pub async fn init() {
-        let app_cfg = AppConfig::get();
-        let instance = Self::new(app_cfg.shard.clone().unwrap());
+        let instance = Self::new();
         instance.load_from_data().await.expect("load_from redis error");
-        INSTANCE_COUNTRY.set(Arc::new(instance)).expect("INSTANCE already initialized");
+        INSTANCE.set(Arc::new(instance)).expect("INSTANCE already initialized");
     }
 
     /// 获取单例
     pub fn get() -> Arc<Self> {
-        INSTANCE_COUNTRY.get().expect("INSTANCE is not initialized").clone()
+        INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
 }
-static INSTANCE_COUNTRY: OnceCell<Arc<ShardManager>> = OnceCell::new();
+static INSTANCE: OnceCell<Arc<ShardManager>> = OnceCell::new();
