@@ -46,10 +46,3 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
-async fn start_grpc_server() {
-    let app_cfg = AppConfig::get();
-    let addr = SocketAddr::from_str(&app_cfg.get_shard().shard_address.unwrap()).expect("Invalid address");
-    let abr_group_service = ArbClientServiceServer::new(ArbClientServiceImpl::new());
-    tonic::transport::Server::builder().add_service(abr_group_service).serve(addr).await.expect("Failed to start server");
-    log::warn!("ArbGroupServiceServer started");
-}

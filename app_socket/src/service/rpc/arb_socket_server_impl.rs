@@ -21,7 +21,7 @@ impl ArbClientRpcServiceImpl {
         ArbClient::init().await.expect("init arb_client error");
         // 读取配置文件
         let app_cfg = AppConfig::get();
-        let addr = SocketAddr::from_str(&app_cfg.get_shard().shard_address.unwrap()).expect("Invalid address");
+        let addr = SocketAddr::from_str(&app_cfg.get_shard().client_addr.unwrap()).expect("Invalid address");
         let svc = ArbClientRpcServiceImpl {
             socket_list: Arc::new(RwLock::new(Vec::new())),
         };

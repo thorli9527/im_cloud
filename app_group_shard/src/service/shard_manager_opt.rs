@@ -32,7 +32,7 @@ impl ShardManagerOpt for ShardManager {
 
         let list = response.get_ref();
 
-        let shard_addr = &AppConfig::get().shard.clone().unwrap().shard_address.unwrap();
+        let shard_addr = &AppConfig::get().shard.clone().unwrap().client_addr.unwrap();
         if list.nodes.len() == 0 {
             return Ok(());
         }

@@ -18,11 +18,13 @@ enum ShardState {
   PREPARING_OFFLINE = 9;  // 节点准备下线，等待迁移完成
 }
 // 节点类型
-enum NodeType{
-  GROUP_NODE = 0;
-  SOCKET_NODE = 1;
-  MSG_GATEWAY = 2;
-  SOCKET_GATEWAY = 3;
+enum NodeType {
+  GROUP_NODE = 0;       // 群组管理节点（用于群聊逻辑、分片等）
+  SOCKET_NODE = 1;      // Socket 接入节点（处理底层连接与会话）
+  SOCKET_GATEWAY = 2;   // Socket 网关（前端连接入口，兼具连接管理和鉴权）
+  MSG_GATEWAY = 3;      // 消息中转网关（统一转发消息的逻辑中心）
+  MES_GROUP = 4;        // 群组消息处理节点（专注处理群消息逻辑）
+  MSG_FRIEND = 5;       // 好友消息处理节点（专注处理单聊/好友消息）
 }
 
 // =====================

@@ -32,7 +32,7 @@ pub struct ArbClient {
 impl ArbClient {
     /// 创建 ArbClient 并注册自身地址
     pub async fn new(shard_config: &ShardConfig, kafka_addr: &str, socket_addr: &str) -> anyhow::Result<Self> {
-        let node_addr = shard_config.server_host.clone().ok_or_else(|| anyhow::anyhow!("Missing server_host in ShardConfig"))?;
+        let node_addr = shard_config.server_addr.clone().ok_or_else(|| anyhow::anyhow!("Missing server_host in ShardConfig"))?;
         let client = ArbServerRpcServiceClient::connect(format!("http://{}", node_addr)).await?;
         Ok(Self {
             arb_client: client,

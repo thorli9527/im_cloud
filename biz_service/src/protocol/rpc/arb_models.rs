@@ -195,10 +195,18 @@ impl ShardState {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum NodeType {
+    /// 群组管理节点（用于群聊逻辑、分片等）
     GroupNode = 0,
+    /// Socket 接入节点（处理底层连接与会话）
     SocketNode = 1,
-    MsgGateway = 2,
-    SocketGateway = 3,
+    /// Socket 网关（前端连接入口，兼具连接管理和鉴权）
+    SocketGateway = 2,
+    /// 消息中转网关（统一转发消息的逻辑中心）
+    MsgGateway = 3,
+    /// 群组消息处理节点（专注处理群消息逻辑）
+    MesGroup = 4,
+    /// 好友消息处理节点（专注处理单聊/好友消息）
+    MsgFriend = 5,
 }
 impl NodeType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -209,8 +217,10 @@ impl NodeType {
         match self {
             Self::GroupNode => "GROUP_NODE",
             Self::SocketNode => "SOCKET_NODE",
-            Self::MsgGateway => "MSG_GATEWAY",
             Self::SocketGateway => "SOCKET_GATEWAY",
+            Self::MsgGateway => "MSG_GATEWAY",
+            Self::MesGroup => "MES_GROUP",
+            Self::MsgFriend => "MSG_FRIEND",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -218,8 +228,10 @@ impl NodeType {
         match value {
             "GROUP_NODE" => Some(Self::GroupNode),
             "SOCKET_NODE" => Some(Self::SocketNode),
-            "MSG_GATEWAY" => Some(Self::MsgGateway),
             "SOCKET_GATEWAY" => Some(Self::SocketGateway),
+            "MSG_GATEWAY" => Some(Self::MsgGateway),
+            "MES_GROUP" => Some(Self::MesGroup),
+            "MSG_FRIEND" => Some(Self::MsgFriend),
             _ => None,
         }
     }

@@ -55,8 +55,8 @@ impl ArbManagerJob {
         let config1 = &AppConfig::get().clone().shard.clone().unwrap();
         Self {
             arb_client: None,
-            server_host: config1.server_host.clone().unwrap().clone(),
-            shard_address: config1.shard_address.clone().unwrap().clone(),
+            server_host: config1.server_addr.clone().unwrap().clone(),
+            shard_address: config1.client_addr.clone().unwrap().clone(),
             total: 0,
         }
     }

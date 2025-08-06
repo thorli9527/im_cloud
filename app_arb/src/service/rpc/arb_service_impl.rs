@@ -1,3 +1,4 @@
+use anyhow::__private::not;
 use biz_service::protocol::common::CommonResp;
 use biz_service::protocol::rpc::arb_group::arb_client_service_client::ArbClientServiceClient;
 use biz_service::protocol::rpc::arb_group::UpdateVersionReq;
@@ -5,6 +6,7 @@ use biz_service::protocol::rpc::arb_models::{
     BaseRequest, ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, RegRequest, ShardState, UpdateShardStateRequest,
 };
 use biz_service::protocol::rpc::arb_server::arb_server_rpc_service_server::ArbServerRpcService;
+use common::errors::AppError;
 use common::util::date_util::now;
 use dashmap::DashMap;
 use std::clone;
@@ -13,7 +15,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::io::Empty;
 use tonic::transport::Channel;
-use tonic::{IntoRequest, Request, Response, Status};
+use tonic::{Code, IntoRequest, Request, Response, Status};
 use tracing::log;
 
 /// 分片节点状态信息
@@ -25,10 +27,26 @@ pub struct ArbiterServiceImpl {
     pub shard_nodes: Arc<DashMap<String, NodeInfo>>,
     pub global_shard_state: Arc<tokio::sync::RwLock<ShardState>>,
     pub socket_nodes: Arc<DashMap<String, NodeInfo>>,
+    pub socket_gateway_nodes: Arc<DashMap<String, NodeInfo>>,
+    pub msg_gateway_nodes: Arc<DashMap<String, NodeInfo>>,
+    pub msg_group_nodes: Arc<DashMap<String, NodeInfo>>,
+    pub msg_friend_nodes: Arc<DashMap<String, NodeInfo>>,
     pub arb_version: Arc<AtomicU64>,
 }
 
 impl ArbiterServiceImpl {
+    pub fn new() -> Self {
+        Self {
+            shard_nodes: Arc::new(DashMap::new()),
+            global_shard_state: Arc::new(tokio::sync::RwLock::new(ShardState::Normal)),
+            socket_nodes: Arc::new(DashMap::new()),
+            socket_gateway_nodes: Arc::new(DashMap::new()),
+            msg_gateway_nodes: Arc::new(DashMap::new()),
+            arb_version: Arc::new(AtomicU64::new(0)),
+            msg_group_nodes: Arc::new(DashMap::new()),
+            msg_friend_nodes: Arc::new(DashMap::new()),
+        }
+    }
     pub async fn init_socket_clients(&self) -> Result<Vec<ArbClientServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
         let mut endpoints = Vec::new();
         for ref node in self.socket_nodes.iter() {
@@ -43,9 +61,21 @@ impl ArbiterServiceImpl {
         }
         Ok(clients)
     }
-    pub async fn init_shard_clients(&self) -> Result<Vec<ArbClientServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn init_clients(&self, node_type: NodeType) -> Result<Vec<ArbClientServiceClient<Channel>>, Box<dyn std::error::Error + Send + Sync>> {
         let mut endpoints = Vec::new();
-        for ref node in self.shard_nodes.iter() {
+        let arc = match node_type {
+            NodeType::GroupNode => self.shard_nodes.clone(),
+            NodeType::SocketNode => self.socket_nodes.clone(),
+            NodeType::SocketGateway => self.socket_gateway_nodes.clone(),
+            NodeType::MsgGateway => self.msg_gateway_nodes.clone(),
+            NodeType::MesGroup => self.msg_group_nodes.clone(),
+            NodeType::MsgFriend => self.msg_friend_nodes.clone(),
+            _ => {
+                return Err(AppError::BizError("Invalid node type".to_string()).into());
+            }
+        };
+
+        for ref node in arc.iter() {
             let node_info = node.value();
             endpoints.push(node_info.node_addr.clone());
         }
@@ -84,16 +114,28 @@ impl ArbServerRpcService for ArbiterServiceImpl {
 
                         if all_normal {
                             // 升级 arb_version
-                            let new_version = self.arb_version.fetch_add(1, Ordering::SeqCst) + 1;
                             let mut global_shard_state = self.global_shard_state.write().await;
                             *global_shard_state = ShardState::Normal;
-                            log::info!("[ArbVersion] All shard nodes are Normal. Upgrading arb_version to {}", new_version);
 
-                            // 通知所有 socket 节点刷新 shard 列表
-                            if let Ok(mut socket_clients) = self.init_socket_clients().await {
-                                for client in socket_clients.iter_mut() {
-                                    let _ = client.flush_nodes(()).await;
-                                }
+                            //通知消息网关节点有变
+                            let mut client_list = self.init_clients(NodeType::MsgGateway).await.expect("init clients error");
+                            for client in client_list.iter_mut() {
+                                client.flush_nodes(()).await?;
+                            }
+                            //通知socket网关节点有变
+                            let mut client_list = self.init_clients(NodeType::SocketGateway).await.expect("init clients error");
+                            for client in client_list.iter_mut() {
+                                client.flush_nodes(()).await?;
+                            }
+                            //通知msg_friend节点有变
+                            let mut client_list = self.init_clients(NodeType::MsgFriend).await.expect("init clients error");
+                            for client in client_list.iter_mut() {
+                                client.flush_nodes(()).await?;
+                            }
+                            //通知msg_group节点有变
+                            let mut client_list = self.init_clients(NodeType::MesGroup).await.expect("init clients error");
+                            for client in client_list.iter_mut() {
+                                client.flush_nodes(()).await?;
                             }
                         } else {
                             log::info!("[ArbVersion] Node {} is Normal, but not all are Normal yet.", current_node_addr);
@@ -115,6 +157,8 @@ impl ArbServerRpcService for ArbiterServiceImpl {
     async fn register_node(&self, request: Request<RegRequest>) -> Result<Response<NodeInfo>, Status> {
         let req = request.into_inner();
         let node_addr = req.node_addr;
+        // 当前时间戳（毫秒）
+        let now = now() as u64;
         if req.node_type == NodeType::GroupNode as i32 {
             // 如果已存在，返回已有信息
             if let Some(node_info) = self.shard_nodes.get(&node_addr) {
@@ -130,13 +174,11 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             }
             let mut global_shard_state = self.global_shard_state.write().await;
             *global_shard_state = ShardState::Ready;
-            let current_total = self.shard_nodes.len() as i32 + 1;
             // 当前时间戳（毫秒）
-            let now = now() as u64;
             // 构建新 entry
             let mut entry = NodeInfo {
                 node_addr: node_addr.clone(),
-                total: current_total,
+                total: self.shard_nodes.len() as i32 + 1,
                 version: 0,
                 node_type: req.node_type,
                 state: ShardState::Preparing as i32,
@@ -146,14 +188,14 @@ impl ArbServerRpcService for ArbiterServiceImpl {
 
             for (mut item) in self.shard_nodes.iter_mut() {
                 item.state = ShardState::Preparing as i32;
-                let mut client_list = self.init_shard_clients().await.expect("init shard clients error");
+                let mut client_list = self.init_clients(NodeType::GroupNode).await.expect("init shard clients error");
                 for mut client in client_list.iter_mut() {
                     let request = Request::new(UpdateVersionReq {
                         node_addr: item.node_addr.clone(),
                         version: item.version,
                         state: item.state,
                         last_update_time: now,
-                        total: current_total,
+                        total: entry.total,
                     });
                     client.update_version(request).await.expect("update version error");
                 }
@@ -165,7 +207,9 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             //打印信息
             // log::warn!("新增分片节点: {:?}", &entry);
             return Ok(Response::new(entry));
-        } else {
+        }
+
+        if req.node_type == NodeType::SocketNode as i32 {
             // 如果已存在，返回已有信息
             if let Some(node_info) = self.socket_nodes.get(&node_addr) {
                 return Ok(Response::new(NodeInfo {
@@ -180,14 +224,13 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             }
 
             // 当前时间戳（毫秒）
-            let now = now() as u64;
             // 构建新 entry
             let mut entry = NodeInfo {
                 node_addr: node_addr.clone(),
-                total: self.shard_nodes.len() as i32,
+                total: self.socket_nodes.len() as i32 + 1,
                 version: 0,
                 node_type: req.node_type,
-                state: ShardState::Preparing as i32,
+                state: ShardState::Normal as i32,
                 last_update_time: now,
                 kafka_addr: req.kafka_addr,
             };
@@ -195,10 +238,68 @@ impl ArbServerRpcService for ArbiterServiceImpl {
             // 插入
             self.socket_nodes.insert(node_addr.clone(), entry.clone());
             entry.total = self.socket_nodes.len() as i32;
+            let mut client_list = self.init_clients(NodeType::MsgGateway).await.expect("init clients error");
+            for client in client_list.iter_mut() {
+                client.flush_nodes(()).await?;
+            }
+            let mut client_list = self.init_clients(NodeType::SocketGateway).await.expect("init clients error");
+            for client in client_list.iter_mut() {
+                client.flush_nodes(()).await?;
+            }
+
+            let mut client_list = self.init_clients(NodeType::GroupNode).await.expect("init clients error");
+            for client in client_list.iter_mut() {
+                client.flush_nodes(()).await?;
+            }
+            let mut client_list = self.init_clients(NodeType::MsgFriend).await.expect("init clients error");
+            for client in client_list.iter_mut() {
+                client.flush_nodes(()).await?;
+            }
+            let mut client_list = self.init_clients(NodeType::MesGroup).await.expect("init clients error");
+            for client in client_list.iter_mut() {
+                client.flush_nodes(()).await?;
+            }
             //打印信息
             // log::warn!("新增分片节点: {:?}", &entry);
             return Ok(Response::new(entry));
         }
+        if req.node_type == NodeType::MsgGateway as i32 {
+            // 构建新 entry
+            let mut entry = NodeInfo {
+                node_addr: node_addr.clone(),
+                total: self.msg_gateway_nodes.len() as i32 + 1,
+                version: 0,
+                node_type: req.node_type,
+                state: ShardState::Normal as i32,
+                last_update_time: now,
+                kafka_addr: req.kafka_addr,
+            };
+            // 插入
+            self.msg_gateway_nodes.insert(node_addr.clone(), entry.clone());
+            //打印信息
+            // log::warn!("新增分片节点: {:?}", &entry);
+            return Ok(Response::new(entry));
+        }
+        if req.node_type == NodeType::SocketGateway as i32 {
+            // 构建新 entry
+            let mut entry = NodeInfo {
+                node_addr: node_addr.clone(),
+                total: self.socket_gateway_nodes.len() as i32 + 1,
+                version: 0,
+                node_type: req.node_type,
+                state: ShardState::Normal as i32,
+                last_update_time: now,
+                kafka_addr: req.kafka_addr,
+            };
+            self.socket_gateway_nodes.insert(node_addr.clone(), entry.clone());
+            let mut client_list = self.init_clients(NodeType::GroupNode).await.expect("init clients error");
+            for client in client_list.iter_mut() {
+                client.flush_nodes(()).await?;
+            }
+            //打印信息
+            return Ok(Response::new(entry));
+        }
+        Err(Status::new(Code::Unknown, "未知错误"))
     }
     async fn list_all_nodes(&self, request: Request<QueryNodeReq>) -> Result<Response<ListAllNodesResponse>, Status> {
         let req = request.into_inner();

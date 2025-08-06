@@ -4,8 +4,8 @@ db_name = "group"
 [redis]
 url = "redis://127.0.0.1:6379/"
 [shard]
-shard_address = "127.0.0.1:51000"
-server_host = "127.0.0.1:50000"
+client_addr = "127.0.0.1:50000"
+server_addr = "127.0.0.1:60000"
 [server]
 host = "127.0.0.1"
 port = 8091

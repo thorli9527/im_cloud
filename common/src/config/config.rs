@@ -21,8 +21,8 @@ pub struct AppConfig {
 }
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct ShardConfig {
-    pub shard_address: Option<String>,
-    pub server_host: Option<String>,
+    pub client_addr: Option<String>,
+    pub server_addr: Option<String>,
 }
 impl AppConfig {
     pub fn new(file: &String) -> Self {
@@ -31,8 +31,7 @@ impl AppConfig {
             .add_source(config::Environment::with_prefix("APP").separator("_"))
             .build()
             .expect("Failed to build configuration");
-        let cfg =
-            config.try_deserialize::<AppConfig>().expect("Failed to deserialize configuration");
+        let cfg = config.try_deserialize::<AppConfig>().expect("Failed to deserialize configuration");
         return cfg;
     }
     pub async fn init(file: &String) {

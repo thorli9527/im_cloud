@@ -216,7 +216,7 @@ impl SocketManager {
             return Ok(());
         }
         let socket_list = sort_nodes(socket_list);
-        let socket_addr = AppConfig::get().get_shard().server_host.unwrap_or_default();
+        let socket_addr = AppConfig::get().get_shard().server_addr.unwrap_or_default();
         for (conn_id, conn_info) in connections {
             let idx = hash_index(&conn_id.0, node_count as i32);
 

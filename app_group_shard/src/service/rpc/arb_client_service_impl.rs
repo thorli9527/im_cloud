@@ -20,7 +20,7 @@ impl ArbClientServiceImpl {
     pub async fn start(&self) {
         // 读取配置文件
         let app_cfg = AppConfig::get();
-        let addr = SocketAddr::from_str(&app_cfg.get_shard().server_host.unwrap()).expect("Invalid address");
+        let addr = SocketAddr::from_str(&app_cfg.get_shard().server_addr.unwrap()).expect("Invalid address");
         let svc = ArbClientServiceImpl {};
         tonic::transport::Server::builder().add_service(ArbClientServiceServer::new(svc)).serve(addr).await.expect("Failed to start server");
         log::warn!("ArbGroupServiceServer started");

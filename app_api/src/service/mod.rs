@@ -1,1 +1,2 @@
-pub mod arb_client;
+pub mod rpc;
+pub async fn init_service() {}

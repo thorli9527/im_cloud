@@ -1,6 +1,5 @@
 use crate::entitys::group_member_entity::GroupMemberEntity;
 use crate::protocol::common::GroupRoleType;
-use crate::util::db_index_util;
 use anyhow::{anyhow, Result};
 use bson::Document;
 use common::errors::AppError;
@@ -24,7 +23,6 @@ pub struct GroupMemberService {
 
 impl GroupMemberService {
     pub async fn new(db: Database) -> Self {
-        db_index_util::index_create(db.collection("group_member"), GroupMemberEntity::index_models()).await;
         let repository = BaseRepository::new(db.clone(), "group_member").await;
         Self {
             dao: repository,

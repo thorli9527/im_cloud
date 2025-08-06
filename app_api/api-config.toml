@@ -1,5 +1,6 @@
 [shard]
-server_host = "127.0.0.1:50000"
+client_addr = "127.0.0.1:50000"
+server_addr = "127.0.0.1:60002"
 [database]
 url = "mongodb://localhost:27017"
 db_name = "group"

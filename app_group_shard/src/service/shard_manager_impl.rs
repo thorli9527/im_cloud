@@ -42,7 +42,7 @@ impl ShardManager {
         (hasher.finish() as usize) % MEMBER_SHARD_SIZE
     }
     pub fn get_node_addr(&self) -> &str {
-        self.shard_config.shard_address.as_deref().expect("shard_address must be set")
+        self.shard_config.client_addr.as_deref().expect("shard_address must be set")
     }
     pub async fn init_grpc_clients(
         &self,
@@ -52,7 +52,7 @@ impl ShardManager {
         let size = endpoints.len();
         for endpoint in endpoints {
             //跳过自动节点
-            if endpoint == self.shard_config.shard_address.clone().unwrap() {
+            if endpoint == self.shard_config.client_addr.clone().unwrap() {
                 continue;
             }
             let channel = Channel::from_shared(format!("http://{}", endpoint))?.connect().await?;

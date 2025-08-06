@@ -11,11 +11,11 @@ impl ManagerJobOpt for ArbManagerJob {
     async fn register_node(&mut self) -> anyhow::Result<()> {
         let config1 = &AppConfig::get().clone().shard.clone().unwrap();
         let shard_manager = ShardManager::get();
-        self.shard_address = config1.clone().shard_address.unwrap();
+        self.shard_address = config1.clone().client_addr.unwrap();
         let client = self.init_arb_client().await?;
         let kafka_config = &AppConfig::get().clone().kafka;
         let request = RegRequest {
-            node_addr: config1.clone().shard_address.unwrap(),
+            node_addr: config1.clone().client_addr.unwrap(),
             node_type: NodeType::GroupNode as i32,
             kafka_addr: Some(kafka_config.clone().unwrap().brokers),
         };
