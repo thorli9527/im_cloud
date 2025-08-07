@@ -4,6 +4,7 @@ use common::UserId;
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, Debug)]
 pub struct OnLineMessageEntity {
+    pub id: String,
     pub message_id: u64,
     pub uid: UserId,
     pub client_id: String,

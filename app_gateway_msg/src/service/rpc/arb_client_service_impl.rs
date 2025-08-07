@@ -1,3 +1,4 @@
+use crate::service::kafka_service::KafkaService;
 use crate::service::rpc::arb_server_client::ArbServerClient;
 use biz_service::biz_service::rpc_server_client_service::ArbServerRpcServiceClientService;
 use biz_service::protocol::common::CommonResp;
@@ -117,6 +118,8 @@ impl ArbClientService for ArbClientServiceImpl {
             .await?;
         NodeUtil::get().await.push_list(NodeType::GroupNode, group_resp.into_inner().nodes);
 
+        let kafka_service = KafkaService::get();
+        kafka_service.rebuild().await.expect("Failed to rebuild kafka service");
         Ok(Response::new(CommonResp {
             success: true,
             message: String::new(),

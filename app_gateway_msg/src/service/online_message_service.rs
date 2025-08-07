@@ -28,7 +28,7 @@ impl OnLineMessageService {
                 login_time: entity.login_time,
             };
             kafka_service.send_proto(&ByteMessageType::OfflineStatusMsgType, &msg, &msg.message_id, kafka_topic_cfg::GROUP_COMMON_MSG_TOPIC).await?;
-            self.dao.up_property(entity.i)
+            self.dao.up_property(&entity.id, "send_group_status", true).await?;
         }
         return Ok(());
     }

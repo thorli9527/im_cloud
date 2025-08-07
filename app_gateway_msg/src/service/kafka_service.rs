@@ -16,21 +16,25 @@ impl KafkaService {
         }
     }
     pub async fn init() -> anyhow::Result<()> {
+        let current = Self::new().await;
+        current.rebuild().await;
+        INSTANCE.set(Arc::new(current)).unwrap();
+        Ok(())
+    }
+    pub async fn rebuild(&self) -> anyhow::Result<()> {
         let mut topic_list = Vec::new();
         topic_list.push(TopicInfo {
             topic_name: "".to_string(),
             partition_num: 0,
             replication_factor: 0,
         });
-        let current = Self::new().await;
         let node_util = NodeUtil::get().await;
         let kafka_list = node_util.get_list(NodeType::GroupNode);
         for kafka in kafka_list {
             let brocker = kafka.kafka_addr.unwrap();
             let kafka_group_service = KafkaInstanceService::new(&brocker, &topic_list).await?;
-            current.kafka_list.lock().await.push(kafka_group_service);
+            self.kafka_list.lock().await.push(kafka_group_service);
         }
-        INSTANCE.set(Arc::new(current)).unwrap();
         Ok(())
     }
     pub fn get() -> Arc<Self> {
