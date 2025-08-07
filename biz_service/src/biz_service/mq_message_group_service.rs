@@ -1,4 +1,4 @@
-use crate::biz_service::kafka_socket_service::KafkaService;
+use crate::biz_service::kafka_socket_service::KafkaInstanceService;
 use crate::entitys::group_msg_entity::GroupMsgEntity;
 use crate::protocol::common::ByteMessageType;
 use crate::protocol::msg::message::Segment;
@@ -63,7 +63,7 @@ impl GroupMessageService {
             is_system: false,
             seq: 0,
         };
-        let kafka_service = KafkaService::get();
+        let kafka_service = KafkaInstanceService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
         let message_type = ByteMessageType::GroupMsgType;

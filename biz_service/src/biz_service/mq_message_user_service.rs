@@ -1,4 +1,4 @@
-use crate::biz_service::kafka_socket_service::KafkaService;
+use crate::biz_service::kafka_socket_service::KafkaInstanceService;
 use crate::entitys::user_msg_entity::UserMsgEntity;
 use crate::protocol::common::ByteMessageType;
 use crate::protocol::msg::message::Segment;
@@ -66,7 +66,7 @@ impl UserMessageService {
             delivered: false,
             read_time: now_time,
         };
-        let kafka_service = KafkaService::get();
+        let kafka_service = KafkaInstanceService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
         let msg_type: ByteMessageType = ByteMessageType::UserMsgType;

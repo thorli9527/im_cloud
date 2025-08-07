@@ -9,7 +9,7 @@ use biz_service::biz_service::kafka_socket_service::KafkaInstanceService;
 use biz_service::biz_service::rpc_server_client_service::ArbServerRpcServiceClientService;
 use biz_service::protocol::rpc::arb_client::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
 use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
-use biz_service::protocol::rpc::arb_models::NodeType::SocketNode;
+use biz_service::protocol::rpc::arb_models::NodeType::{MsgGateway, SocketNode};
 use biz_service::util::node_util::NodeUtil;
 use once_cell::sync::OnceCell;
 use std::str::FromStr;
@@ -29,7 +29,7 @@ impl ArbClientServiceImpl {
         let client_services = Self {};
         // 向服务端注册节点
         let request = RegRequest {
-            node_type: NodeType::SocketGateway as i32,
+            node_type: NodeType::SocketNode as i32,
             node_addr: client_addr.clone(),
             kafka_addr: None,
         };
@@ -38,7 +38,7 @@ impl ArbClientServiceImpl {
 
         let response = client
             .list_all_nodes(QueryNodeReq {
-                node_type: NodeType::SocketNode as i32,
+                node_type: NodeType::MsgGateway as i32,
             })
             .await
             .expect("list_all_nodes.error");
@@ -50,7 +50,7 @@ impl ArbClientServiceImpl {
             // 启动 gRPC 服务
             let addr = std::net::SocketAddr::from_str(&client_addr.clone()).expect("Invalid socket address");
             tonic::transport::Server::builder()
-                .add_service(ArbClientServiceServer::new(client_services)) // ✅ 这里使用 Arc<Self>
+                .add_service(ArbClientServiceServer::new(client_services))
                 .serve(addr)
                 .await
                 .expect("Failed to start server");
@@ -94,11 +94,11 @@ impl ArbClientService for ArbClientServiceImpl {
         let mut client = rpc_server_service.client.lock().await;
         let response = client
             .list_all_nodes(QueryNodeReq {
-                node_type: NodeType::SocketNode as i32,
+                node_type: NodeType::MsgGateway as i32,
             })
             .await?;
         let node_util = NodeUtil::get();
-        node_util.await.push_list(SocketNode, response.into_inner().nodes);
+        node_util.await.push_list(MsgGateway, response.into_inner().nodes);
         Ok(Response::new(CommonResp {
             success: true,
             message: String::new(),

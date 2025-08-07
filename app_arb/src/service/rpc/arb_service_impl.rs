@@ -1,5 +1,7 @@
 use anyhow::__private::not;
 use biz_service::protocol::common::CommonResp;
+use biz_service::protocol::rpc::arb_client::arb_client_service_client::ArbClientServiceClient;
+use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
 use biz_service::protocol::rpc::arb_models::{
     BaseRequest, ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, RegRequest, ShardState, UpdateShardStateRequest,
 };
@@ -15,8 +17,6 @@ use tokio::io::Empty;
 use tonic::transport::Channel;
 use tonic::{Code, IntoRequest, Request, Response, Status};
 use tracing::log;
-use biz_service::protocol::rpc::arb_client::arb_client_service_client::ArbClientServiceClient;
-use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
 
 /// 分片节点状态信息
 /// 表示某个 vnode 当前的版本号、状态、归属节点及上次更新时间
@@ -31,7 +31,6 @@ pub struct ArbiterServiceImpl {
     pub msg_gateway_nodes: Arc<DashMap<String, NodeInfo>>,
     pub msg_group_nodes: Arc<DashMap<String, NodeInfo>>,
     pub msg_friend_nodes: Arc<DashMap<String, NodeInfo>>,
-    pub arb_version: Arc<AtomicU64>,
 }
 
 impl ArbiterServiceImpl {
@@ -42,7 +41,6 @@ impl ArbiterServiceImpl {
             socket_nodes: Arc::new(DashMap::new()),
             socket_gateway_nodes: Arc::new(DashMap::new()),
             msg_gateway_nodes: Arc::new(DashMap::new()),
-            arb_version: Arc::new(AtomicU64::new(0)),
             msg_group_nodes: Arc::new(DashMap::new()),
             msg_friend_nodes: Arc::new(DashMap::new()),
         }

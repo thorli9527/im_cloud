@@ -1,6 +1,6 @@
 use crate::biz_service::client_service::ClientService;
 use crate::biz_service::friend_service::UserFriendService;
-use crate::biz_service::kafka_socket_service::KafkaService;
+use crate::biz_service::kafka_socket_service::KafkaInstanceService;
 use crate::manager::user_manager::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
 
 use crate::entitys::client_entity::ClientEntity;
@@ -40,7 +40,7 @@ impl UserManagerOpt for UserManager {
         let _: () = conn.hset(&redis_key, &field_key, &new_value).await?;
 
         if is_first_online {
-            let kafka = KafkaService::get();
+            let kafka = KafkaInstanceService::get();
             let online_msg = OnlineStatusMsg {
                 message_id: build_snow_id(),
                 uid: user_id.clone(),
@@ -95,7 +95,7 @@ impl UserManagerOpt for UserManager {
 
         let is_all_offline = self.is_all_device_offline(user_id).await?;
         if is_all_offline {
-            let kafka = KafkaService::get();
+            let kafka = KafkaInstanceService::get();
             let offline_msg = OfflineStatueMsg {
                 message_id: build_snow_id(),
                 uid: user_id.clone(),
@@ -340,7 +340,7 @@ impl UserManagerOpt for UserManager {
         let _: () = conn.sadd(&redis_block_key, friend_id).await?;
         // ---------- 4. 可选：发送 Kafka 拉黑事件 ----------
         // ---------- 6. Kafka 消息通知 ----------
-        let kafka_service = KafkaService::get();
+        let kafka_service = KafkaInstanceService::get();
         let app_config = AppConfig::get();
         let topic = &app_config.get_kafka().topic_single;
         let time = now() as u64;
@@ -436,7 +436,7 @@ impl UserManagerOpt for UserManager {
             to_remark: None,
         };
         // ---------- 6. Kafka 消息通知 ----------
-        let kafka_service = KafkaService::get();
+        let kafka_service = KafkaInstanceService::get();
         let app_config = AppConfig::get();
         let topic = &app_config.get_kafka().topic_single;
         // 同步通知双方

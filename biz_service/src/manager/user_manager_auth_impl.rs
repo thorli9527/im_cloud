@@ -1,5 +1,5 @@
 use crate::biz_service::client_service::ClientService;
-use crate::biz_service::kafka_socket_service::KafkaService;
+use crate::biz_service::kafka_socket_service::KafkaInstanceService;
 use crate::entitys::client_entity::ClientEntity;
 use crate::manager::user_manager::{UserManager, UserManagerOpt};
 use crate::manager::user_manager_auth::{ResetPasswordType, UserManagerAuth, UserManagerAuthOpt, UserRegType};
@@ -82,7 +82,7 @@ impl UserManagerAuthOpt for UserManagerAuth {
     async fn logout(&self, message_id: &u64, uid: &UserId, device_type: &DeviceType) -> anyhow::Result<()> {
         let user_manager = UserManager::get();
         user_manager.offline(uid, device_type).await?;
-        let kafka_service = KafkaService::get();
+        let kafka_service = KafkaInstanceService::get();
         let token = user_manager.get_token_by_uid_device(uid, device_type).await?;
         if let Some(token) = token {
             user_manager.delete_token(&token).await?;

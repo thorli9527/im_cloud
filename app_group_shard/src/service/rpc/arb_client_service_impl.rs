@@ -3,6 +3,7 @@ use biz_service::protocol::common::CommonResp;
 use biz_service::protocol::rpc::arb_client::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
 use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
 use biz_service::protocol::rpc::arb_models::{ListAllNodesResponse, SyncListGroup};
+use biz_service::util::node_util::NodeUtil;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
@@ -16,14 +17,6 @@ pub struct ArbClientServiceImpl {}
 impl ArbClientServiceImpl {
     pub fn new() -> Self {
         Self {}
-    }
-    pub async fn start(&self) {
-        // 读取配置文件
-        let app_cfg = AppConfig::get();
-        let addr = SocketAddr::from_str(&app_cfg.get_shard().server_addr.unwrap()).expect("Invalid address");
-        let svc = ArbClientServiceImpl {};
-        tonic::transport::Server::builder().add_service(ArbClientServiceServer::new(svc)).serve(addr).await.expect("Failed to start server");
-        log::warn!("ArbGroupServiceServer started");
     }
 }
 #[tonic::async_trait]
@@ -65,6 +58,11 @@ impl ArbClientService for ArbClientServiceImpl {
     }
 
     async fn flush_nodes(&self, request: Request<()>) -> Result<Response<CommonResp>, Status> {
-        todo!()
+        let node_util = NodeUtil::get();
+
+        Ok(Response::new(CommonResp {
+            success: true,
+            message: format!("Sync success"),
+        }))
     }
 }

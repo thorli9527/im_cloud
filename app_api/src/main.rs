@@ -3,6 +3,8 @@ use app_api::handlers;
 use common::config::AppConfig;
 
 use actix_web::{App, HttpServer};
+use app_api::service::rpc::arb_client_service_impl::ArbClientServiceImpl;
+use biz_service::protocol::rpc::arb_client::arb_client_service_server::ArbClientServiceServer;
 use log::warn;
 
 #[actix_web::main]
@@ -16,6 +18,12 @@ async fn main() -> std::io::Result<()> {
     // 初始化 业务
     biz_service::init_service().await;
     biz_service::manager::init();
+
+    //启用 ArbClientServiceServer
+    tokio::spawn(async {
+        ArbClientServiceImpl::start().await;
+    });
+
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())

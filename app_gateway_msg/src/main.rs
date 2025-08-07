@@ -2,6 +2,7 @@ use actix_web::middleware::Logger;
 use common::config::AppConfig;
 
 use actix_web::{App, HttpServer};
+use app_msg_gateway::service;
 use log::warn;
 
 #[actix_web::main]
@@ -12,6 +13,7 @@ async fn main() -> std::io::Result<()> {
     //初始化日志
     let address_and_port = format!("{}:{}", &app_cfg.get_server().host, &app_cfg.get_server().port);
     warn!("Starting server on {}", address_and_port);
+    service::init_service().await;
     // 初始化 业务
     HttpServer::new(move || {
         App::new()

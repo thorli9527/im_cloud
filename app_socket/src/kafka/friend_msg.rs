@@ -1,6 +1,7 @@
 use crate::kafka::kafka_consumer::{get_pending_acks, PendingMeta};
+use crate::socket::socket_manager::SocketManager;
 use anyhow::Result;
-use biz_service::biz_service::kafka_socket_service::KafkaService;
+use biz_service::biz_service::kafka_socket_service::KafkaInstanceService;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::friend::FriendEventMsg;
 use bytes::Buf;
@@ -9,13 +10,19 @@ use common::util::common_utils::build_snow_id;
 use prost::Message;
 use rdkafka::message::{Message as KafkaMessageTrait, OwnedMessage};
 use std::sync::Arc;
-use crate::socket::socket_manager::SocketManager;
 
 pub async fn friend_msg_to_socket(mut body: impl Buf, msg: &OwnedMessage, socket_manager: &Arc<SocketManager>) -> Result<()> {
     let mut message = FriendEventMsg::decode(&mut body)?;
     let message_id = message.message_id.clone();
     message.message_id = build_snow_id();
-    get_pending_acks().insert(message_id, PendingMeta { topic: msg.topic().to_string(), partition: msg.partition(), offset: msg.offset() });
+    get_pending_acks().insert(
+        message_id,
+        PendingMeta {
+            topic: msg.topic().to_string(),
+            partition: msg.partition(),
+            offset: msg.offset(),
+        },
+    );
     let friend_event = FriendEventMsg {
         message_id: build_snow_id(),
         from_uid: "".to_string(),
@@ -33,7 +40,7 @@ pub async fn friend_msg_to_socket(mut body: impl Buf, msg: &OwnedMessage, socket
     };
 
     // ---------- 6. Kafka 消息通知 ----------
-    let kafka_service = KafkaService::get();
+    let kafka_service = KafkaInstanceService::get();
     let app_config = AppConfig::get();
     let topic = &app_config.get_kafka().topic_single;
     kafka_service.send_proto(&ByteMessageType::FriendEventMsgType, &friend_event, &friend_event.message_id, topic).await?;
