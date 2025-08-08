@@ -7,9 +7,9 @@ use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::sync::Arc;
-use biz_service::kafka_util::kafka_producer::KafkaInstanceService;
-use biz_service::protocol::common::ByteMessageType;
-use biz_service::protocol::msg::message::Segment;
+use biz_core::kafka_util::kafka_producer::KafkaInstanceService;
+use biz_core::protocol::common::ByteMessageType;
+use biz_core::protocol::msg::message::Segment;
 use crate::domain::group_msg_entity::GroupMsgEntity;
 
 #[derive(Debug)]

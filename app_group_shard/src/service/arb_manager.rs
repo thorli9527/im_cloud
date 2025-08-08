@@ -9,8 +9,8 @@ use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::time::sleep;
 use tonic::transport::Channel;
-use biz_service::protocol::arb::arb_models::ShardState::{Migrating, Normal, Preparing, Ready, Registered};
-use biz_service::protocol::arb::arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
+use biz_core::protocol::arb::arb_models::ShardState::{Migrating, Normal, Preparing, Ready, Registered};
+use biz_core::protocol::arb::arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 
 #[derive(Debug)]
 pub struct ArbManagerJob {

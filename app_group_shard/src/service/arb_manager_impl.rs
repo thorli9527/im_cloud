@@ -4,7 +4,7 @@ use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
 use tonic::async_trait;
-use biz_service::protocol::arb::arb_models::{BaseRequest, NodeType, QueryNodeReq, RegRequest, ShardState, SyncListGroup, UpdateShardStateRequest};
+use biz_core::protocol::arb::arb_models::{BaseRequest, NodeType, QueryNodeReq, RegRequest, ShardState, SyncListGroup, UpdateShardStateRequest};
 
 #[async_trait]
 impl ManagerJobOpt for ArbManagerJob {

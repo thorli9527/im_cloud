@@ -1,9 +1,9 @@
 use crate::kafka::kafka_consumer::{get_pending_acks, PendingMeta};
 use crate::socket::socket_manager::SocketManager;
 use anyhow::Result;
-use biz_service::kafka_util::kafka_producer::KafkaInstanceService;
-use biz_service::protocol::common::ByteMessageType;
-use biz_service::protocol::msg::friend::FriendEventMsg;
+use biz_core::kafka_util::kafka_producer::KafkaInstanceService;
+use biz_core::protocol::common::ByteMessageType;
+use biz_core::protocol::msg::friend::FriendEventMsg;
 use bytes::Buf;
 use common::config::AppConfig;
 use common::util::common_utils::build_snow_id;

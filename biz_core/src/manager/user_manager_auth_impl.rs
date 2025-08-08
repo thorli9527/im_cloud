@@ -1,4 +1,4 @@
-use crate::biz_service::client_service::ClientService;
+use crate::service::client_service::ClientService;
 use crate::entitys::client_entity::ClientEntity;
 use crate::kafka_util::kafka_producer::KafkaInstanceService;
 use crate::manager::user_manager::{UserManager, UserManagerOpt};

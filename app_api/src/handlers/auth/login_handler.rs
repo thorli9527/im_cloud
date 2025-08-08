@@ -1,6 +1,6 @@
 use actix_web::{post, web, web::ServiceConfig, HttpResponse, Responder};
-use biz_service::manager::user_manager_auth::{UserManagerAuth, UserManagerAuthOpt, UserRegType};
-use biz_service::protocol::msg::auth::DeviceType;
+use biz_core::manager::user_manager_auth::{UserManagerAuth, UserManagerAuthOpt, UserRegType};
+use biz_core::protocol::msg::auth::DeviceType;
 use common::errors::AppError;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

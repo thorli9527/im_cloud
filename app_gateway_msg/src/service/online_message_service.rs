@@ -1,7 +1,7 @@
 use crate::entity::online_message::OnLineMessageEntity;
 use crate::service::kafka_service::KafkaService;
-use biz_service::protocol::common::ByteMessageType;
-use biz_service::protocol::msg::auth::OnlineStatusMsg;
+use biz_core::protocol::common::ByteMessageType;
+use biz_core::protocol::msg::auth::OnlineStatusMsg;
 use common::db::Db;
 use common::kafka::topic_info::ONLINE_TOPIC_INFO;
 use common::repository_util::{BaseRepository, Repository};

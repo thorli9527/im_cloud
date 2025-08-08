@@ -1,7 +1,7 @@
 use crate::result::result;
 use actix_web::{HttpResponse, Responder, post, web};
-use biz_service::biz_service::user_role_service::UserRoleService;
-use biz_service::biz_service::user_service::UserService;
+use biz_core::service::user_role_service::UserRoleService;
+use biz_core::service::user_service::UserService;
 use common::errors::AppError;
 use common::repository_util::Repository;
 use mongo_macro::QueryFilter;

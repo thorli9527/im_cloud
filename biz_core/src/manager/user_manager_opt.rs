@@ -1,5 +1,5 @@
-use crate::biz_service::client_service::ClientService;
-use crate::biz_service::friend_service::UserFriendService;
+use crate::service::client_service::ClientService;
+use crate::service::friend_service::UserFriendService;
 use crate::manager::user_manager::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
 
 use crate::entitys::client_entity::ClientEntity;

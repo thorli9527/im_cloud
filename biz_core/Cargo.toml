@@ -1,5 +1,5 @@
 [package]
-name = "biz_service"
+name = "biz_core"
 version = "0.1.0"
 edition = "2024"
 

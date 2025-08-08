@@ -5,8 +5,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::socket::socket_error::SendError;
 use anyhow::Result;
-use biz_service::protocol::common::{ByteMessageType, ChatTargetType};
-use biz_service::protocol::msg::auth::DeviceType;
+use biz_core::protocol::common::{ByteMessageType, ChatTargetType};
+use biz_core::protocol::msg::auth::DeviceType;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::UserId;
@@ -16,7 +16,7 @@ use once_cell::sync::OnceCell;
 use prost::bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
-use biz_service::protocol::arb::arb_models::NodeInfo;
+use biz_core::protocol::arb::arb_models::NodeInfo;
 
 static MESSAGE_CACHE: OnceCell<Arc<DashMap<MessageId, (CachedResponse, u64)>>> = OnceCell::new();
 

@@ -2,7 +2,7 @@ use crate::handlers::auth::register_handler_dto::{RegisterRequest, RegisterRespo
 use crate::result::ApiResponse;
 use actix_web::web::ServiceConfig;
 use actix_web::{post, web, Responder};
-use biz_service::manager::user_manager_auth::{UserManagerAuth, UserManagerAuthOpt, UserRegType};
+use biz_core::manager::user_manager_auth::{UserManagerAuth, UserManagerAuthOpt, UserRegType};
 use common::errors::AppError;
 use log::error;
 use serde_json::json;

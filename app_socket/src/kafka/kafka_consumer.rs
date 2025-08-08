@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 use crate::kafka::friend_msg::friend_msg_to_socket;
 use crate::socket::socket_manager::SocketManager;
-use biz_service::manager::user_manager::{UserManager, UserManagerOpt};
-use biz_service::protocol::common::ByteMessageType;
+use biz_core::manager::user_manager::{UserManager, UserManagerOpt};
+use biz_core::protocol::common::ByteMessageType;
 use common::config::KafkaConfig;
 use common::util::date_util::now;
 use rdkafka::config::ClientConfig;

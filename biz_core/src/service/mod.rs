@@ -10,7 +10,7 @@ pub mod rpc_server_client_service;
 pub mod user_role_service;
 pub mod user_service;
 
-use crate::biz_service::friend_event_service::FriendEventService;
+use crate::service::friend_event_service::FriendEventService;
 use common::db::Db;
 
 pub async fn init_service() {

@@ -339,7 +339,7 @@ dependencies = [
  "actix-service",
  "actix-web",
  "anyhow",
- "biz_service",
+ "biz_core",
  "chrono",
  "common",
  "config",
@@ -367,7 +367,7 @@ name = "app_arb"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "biz_service",
+ "biz_core",
  "chrono",
  "common",
  "dashmap",
@@ -392,7 +392,7 @@ dependencies = [
  "actix-service",
  "actix-web",
  "anyhow",
- "biz_service",
+ "biz_core",
  "chrono",
  "common",
  "config",
@@ -424,7 +424,7 @@ dependencies = [
  "actix-service",
  "actix-web",
  "anyhow",
- "biz_service",
+ "biz_core",
  "chrono",
  "common",
  "config",
@@ -460,7 +460,7 @@ dependencies = [
  "actix-service",
  "actix-web",
  "anyhow",
- "biz_service",
+ "biz_core",
  "chrono",
  "common",
  "config",
@@ -489,7 +489,7 @@ dependencies = [
  "actix-service",
  "actix-web",
  "anyhow",
- "biz_service",
+ "biz_core",
  "chrono",
  "common",
  "config",
@@ -522,7 +522,7 @@ dependencies = [
  "anyhow",
  "arc-swap",
  "async-trait",
- "biz_service",
+ "biz_core",
  "bytes",
  "chrono",
  "common",
@@ -553,7 +553,7 @@ name = "app_socket"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "biz_service",
+ "biz_core",
  "bytes",
  "chrono",
  "common",
@@ -958,7 +958,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "biz_service"
+name = "biz_core"
 version = "0.1.0"
 dependencies = [
  "actix-service",

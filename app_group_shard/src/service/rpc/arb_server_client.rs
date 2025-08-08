@@ -1,4 +1,4 @@
-use biz_service::protocol::arb::arb_server::arb_server_rpc_service_client;
+use biz_core::protocol::arb::arb_server::arb_server_rpc_service_client;
 use common::config::AppConfig;
 
 #[derive(Debug)]

@@ -1,9 +1,9 @@
 use crate::service::shard_manager::{ShardManager, ShardManagerOpt};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
-use biz_service::protocol::arb::shard_service::{AddMemberReq, ChangeRoleReq, GetGroupsResp, GetMemberCountReq, GetMemberPageReq, MemberCountResp, MemberListResp, OnlineReq, RemoveMemberReq, UserIdListResp};
-use biz_service::protocol::arb::shard_service::shard_rpc_service_server::ShardRpcService;
-use biz_service::protocol::common::IdReq;
+use biz_core::protocol::arb::shard_service::{AddMemberReq, ChangeRoleReq, GetGroupsResp, GetMemberCountReq, GetMemberPageReq, MemberCountResp, MemberListResp, OnlineReq, RemoveMemberReq, UserIdListResp};
+use biz_core::protocol::arb::shard_service::shard_rpc_service_server::ShardRpcService;
+use biz_core::protocol::common::IdReq;
 
 pub struct ShardRpcServiceImpl {
     pub shard_manager: Arc<ShardManager>,

@@ -1,5 +1,5 @@
-// use crate::biz_service::group_member_service::GroupMemberService;
-// use crate::biz_service::group_service::GroupService;
+// use crate::service::group_member_service::GroupMemberService;
+// use crate::service::group_service::GroupService;
 // use crate::manager::group_manager_core::{GroupManager, GroupManagerOpt};
 // use crate::manager::user_manager_core::{UserManager, UserManagerOpt};
 // use crate::protocol::common::{GroupEntity, GroupMemberEntity, GroupRoleType};

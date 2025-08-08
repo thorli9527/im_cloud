@@ -13,7 +13,7 @@ fn main() {
             ".",
             "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]",
         )
-        .out_dir("biz_service/src/protocol/") // 输出 Rust 模块到该目录
+        .out_dir("service/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
                 "proto/auth.proto",
@@ -32,7 +32,7 @@ fn main() {
     let out_dir = PathBuf::from("src/protocol/");
 
    
-    println!("cargo:warning=✅ proto 编译 biz_service 完成！");
+    println!("cargo:warning=✅ proto 编译 service 完成！");
 
     //
     // // 编译 app_arb proto 文件

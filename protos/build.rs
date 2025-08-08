@@ -12,7 +12,7 @@ fn build_biz_service() {
         .build_client(false) // 如无需生成 gRPC Client 代码
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
-        .out_dir("../biz_service/src/protocol/") // 输出 Rust 模块到该目录
+        .out_dir("../biz_core/src/protocol/") // 输出 Rust 模块到该目录
         .compile_protos(
             &["proto/common.proto"],
             &["proto"], // proto 根目录
@@ -24,7 +24,7 @@ fn build_biz_service() {
         .build_client(true) // 如无需生成 gRPC Client 代码
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
-        .out_dir("../biz_service/src/protocol/msg/") // 输出 Rust 模块到该目录
+        .out_dir("../biz_core/src/protocol/msg/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
                 "proto/common.proto",
@@ -42,8 +42,8 @@ fn build_biz_service() {
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
 
-    fs::remove_file("../biz_service/src/protocol/msg/common.rs").expect("删除失败");
-    let out_dir = PathBuf::from("../biz_service/src/protocol/msg");
+    fs::remove_file("../biz_core/src/protocol/msg/common.rs").expect("删除失败");
+    let out_dir = PathBuf::from("../biz_core/src/protocol/msg");
     for entry in fs::read_dir(&out_dir).expect("无法读取目录") {
         let entry = entry.expect("无法读取文件项");
         let path = entry.path();
@@ -68,14 +68,14 @@ fn build_biz_service() {
         }
     }
 
-    println!("cargo:warning=✅ proto biz_service 编译完成！");
+    println!("cargo:warning=✅ proto service 编译完成！");
 
     tonic_build::configure()
         .build_server(true) // 如无需生成 gRPC Server 代码
         .build_client(true) // 如无需生成 gRPC Client 代码
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize,utoipa::ToSchema)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
-        .out_dir("../biz_service/src/protocol/arb/") // 输出 Rust 模块到该目录
+        .out_dir("../biz_core/src/protocol/arb/") // 输出 Rust 模块到该目录
         .compile_protos(
             &[
                 "proto/common.proto",
@@ -88,10 +88,10 @@ fn build_biz_service() {
         )
         .expect("💥 Proto 编译失败，请检查路径和语法！");
 
-    //删除 ../biz_service/src/protocol/arb/common.rs
-    fs::remove_file("../biz_service/src/protocol/arb/common.rs").expect("删除失败");
+    //删除 ../service/src/protocol/arb/common.rs
+    fs::remove_file("../biz_core/src/protocol/arb/common.rs").expect("删除失败");
 
-    let out_dir = PathBuf::from("../biz_service/src/protocol/arb");
+    let out_dir = PathBuf::from("../biz_core/src/protocol/arb");
     for entry in fs::read_dir(&out_dir).expect("无法读取目录") {
         let entry = entry.expect("无法读取文件项");
         let path = entry.path();
@@ -116,5 +116,5 @@ fn build_biz_service() {
         }
     }
 
-    println!("cargo:warning=✅ proto biz_service rpc 编译完成！");
+    println!("cargo:warning=✅ proto service rpc 编译完成！");
 }

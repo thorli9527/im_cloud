@@ -1,8 +1,8 @@
 use crate::service::kafka_service::KafkaService;
 use crate::service::rpc::arb_server_client::ArbServerClient;
-use biz_service::biz_service::rpc_server_client_service::ArbServerRpcServiceClientService;
-use biz_service::kafka_util::node_util::NodeUtil;
-use biz_service::protocol::common::CommonResp;
+use biz_core::service::rpc_server_client_service::ArbServerRpcServiceClientService;
+use biz_core::kafka_util::node_util::NodeUtil;
+use biz_core::protocol::common::CommonResp;
 use common::config::AppConfig;
 use log::info;
 use once_cell::sync::OnceCell;
@@ -11,9 +11,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tonic::{transport::Server, Request, Response, Status};
-use biz_service::protocol::arb::arb_client::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
-use biz_service::protocol::arb::arb_client::UpdateVersionReq;
-use biz_service::protocol::arb::arb_models::{NodeType, QueryNodeReq, RegRequest, SyncListGroup};
+use biz_core::protocol::arb::arb_client::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
+use biz_core::protocol::arb::arb_client::UpdateVersionReq;
+use biz_core::protocol::arb::arb_models::{NodeType, QueryNodeReq, RegRequest, SyncListGroup};
 
 /// ArbClientServiceImpl: 与 ArbServer 交互并提供 gRPC 服务接口
 #[derive(Debug, Clone)]

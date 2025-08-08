@@ -1,8 +1,8 @@
 use crate::result::{result, result_data, result_error};
 use actix_web::{Responder, post, web};
 use anyhow::anyhow;
-use biz_service::biz_service::user_service::UserService;
-use biz_service::entitys::user_entity::UserInfoEntity;
+use biz_core::service::user_service::UserService;
+use biz_core::entitys::user_entity::UserInfoEntity;
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::models::property_value::PropertyValue;

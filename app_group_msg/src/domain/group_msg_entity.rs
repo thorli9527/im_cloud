@@ -1,4 +1,4 @@
-use biz_service::protocol::msg::message::Segment;
+use biz_core::protocol::msg::message::Segment;
 
 /// ======================================
 /// 👥 群组消息结构（群聊消息）

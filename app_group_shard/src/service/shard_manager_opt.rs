@@ -2,17 +2,17 @@ use crate::service::arb_manager::ArbManagerJob;
 use crate::service::shard_manager::{ShardManager, ShardManagerOpt};
 use anyhow::Result;
 use async_trait::async_trait;
-use biz_service::biz_service::group_member_service::GroupMemberService;
-use biz_service::biz_service::group_service::GroupService;
-use biz_service::entitys::group_member_entity::GroupMemberEntity;
-use biz_service::protocol::common::GroupRoleType;
+use biz_core::service::group_member_service::GroupMemberService;
+use biz_core::service::group_service::GroupService;
+use biz_core::entitys::group_member_entity::GroupMemberEntity;
+use biz_core::protocol::common::GroupRoleType;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::{GroupId, UserId};
 use futures_util::StreamExt;
 use mongodb::bson::doc;
 use mongodb::options::FindOptions;
-use biz_service::protocol::arb::arb_models::{MemberRef, NodeType, QueryNodeReq};
+use biz_core::protocol::arb::arb_models::{MemberRef, NodeType, QueryNodeReq};
 
 #[async_trait]
 impl ShardManagerOpt for ShardManager {

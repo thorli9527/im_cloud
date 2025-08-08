@@ -11,10 +11,10 @@ async fn main() -> anyhow::Result<()> {
     //初始化 kafka
     // KafkaService::init(&config.get_kafka()).await;
     //初始化业务
-    biz_service::init_service().await;
+    biz_core::init_service().await;
     //启动任务
     scheduler::configure();
-    biz_service::manager::init();
+    biz_core::manager::init();
     //arb server 与消费
     ArbClientServiceImpl::start().await;
     //socket-web-server

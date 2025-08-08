@@ -7,7 +7,7 @@ use std::str::FromStr;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tracing::log;
-use biz_service::protocol::arb::arb_server::arb_server_rpc_service_server::ArbServerRpcServiceServer;
+use biz_core::protocol::arb::arb_server::arb_server_rpc_service_server::ArbServerRpcServiceServer;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

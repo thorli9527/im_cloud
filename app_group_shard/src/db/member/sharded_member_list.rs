@@ -1,9 +1,9 @@
 use std::hash::Hasher;
 use std::sync::Arc;
 use twox_hash::XxHash64;
-use biz_service::protocol::arb::arb_models::MemberRef;
+use biz_core::protocol::arb::arb_models::MemberRef;
 use crate::db::member::simple_member_list::SimpleMemberList;
-use biz_service::protocol::common::GroupRoleType;
+use biz_core::protocol::common::GroupRoleType;
 
 /// 支持分片的成员列表，内部每个 shard 是一个 SimpleMemberList。
 #[derive(Debug, Clone)]

@@ -1,7 +1,7 @@
-use biz_service::protocol::common::GroupRoleType;
+use biz_core::protocol::common::GroupRoleType;
 use dashmap::{DashMap, DashSet};
 use std::sync::Arc;
-use biz_service::protocol::arb::arb_models::MemberRef;
+use biz_core::protocol::arb::arb_models::MemberRef;
 
 /// 简单的成员列表，适用于成员量较小时，内部用 dashmap 做并发。
 #[derive(Debug, Default)]

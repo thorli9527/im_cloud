@@ -1,4 +1,4 @@
-use biz_service::protocol::msg::auth::DeviceType;
+use biz_core::protocol::msg::auth::DeviceType;
 use common::UserId;
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]

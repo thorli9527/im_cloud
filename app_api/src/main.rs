@@ -15,8 +15,8 @@ async fn main() -> std::io::Result<()> {
     let address_and_port = format!("{}:{}", &app_cfg.get_server().host, &app_cfg.get_server().port);
     warn!("Starting server on {}", address_and_port);
     // 初始化 业务
-    biz_service::init_service().await;
-    biz_service::manager::init();
+    biz_core::init_service().await;
+    biz_core::manager::init();
 
     //启用 ArbClientServiceServer
     tokio::spawn(async {

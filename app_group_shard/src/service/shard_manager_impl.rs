@@ -10,8 +10,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tonic::transport::Channel;
 use twox_hash::XxHash64;
-use biz_service::protocol::arb::arb_client::arb_client_service_client::ArbClientServiceClient;
-use biz_service::protocol::arb::arb_models::ShardState;
+use biz_core::protocol::arb::arb_client::arb_client_service_client::ArbClientServiceClient;
+use biz_core::protocol::arb::arb_models::ShardState;
 
 impl ShardManager {
     pub fn new() -> Self {

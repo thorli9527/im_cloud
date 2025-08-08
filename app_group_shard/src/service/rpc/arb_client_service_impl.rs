@@ -6,11 +6,11 @@ use log::info;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use tonic::{Request, Response, Status};
-use biz_service::kafka_util::node_util::NodeUtil;
-use biz_service::protocol::arb::arb_client::arb_client_service_server::ArbClientService;
-use biz_service::protocol::arb::arb_client::UpdateVersionReq;
-use biz_service::protocol::arb::arb_models::SyncListGroup;
-use biz_service::protocol::common::CommonResp;
+use biz_core::kafka_util::node_util::NodeUtil;
+use biz_core::protocol::arb::arb_client::arb_client_service_server::ArbClientService;
+use biz_core::protocol::arb::arb_client::UpdateVersionReq;
+use biz_core::protocol::arb::arb_models::SyncListGroup;
+use biz_core::protocol::common::CommonResp;
 
 /// arb 组 客户端接口
 pub struct ArbClientServiceImpl {}

@@ -2,7 +2,7 @@ use crate::handlers::auth::reset_password_handler_dto::{ResetPasswordResponse, R
 use crate::result::{result, result_error_code};
 use actix_web::web::ServiceConfig;
 use actix_web::{post, web, HttpResponse, Responder};
-use biz_service::manager::user_manager_auth::{ResetPasswordType, UserManagerAuth, UserManagerAuthOpt};
+use biz_core::manager::user_manager_auth::{ResetPasswordType, UserManagerAuth, UserManagerAuthOpt};
 use common::errors::AppError;
 use validator::Validate;
 

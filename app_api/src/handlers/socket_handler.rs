@@ -3,8 +3,8 @@ use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use common::errors::AppError;
 use common::util::common_utils::hash_index;
 use serde::Serialize;
-use biz_service::kafka_util::node_util::NodeUtil;
-use biz_service::protocol::arb::arb_models::NodeType;
+use biz_core::kafka_util::node_util::NodeUtil;
+use biz_core::protocol::arb::arb_models::NodeType;
 
 #[derive(Serialize)]
 pub struct SocketAddrResponse {

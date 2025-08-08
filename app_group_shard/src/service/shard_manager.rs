@@ -2,12 +2,12 @@ use crate::db::hash_shard_map::HashShardMap;
 use anyhow::Result;
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
-use biz_service::protocol::common::GroupRoleType;
+use biz_core::protocol::common::GroupRoleType;
 use common::config::ShardConfig;
 use common::{GroupId, UserId};
 use std::hash::Hash;
 use tokio::sync::RwLock;
-use biz_service::protocol::arb::arb_models::{MemberRef, ShardState};
+use biz_core::protocol::arb::arb_models::{MemberRef, ShardState};
 
 pub const GROUP_SHARD_SIZE: usize = 64;
 pub const MEMBER_SHARD_SIZE: usize = 16;
