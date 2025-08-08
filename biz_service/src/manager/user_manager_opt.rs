@@ -1,12 +1,14 @@
 use crate::biz_service::client_service::ClientService;
 use crate::biz_service::friend_service::UserFriendService;
-use crate::biz_service::kafka_socket_service::KafkaInstanceService;
 use crate::manager::user_manager::{UserManager, UserManagerOpt, USER_ONLINE_TTL_SECS};
 
 use crate::entitys::client_entity::ClientEntity;
+use crate::kafka_util::kafka_producer::KafkaInstanceService;
 use crate::protocol::common::ByteMessageType;
 use crate::protocol::msg::auth::{DeviceType, OfflineStatueMsg, OnlineStatusMsg};
-use crate::protocol::msg::friend::{EventStatus, FriendEventMsg, FriendEventType, FriendSourceType};
+use crate::protocol::msg::friend::{
+    EventStatus, FriendEventMsg, FriendEventType, FriendSourceType,
+};
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use common::config::AppConfig;
@@ -28,7 +30,9 @@ impl UserManagerOpt for UserManager {
         // 获取现有设备
         let existing: Option<String> = conn.hget(&redis_key, &field_key).await?;
         let mut devices = match existing {
-            Some(s) => s.split(',').map(|s| s.to_string()).collect::<std::collections::HashSet<_>>(),
+            Some(s) => {
+                s.split(',').map(|s| s.to_string()).collect::<std::collections::HashSet<_>>()
+            }
             None => std::collections::HashSet::new(),
         };
 
@@ -49,7 +53,12 @@ impl UserManagerOpt for UserManager {
                 login_time: now(),
             };
             kafka
-                .send_proto(&ByteMessageType::LogoutRespMsgType, &online_msg, &online_msg.message_id, &AppConfig::get().get_kafka().topic_group)
+                .send_proto(
+                    &ByteMessageType::LogoutRespMsgType,
+                    &online_msg,
+                    &online_msg.message_id,
+                    &AppConfig::get().get_kafka().topic_group,
+                )
                 .await?;
         }
 
@@ -70,7 +79,10 @@ impl UserManagerOpt for UserManager {
         let (redis_key, field_key) = self.make_online_key(user_id);
         let mut conn = self.pool.get().await?;
         if let Some(s) = conn.hget::<_, _, Option<String>>(&redis_key, &field_key).await? {
-            Ok(s.split(',').filter_map(|d| d.parse::<i32>().ok()).filter_map(DeviceType::from_i32).collect())
+            Ok(s.split(',')
+                .filter_map(|d| d.parse::<i32>().ok())
+                .filter_map(DeviceType::from_i32)
+                .collect())
         } else {
             Ok(vec![])
         }
@@ -82,7 +94,8 @@ impl UserManagerOpt for UserManager {
 
         let existing: Option<String> = conn.hget(&redis_key, &field_key).await?;
         if let Some(s) = existing {
-            let mut devices: std::collections::HashSet<_> = s.split(',').map(|x| x.to_string()).collect();
+            let mut devices: std::collections::HashSet<_> =
+                s.split(',').map(|x| x.to_string()).collect();
             devices.remove(&(*device_type as u8).to_string());
 
             if devices.is_empty() {
@@ -105,7 +118,12 @@ impl UserManagerOpt for UserManager {
                 reason: "".to_string(),
             };
             kafka
-                .send_proto(&ByteMessageType::LogoutRespMsgType, &offline_msg, &offline_msg.message_id, &AppConfig::get().get_kafka().topic_group)
+                .send_proto(
+                    &ByteMessageType::LogoutRespMsgType,
+                    &offline_msg,
+                    &offline_msg.message_id,
+                    &AppConfig::get().get_kafka().topic_group,
+                )
                 .await?;
         }
 
@@ -211,7 +229,8 @@ impl UserManagerOpt for UserManager {
     /// 检查 token 是否存在
     async fn verify_token(&self, token: &str) -> Result<bool> {
         let mut conn = self.pool.get().await?;
-        let exists: bool = conn.exists(format!("token:{}", token)).await.context("检查 token 失败")?;
+        let exists: bool =
+            conn.exists(format!("token:{}", token)).await.context("检查 token 失败")?;
         Ok(exists)
     }
     /// 清空某用户所有 token（通过集合 smembers）
@@ -226,7 +245,11 @@ impl UserManagerOpt for UserManager {
         Ok(())
     }
     /// 获取指定 uid + 设备的 token（单设备支持）
-    async fn get_token_by_uid_device(&self, uid: &UserId, device_type: &DeviceType) -> Result<Option<String>> {
+    async fn get_token_by_uid_device(
+        &self,
+        uid: &UserId,
+        device_type: &DeviceType,
+    ) -> Result<Option<String>> {
         let mut conn = self.pool.get().await?;
         let index_key = format!("token:index:{}:{}", uid, *device_type as i32);
         let token: Option<String> = conn.get(&index_key).await.context("获取 token 索引失败")?;
@@ -236,21 +259,26 @@ impl UserManagerOpt for UserManager {
     /// 获取 token 对应的客户端身份
     async fn get_client_token(&self, token: &str) -> Result<ClientTokenDto> {
         let mut conn = self.pool.get().await?;
-        let json: String = conn.get(format!("token:{}", token)).await.context("获取 token 数据失败")?;
+        let json: String =
+            conn.get(format!("token:{}", token)).await.context("获取 token 数据失败")?;
         serde_json::from_str(&json).context("反序列化 ClientTokenDto 失败")
     }
 
     /// 通过 token 查找用户完整信息
     async fn find_user_by_token(&self, token: &str) -> Result<Option<ClientEntity>> {
         let dto = self.get_client_token(token).await?;
-        let user = self.get_user_info(&dto.uid).await?.ok_or_else(|| AppError::BizError("用户不存在".to_string()))?;
+        let user = self
+            .get_user_info(&dto.uid)
+            .await?
+            .ok_or_else(|| AppError::BizError("用户不存在".to_string()))?;
         Ok(Some(user))
     }
     async fn is_friend(&self, uid: &UserId, friend_id: &UserId) -> Result<bool> {
         // 1. Redis 查询
         let redis_key = format!("friend:user:{}", uid);
         let mut conn = self.pool.get().await?;
-        let exists: bool = conn.sismember(&redis_key, friend_id).await.context("Redis SISMEMBER 查询失败")?;
+        let exists: bool =
+            conn.sismember(&redis_key, friend_id).await.context("Redis SISMEMBER 查询失败")?;
 
         if exists {
             return Ok(true);
@@ -263,7 +291,8 @@ impl UserManagerOpt for UserManager {
             "friend_status": 1 // 限定必须是 Accepted 状态
         };
         let friend_service = UserFriendService::get();
-        let exists_in_db = friend_service.dao.find_one(filter).await.map(|opt| opt.is_some()).unwrap_or(false);
+        let exists_in_db =
+            friend_service.dao.find_one(filter).await.map(|opt| opt.is_some()).unwrap_or(false);
         Ok(exists_in_db)
     }
 
@@ -273,7 +302,8 @@ impl UserManagerOpt for UserManager {
         // 1. Redis 查询
         let redis_key = format!("friend:user:{}", user_id);
         let mut conn = self.pool.get().await?;
-        let redis_friends: Vec<String> = conn.smembers(&redis_key).await.context("Redis SMEMBERS 获取好友列表失败")?;
+        let redis_friends: Vec<String> =
+            conn.smembers(&redis_key).await.context("Redis SMEMBERS 获取好友列表失败")?;
 
         // 如果 Redis 命中，直接返回
         if !redis_friends.is_empty() {
@@ -286,7 +316,14 @@ impl UserManagerOpt for UserManager {
             "uid": user_id.to_string(),
             "friend_status": 1, // 只取已接受的关系
         };
-        let mongo_friends = friend_service.dao.query(filter).await.unwrap_or_default().into_iter().map(|f| f.friend_id).collect::<Vec<UserId>>();
+        let mongo_friends = friend_service
+            .dao
+            .query(filter)
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .map(|f| f.friend_id)
+            .collect::<Vec<UserId>>();
 
         // 同步回 Redis 和本地缓存（可选）
         if !mongo_friends.is_empty() {
@@ -366,7 +403,10 @@ impl UserManagerOpt for UserManager {
         for (form_uid, to_uid) in [(user_id, &friend_id)] {
             let event = make_event(form_uid, to_uid);
             let message_id = &event.message_id.clone();
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendEventMsgType, &event, &message_id, topic).await {
+            if let Err(e) = kafka_service
+                .send_proto(&ByteMessageType::FriendEventMsgType, &event, &message_id, topic)
+                .await
+            {
                 log::warn!("Kafka 消息发送失败 [{}]: {:?}", message_id, e);
             }
         }
@@ -417,35 +457,38 @@ impl UserManagerOpt for UserManager {
         let redis_block_key = format!("block:user:{}", user_id);
         let _: () = conn.srem(&redis_block_key, friend_id).await?;
         // ---------- 4. 可选：发送 Kafka 取消拉黑事件 ----------
-        let time = now() as u64;
-        let message_id = build_snow_id();
+        // let time = now() as u64;
+        // let message_id = build_snow_id();
         // 构造好友事件
-        let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
-            message_id: message_id.clone(),
-            from_uid: from_uid.to_string(),
-            to_uid: to_uid.to_string(),
-            event_type: FriendEventType::FriendUnblock as i32,
-            message: String::new(),
-            status: EventStatus::Done as i32,
-            source_type: FriendSourceType::FriendSourceSystem as i32,
-            from_a_name: "".to_string(),
-            to_a_name: "".to_string(),
-            from_remark: None,
-            created_at: time,
-            updated_at: time,
-            to_remark: None,
-        };
-        // ---------- 6. Kafka 消息通知 ----------
-        let kafka_service = KafkaInstanceService::get();
-        let app_config = AppConfig::get();
-        let topic = &app_config.get_kafka().topic_single;
-        // 同步通知双方
-        for (form_uid, to_uid) in [(user_id, &friend_id)] {
-            let event = make_event(form_uid, to_uid);
-            if let Err(e) = kafka_service.send_proto(&ByteMessageType::FriendEventMsgType, &event, &message_id, topic).await {
-                log::warn!("Kafka 消息发送失败 [{}]: {:?}", message_id, e);
-            }
-        }
+        // let make_event = |from_uid: &str, to_uid: &str| FriendEventMsg {
+        //     message_id: message_id.clone(),
+        //     from_uid: from_uid.to_string(),
+        //     to_uid: to_uid.to_string(),
+        //     event_type: FriendEventType::FriendUnblock as i32,
+        //     message: String::new(),
+        //     status: EventStatus::Done as i32,
+        //     source_type: FriendSourceType::FriendSourceSystem as i32,
+        //     from_a_name: "".to_string(),
+        //     to_a_name: "".to_string(),
+        //     from_remark: None,
+        //     created_at: time,
+        //     updated_at: time,
+        //     to_remark: None,
+        // };
+        // // ---------- 6. Kafka 消息通知 ----------
+        // let kafka_service = KafkaInstanceService::get();
+        // let app_config = AppConfig::get();
+        // let topic = &app_config.get_kafka().topic_single;
+        // // 同步通知双方
+        // for (form_uid, to_uid) in [(user_id, &friend_id)] {
+        //     let event = make_event(form_uid, to_uid);
+        //     if let Err(e) = kafka_service
+        //         .send_proto(&ByteMessageType::FriendEventMsgType, &event, &message_id, topic)
+        //         .await
+        //     {
+        //         log::warn!("Kafka 消息发送失败 [{}]: {:?}", message_id, e);
+        //     }
+        // }
         Ok(())
     }
 }

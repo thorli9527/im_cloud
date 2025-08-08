@@ -1,7 +1,7 @@
 use crate::kafka::kafka_consumer::{get_pending_acks, PendingMeta};
 use crate::socket::socket_manager::SocketManager;
 use anyhow::Result;
-use biz_service::biz_service::kafka_socket_service::KafkaInstanceService;
+use biz_service::kafka_util::kafka_producer::KafkaInstanceService;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::friend::FriendEventMsg;
 use bytes::Buf;
@@ -11,7 +11,11 @@ use prost::Message;
 use rdkafka::message::{Message as KafkaMessageTrait, OwnedMessage};
 use std::sync::Arc;
 
-pub async fn friend_msg_to_socket(mut body: impl Buf, msg: &OwnedMessage, socket_manager: &Arc<SocketManager>) -> Result<()> {
+pub async fn friend_msg_to_socket(
+    mut body: impl Buf,
+    msg: &OwnedMessage,
+    socket_manager: &Arc<SocketManager>,
+) -> Result<()> {
     let mut message = FriendEventMsg::decode(&mut body)?;
     let message_id = message.message_id.clone();
     message.message_id = build_snow_id();
@@ -43,6 +47,13 @@ pub async fn friend_msg_to_socket(mut body: impl Buf, msg: &OwnedMessage, socket
     let kafka_service = KafkaInstanceService::get();
     let app_config = AppConfig::get();
     let topic = &app_config.get_kafka().topic_single;
-    kafka_service.send_proto(&ByteMessageType::FriendEventMsgType, &friend_event, &friend_event.message_id, topic).await?;
+    kafka_service
+        .send_proto(
+            &ByteMessageType::FriendEventMsgType,
+            &friend_event,
+            &friend_event.message_id,
+            topic,
+        )
+        .await?;
     Ok(())
 }

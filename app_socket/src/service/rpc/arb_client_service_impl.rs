@@ -1,16 +1,19 @@
 use biz_service::protocol::common::CommonResp;
-use biz_service::protocol::rpc::arb_models::{ListAllNodesResponse, NodeType, QueryNodeReq, RegRequest, SyncListGroup};
+use biz_service::protocol::rpc::arb_models::{
+    ListAllNodesResponse, NodeType, QueryNodeReq, RegRequest, SyncListGroup,
+};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
 use log::info;
 
-use biz_service::biz_service::kafka_socket_service::KafkaInstanceService;
 use biz_service::biz_service::rpc_server_client_service::ArbServerRpcServiceClientService;
-use biz_service::protocol::rpc::arb_client::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
+use biz_service::kafka_util::node_util::NodeUtil;
+use biz_service::protocol::rpc::arb_client::arb_client_service_server::{
+    ArbClientService, ArbClientServiceServer,
+};
 use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
 use biz_service::protocol::rpc::arb_models::NodeType::{MsgGateway, SocketNode};
-use biz_service::util::node_util::NodeUtil;
 use once_cell::sync::OnceCell;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -48,7 +51,8 @@ impl ArbClientServiceImpl {
 
         tokio::spawn(async move {
             // 启动 gRPC 服务
-            let addr = std::net::SocketAddr::from_str(&client_addr.clone()).expect("Invalid socket address");
+            let addr = std::net::SocketAddr::from_str(&client_addr.clone())
+                .expect("Invalid socket address");
             tonic::transport::Server::builder()
                 .add_service(ArbClientServiceServer::new(client_services))
                 .serve(addr)
@@ -75,14 +79,20 @@ impl ArbClientServiceImpl {
 static INSTANCE: OnceCell<Arc<ArbClientServiceImpl>> = OnceCell::new();
 #[tonic::async_trait]
 impl ArbClientService for ArbClientServiceImpl {
-    async fn update_version(&self, request: Request<UpdateVersionReq>) -> Result<Response<CommonResp>, Status> {
+    async fn update_version(
+        &self,
+        request: Request<UpdateVersionReq>,
+    ) -> Result<Response<CommonResp>, Status> {
         Ok(Response::new(CommonResp {
             success: true,
             message: "".to_string(),
         }))
     }
 
-    async fn sync_data(&self, request: Request<SyncListGroup>) -> Result<Response<CommonResp>, Status> {
+    async fn sync_data(
+        &self,
+        request: Request<SyncListGroup>,
+    ) -> Result<Response<CommonResp>, Status> {
         Ok(Response::new(CommonResp {
             success: true,
             message: "".to_string(),

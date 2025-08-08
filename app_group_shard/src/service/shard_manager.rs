@@ -7,7 +7,6 @@ use biz_service::protocol::rpc::arb_models::{MemberRef, ShardState};
 use common::config::ShardConfig;
 use common::{GroupId, UserId};
 use std::hash::Hash;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub const GROUP_SHARD_SIZE: usize = 64;
@@ -63,7 +62,12 @@ pub trait ShardManagerOpt: Send + Sync {
     /// 获取某个群组的所有成员 ID 列表
     fn get_member(&self, group_id: &GroupId) -> Result<Vec<MemberRef>>;
     /// 获取群组成员分页列表
-    fn get_member_page(&self, group_id: &GroupId, offset: usize, limit: usize) -> Result<Option<Vec<MemberRef>>>;
+    fn get_member_page(
+        &self,
+        group_id: &GroupId,
+        offset: usize,
+        limit: usize,
+    ) -> Result<Option<Vec<MemberRef>>>;
     fn get_member_count(&self, group_id: &GroupId) -> Result<usize>;
     /// 标记用户在线
     fn online(&self, group_id: &GroupId, uid: &UserId) -> Result<()>;
@@ -74,7 +78,7 @@ pub trait ShardManagerOpt: Send + Sync {
     ///修改角色
     fn change_role(&self, group_id: &GroupId, uid: &UserId, role: GroupRoleType) -> Result<()>;
     /// 获取用户所在的群组
-    fn get_user_groups(&self, uid: &UserId) -> anyhow::Result<Vec<Arc<str>>>;
+    fn get_user_groups(&self, uid: &UserId) -> anyhow::Result<Vec<String>>;
 
     /// 获取在线管理员
     async fn get_admin_member(&self, group_id: &GroupId) -> Result<Option<Vec<UserId>>>;

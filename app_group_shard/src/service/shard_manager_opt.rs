@@ -13,7 +13,6 @@ use common::{GroupId, UserId};
 use futures_util::StreamExt;
 use mongodb::bson::doc;
 use mongodb::options::FindOptions;
-use std::sync::Arc;
 
 #[async_trait]
 impl ShardManagerOpt for ShardManager {
@@ -67,7 +66,8 @@ impl ShardManagerOpt for ShardManager {
                     continue;
                 }
                 // 查询该群的所有成员
-                let members: Vec<GroupMemberEntity> = group_member_service.get_all_members_by_group_id(&group_id).await?;
+                let members: Vec<GroupMemberEntity> =
+                    group_member_service.get_all_members_by_group_id(&group_id).await?;
 
                 // 将每个成员添加到该群组分片中
                 for member in members {
@@ -121,7 +121,12 @@ impl ShardManagerOpt for ShardManager {
     }
 
     /// 获取群组成员分页列表
-    fn get_member_page(&self, group_id: &GroupId, offset: usize, limit: usize) -> Result<Option<Vec<MemberRef>>> {
+    fn get_member_page(
+        &self,
+        group_id: &GroupId,
+        offset: usize,
+        limit: usize,
+    ) -> Result<Option<Vec<MemberRef>>> {
         let result = self.current.load().shard_map.get_page(group_id, offset, limit);
         return Ok(result);
     }
@@ -151,8 +156,10 @@ impl ShardManagerOpt for ShardManager {
         Ok(Some(admin_member))
     }
 
-    fn get_user_groups(&self, uid: &UserId) -> anyhow::Result<Vec<Arc<str>>> {
+    fn get_user_groups(&self, uid: &UserId) -> anyhow::Result<Vec<String>> {
         let group_service = self.current.load().shard_map.user_group_list(uid);
-        Ok(group_service)
+        let string_vec: Vec<String> =
+            group_service.iter().map(|s| s.as_ref().to_string()).collect();
+        Ok(string_vec)
     }
 }

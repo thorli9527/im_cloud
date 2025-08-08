@@ -87,6 +87,14 @@ pub struct MemberCountResp {
     #[prost(uint32, tag = "1")]
     pub count: u32,
 }
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetGroupsResp {
+    /// 群组 ID 列表
+    #[prost(string, repeated, tag = "1")]
+    pub group_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
 /// Generated client implementations.
 pub mod shard_rpc_service_client {
     #![allow(
@@ -469,6 +477,33 @@ pub mod shard_rpc_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// 获取用户群组
+        pub async fn get_user_groups(
+            &mut self,
+            request: impl tonic::IntoRequest<super::IdReq>,
+        ) -> std::result::Result<tonic::Response<super::GetGroupsResp>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/protocol.shard_service.ShardRpcService/GetUserGroups",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "protocol.shard_service.ShardRpcService",
+                        "GetUserGroups",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -539,6 +574,11 @@ pub mod shard_rpc_service_server {
             &self,
             request: tonic::Request<super::IdReq>,
         ) -> std::result::Result<tonic::Response<super::UserIdListResp>, tonic::Status>;
+        /// 获取用户群组
+        async fn get_user_groups(
+            &self,
+            request: tonic::Request<super::IdReq>,
+        ) -> std::result::Result<tonic::Response<super::GetGroupsResp>, tonic::Status>;
     }
     #[derive(Debug)]
     pub struct ShardRpcServiceServer<T> {
@@ -1089,6 +1129,50 @@ pub mod shard_rpc_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetAdminMemberSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/protocol.shard_service.ShardRpcService/GetUserGroups" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetUserGroupsSvc<T: ShardRpcService>(pub Arc<T>);
+                    impl<T: ShardRpcService> tonic::server::UnaryService<super::IdReq>
+                    for GetUserGroupsSvc<T> {
+                        type Response = super::GetGroupsResp;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::IdReq>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ShardRpcService>::get_user_groups(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetUserGroupsSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

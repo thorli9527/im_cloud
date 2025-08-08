@@ -1,5 +1,5 @@
-use crate::biz_service::kafka_socket_service::KafkaInstanceService;
 use crate::entitys::group_msg_entity::GroupMsgEntity;
+use crate::kafka_util::kafka_producer::KafkaInstanceService;
 use crate::protocol::common::ByteMessageType;
 use crate::protocol::msg::message::Segment;
 use common::config::AppConfig;
@@ -32,7 +32,12 @@ impl GroupMessageService {
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
-    pub async fn send_group_message(&self, from: &String, to: &String, segments: &Vec<Segment>) -> Result<GroupMsgEntity, AppError> {
+    pub async fn send_group_message(
+        &self,
+        from: &String,
+        to: &String,
+        segments: &Vec<Segment>,
+    ) -> Result<GroupMsgEntity, AppError> {
         let now_time = now();
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
@@ -67,7 +72,14 @@ impl GroupMessageService {
         // 发送到 Kafka
         let app_config = AppConfig::get();
         let message_type = ByteMessageType::GroupMsgType;
-        kafka_service.send_proto(&message_type, &message, &message.message_id, &app_config.get_kafka().topic_group).await?;
+        kafka_service
+            .send_proto(
+                &message_type,
+                &message,
+                &message.message_id,
+                &app_config.get_kafka().topic_group,
+            )
+            .await?;
         // 持久化
         self.dao.insert(&message).await?;
         Ok(message)

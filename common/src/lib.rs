@@ -2,6 +2,7 @@ extern crate core;
 
 pub mod config;
 pub mod errors;
+pub mod kafka;
 pub mod models;
 pub mod redis;
 pub mod repository;

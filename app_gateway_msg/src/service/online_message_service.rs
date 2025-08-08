@@ -1,9 +1,9 @@
-use crate::consts::kafka_topic_cfg;
 use crate::entity::online_message::OnLineMessageEntity;
 use crate::service::kafka_service::KafkaService;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::OnlineStatusMsg;
 use common::db::Db;
+use common::kafka::topic_info::ONLINE_TOPIC_INFO;
 use common::repository_util::{BaseRepository, Repository};
 use common::util::common_utils::build_snow_id;
 use std::sync::Arc;
@@ -27,7 +27,14 @@ impl OnLineMessageService {
                 client_id: entity.client_id.clone(),
                 login_time: entity.login_time,
             };
-            kafka_service.send_proto(&ByteMessageType::OfflineStatusMsgType, &msg, &msg.message_id, kafka_topic_cfg::GROUP_COMMON_MSG_TOPIC).await?;
+            kafka_service
+                .send_proto(
+                    &ByteMessageType::OfflineStatusMsgType,
+                    &msg,
+                    &msg.message_id,
+                    &ONLINE_TOPIC_INFO.topic_name,
+                )
+                .await?;
             self.dao.up_property(&entity.id, "send_group_status", true).await?;
         }
         return Ok(());
@@ -50,4 +57,5 @@ impl OnLineMessageService {
 }
 
 //单例
-static INSTANCE: once_cell::sync::OnceCell<Arc<OnLineMessageService>> = once_cell::sync::OnceCell::new();
+static INSTANCE: once_cell::sync::OnceCell<Arc<OnLineMessageService>> =
+    once_cell::sync::OnceCell::new();

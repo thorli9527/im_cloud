@@ -1,9 +1,10 @@
 use crate::service::shard_manager::ShardManager;
 use biz_service::protocol::common::CommonResp;
-use biz_service::protocol::rpc::arb_client::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
+use biz_service::protocol::rpc::arb_client::arb_client_service_server::{
+    ArbClientService, ArbClientServiceServer,
+};
 use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
 use biz_service::protocol::rpc::arb_models::{ListAllNodesResponse, SyncListGroup};
-use biz_service::util::node_util::NodeUtil;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::util::date_util::now;
@@ -11,6 +12,7 @@ use log::info;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use tonic::{Request, Response, Status};
+use biz_service::kafka_util::node_util::NodeUtil;
 
 /// arb 组 客户端接口
 pub struct ArbClientServiceImpl {}
@@ -21,7 +23,10 @@ impl ArbClientServiceImpl {
 }
 #[tonic::async_trait]
 impl ArbClientService for ArbClientServiceImpl {
-    async fn update_version(&self, request: Request<UpdateVersionReq>) -> Result<Response<CommonResp>, Status> {
+    async fn update_version(
+        &self,
+        request: Request<UpdateVersionReq>,
+    ) -> Result<Response<CommonResp>, Status> {
         let req = request.into_inner();
         let shard_manager = ShardManager::get();
 
@@ -41,7 +46,10 @@ impl ArbClientService for ArbClientServiceImpl {
         }))
     }
 
-    async fn sync_data(&self, request: Request<SyncListGroup>) -> Result<Response<CommonResp>, Status> {
+    async fn sync_data(
+        &self,
+        request: Request<SyncListGroup>,
+    ) -> Result<Response<CommonResp>, Status> {
         let shard_manager = ShardManager::get();
         let sync_data = request.into_inner();
 

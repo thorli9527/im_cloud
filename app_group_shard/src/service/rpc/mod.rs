@@ -1,4 +1,4 @@
-use biz_service::util::node_util::NodeUtil;
+use biz_service::kafka_util::node_util::NodeUtil;
 
 pub mod arb_client_service_impl;
 mod arb_server_client;

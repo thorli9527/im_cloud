@@ -1,7 +1,6 @@
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use app_main::handlers;
-use biz_service::biz_service::kafka_socket_service::KafkaInstanceService;
 use common::config::AppConfig;
 use log::warn;
 

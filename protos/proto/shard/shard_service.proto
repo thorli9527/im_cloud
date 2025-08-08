@@ -55,7 +55,9 @@ message UserIdListResp {
 message MemberCountResp {
   uint32 count = 1;
 }
-
+message GetGroupsResp {
+  repeated string group_ids = 1; // 群组 ID 列表
+}
 // ------------------- Service 定义 -------------------
 
 service ShardRpcService {
@@ -91,4 +93,6 @@ service ShardRpcService {
 
   // 获取在线管理员（异步）
   rpc GetAdminMember(IdReq) returns (UserIdListResp);
+  // 获取用户群组
+  rpc GetUserGroups(IdReq) returns (GetGroupsResp);
 }

@@ -1,16 +1,17 @@
 use crate::service::kafka_service::KafkaService;
 use crate::service::rpc::arb_server_client::ArbServerClient;
 use biz_service::biz_service::rpc_server_client_service::ArbServerRpcServiceClientService;
+use biz_service::kafka_util::node_util::NodeUtil;
 use biz_service::protocol::common::CommonResp;
-use biz_service::protocol::rpc::arb_client::arb_client_service_server::{ArbClientService, ArbClientServiceServer};
+use biz_service::protocol::rpc::arb_client::arb_client_service_server::{
+    ArbClientService, ArbClientServiceServer,
+};
 use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
 use biz_service::protocol::rpc::arb_models::{NodeType, QueryNodeReq, RegRequest, SyncListGroup};
-use biz_service::util::node_util::NodeUtil;
 use common::config::AppConfig;
 use log::info;
 use once_cell::sync::OnceCell;
 use std::net::SocketAddr;
-use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -35,7 +36,8 @@ impl ArbClientServiceImpl {
         ArbServerRpcServiceClientService::init().await.expect(" init arb server rpc client error");
         // 读取配置并解析地址
         let app_cfg = AppConfig::get();
-        let addr = SocketAddr::from_str(&app_cfg.get_shard().server_addr.unwrap()).expect("Invalid address");
+        let addr = SocketAddr::from_str(&app_cfg.get_shard().server_addr.unwrap())
+            .expect("Invalid address");
 
         // 构造服务实例
         let svc = ArbClientServiceImpl {
@@ -85,14 +87,20 @@ impl ArbClientServiceImpl {
 }
 #[tonic::async_trait]
 impl ArbClientService for ArbClientServiceImpl {
-    async fn update_version(&self, _req: Request<UpdateVersionReq>) -> Result<Response<CommonResp>, Status> {
+    async fn update_version(
+        &self,
+        _req: Request<UpdateVersionReq>,
+    ) -> Result<Response<CommonResp>, Status> {
         Ok(Response::new(CommonResp {
             success: true,
             message: String::new(),
         }))
     }
 
-    async fn sync_data(&self, _req: Request<SyncListGroup>) -> Result<Response<CommonResp>, Status> {
+    async fn sync_data(
+        &self,
+        _req: Request<SyncListGroup>,
+    ) -> Result<Response<CommonResp>, Status> {
         Ok(Response::new(CommonResp {
             success: true,
             message: String::new(),
