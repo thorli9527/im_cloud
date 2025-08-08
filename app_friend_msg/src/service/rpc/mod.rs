@@ -1,0 +1,1 @@
+mod friend_rpc_service_impl;
