@@ -330,14 +330,8 @@ message RedEnvelopeContent {
 // 表示一条消息中的一个独立段（如文本段、图片段等），支持排序、编辑、标记等
 message Segment {
   MessageContent body = 1;             // 消息段内容（如文本、图片等，使用 oneof 封装）：段的具体内容
-
-  string segment_id = 2;               // 段唯一标识（客户端生成或服务端补全）：段的唯一ID
-  uint64 seq_in_msg = 3;               // 消息内顺序编号（用于前端渲染排序）：段在消息中的顺序
-
-  bool edited = 4;                     // 是否为编辑后的段落（true 表示被修改）：段的编辑状态
-  bool visible = 5;                    // 是否允许客户端渲染该段（false 可用于隐藏草稿等）：段的可见性
-
-  map<string, string> metadata = 6;    // 通用扩展字段（以字符串键值对存储 JSON 扁平数据）：段的元数据
+  uint64 seq_in_msg = 2;               // 消息内顺序编号（用于前端渲染排序）：段在消息中的顺序
+  map<string, string> metadata = 3;    // 通用扩展字段（以字符串键值对存储 JSON 扁平数据）：段的元数据
 }
 
 // ======================================

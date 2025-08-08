@@ -1,7 +1,3 @@
-use crate::entitys::user_msg_entity::UserMsgEntity;
-use crate::kafka_util::kafka_producer::KafkaInstanceService;
-use crate::protocol::common::ByteMessageType;
-use crate::protocol::msg::message::Segment;
 use common::config::AppConfig;
 use common::errors::AppError;
 use common::repository_util::{BaseRepository, Repository};
@@ -11,16 +7,20 @@ use mongodb::Database;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::sync::Arc;
+use biz_service::kafka_util::kafka_producer::KafkaInstanceService;
+use biz_service::protocol::common::ByteMessageType;
+use biz_service::protocol::msg::message::Segment;
+use crate::domain::group_msg_entity::GroupMsgEntity;
 
 #[derive(Debug)]
-pub struct UserMessageService {
-    pub dao: BaseRepository<UserMsgEntity>,
+pub struct GroupMessageService {
+    pub dao: BaseRepository<GroupMsgEntity>,
 }
 
-impl UserMessageService {
+impl GroupMessageService {
     pub async fn new(db: Database) -> Self {
         Self {
-            dao: BaseRepository::new(db, "mq_user_message").await,
+            dao: BaseRepository::new(db, "mq_group_message").await,
         }
     }
     pub async fn init(db: Database) {
@@ -32,13 +32,12 @@ impl UserMessageService {
     pub fn get() -> Arc<Self> {
         INSTANCE.get().expect("INSTANCE is not initialized").clone()
     }
-    /// 构造并保存一条用户消息，返回完整 UserMessage
-    pub async fn send_user_message(
+    pub async fn send_group_message(
         &self,
         from: &String,
         to: &String,
         segments: &Vec<Segment>,
-    ) -> Result<UserMsgEntity, AppError> {
+    ) -> Result<GroupMsgEntity, AppError> {
         let now_time = now();
         if segments.is_empty() {
             return Err(AppError::BizError("消息内容不能为空".into()));
@@ -49,38 +48,33 @@ impl UserMessageService {
             .enumerate()
             .map(|(_, s)| Segment {
                 body: s.body.clone(),
-                segment_id: build_uuid(),
                 seq_in_msg: build_snow_id() as u64, // 分布式唯一顺序段号
-                edited: false,
-                visible: true,
                 metadata: { HashMap::new() },
             })
             .collect();
-
         // 构造 UserMessage 对象
-        let message = UserMsgEntity {
+        let message = GroupMsgEntity {
             message_id: build_snow_id(),
-            from: from.clone(),
-            to: to.clone(),
+            from: from.to_string(),
+            sync_mq_status: true,
+            to: to.to_string(),
             content: segments,
-            created_time: now_time,
-            updated_time: now_time,
-            sync_mq_status: false,
+            create_time: now_time,
+            update_time: now_time,
             revoked: false,
             is_system: false,
-            delivered: false,
-            read_time: now_time,
+            seq: 0,
         };
         let kafka_service = KafkaInstanceService::get();
         // 发送到 Kafka
         let app_config = AppConfig::get();
-        let msg_type: ByteMessageType = ByteMessageType::UserMsgType;
+        let message_type = ByteMessageType::GroupMsgType;
         kafka_service
             .send_proto(
-                &msg_type,
+                &message_type,
                 &message,
                 &message.message_id,
-                &app_config.get_kafka().topic_single,
+                &app_config.get_kafka().topic_group,
             )
             .await?;
         // 持久化
@@ -88,4 +82,4 @@ impl UserMessageService {
         Ok(message)
     }
 }
-static INSTANCE: OnceCell<Arc<UserMessageService>> = OnceCell::new();
+static INSTANCE: OnceCell<Arc<GroupMessageService>> = OnceCell::new();

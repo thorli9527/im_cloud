@@ -3,8 +3,6 @@ use crate::socket::handlers::auth::logout_handler::handle_logout;
 use crate::socket::handlers::heartbeat_handler::start_global_heartbeat_checker;
 use crate::socket::socket_manager::{get_socket_manager, ConnectionId, ConnectionInfo, ConnectionMeta, SocketManager};
 use anyhow::{anyhow, Result};
-use biz_service::entitys::group_msg_entity::GroupMsgEntity;
-use biz_service::entitys::user_msg_entity::UserMsgEntity;
 use biz_service::protocol::common::ByteMessageType;
 use biz_service::protocol::msg::auth::{DeviceType, LoginReqMsg, LogoutReqMsg, OfflineStatueMsg, OnlineStatusMsg, SendVerificationCodeReqMsg};
 use biz_service::protocol::msg::friend::FriendEventMsg;
@@ -139,14 +137,14 @@ async fn read_loop(
                 let msg = OfflineStatueMsg::decode(bytes)?;
                 log::debug!("🔴 用户下线");
             }
-            ByteMessageType::UserMsgType => {
-                let msg = UserMsgEntity::decode(bytes)?;
-                log::debug!("📨 普通消息处理");
-            }
-            ByteMessageType::GroupMsgType => {
-                let msg = GroupMsgEntity::decode(bytes)?;
-                log::debug!("👥 群聊消息处理");
-            }
+            // ByteMessageType::UserMsgType => {
+            //     let msg = UserMsgEntity::decode(bytes)?;
+            //     log::debug!("📨 普通消息处理");
+            // }
+            // ByteMessageType::GroupMsgType => {
+            //     let msg = GroupMsgEntity::decode(bytes)?;
+            //     log::debug!("👥 群聊消息处理");
+            // }
             ByteMessageType::FriendEventMsgType => {
                 let msg = FriendEventMsg::decode(bytes)?;
                 log::debug!("👥 好友事件处理");

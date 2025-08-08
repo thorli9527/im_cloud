@@ -1,11 +1,4 @@
 use anyhow::__private::not;
-use biz_service::protocol::common::CommonResp;
-use biz_service::protocol::rpc::arb_client::arb_client_service_client::ArbClientServiceClient;
-use biz_service::protocol::rpc::arb_client::UpdateVersionReq;
-use biz_service::protocol::rpc::arb_models::{
-    BaseRequest, ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, RegRequest, ShardState, UpdateShardStateRequest,
-};
-use biz_service::protocol::rpc::arb_server::arb_server_rpc_service_server::ArbServerRpcService;
 use common::errors::AppError;
 use common::util::date_util::now;
 use dashmap::DashMap;
@@ -17,6 +10,11 @@ use tokio::io::Empty;
 use tonic::transport::Channel;
 use tonic::{Code, IntoRequest, Request, Response, Status};
 use tracing::log;
+use biz_service::protocol::arb::arb_client::arb_client_service_client::ArbClientServiceClient;
+use biz_service::protocol::arb::arb_client::UpdateVersionReq;
+use biz_service::protocol::arb::arb_models::{BaseRequest, ListAllNodesResponse, NodeInfo, NodeType, QueryNodeReq, RegRequest, ShardState, UpdateShardStateRequest};
+use biz_service::protocol::arb::arb_server::arb_server_rpc_service_server::ArbServerRpcService;
+use biz_service::protocol::common::CommonResp;
 
 /// 分片节点状态信息
 /// 表示某个 vnode 当前的版本号、状态、归属节点及上次更新时间

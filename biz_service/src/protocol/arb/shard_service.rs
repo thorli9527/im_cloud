@@ -2,13 +2,6 @@
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct IdReq {
-    #[prost(string, tag = "1")]
-    pub ref_id: ::prost::alloc::string::String,
-}
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AddMemberReq {
     #[prost(string, tag = "1")]
     pub group_id: ::prost::alloc::string::String,
@@ -189,7 +182,7 @@ pub mod shard_rpc_service_client {
         /// 创建群组
         pub async fn create(
             &mut self,
-            request: impl tonic::IntoRequest<super::IdReq>,
+            request: impl tonic::IntoRequest<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<()>, tonic::Status> {
             self.inner
                 .ready()
@@ -213,7 +206,7 @@ pub mod shard_rpc_service_client {
         /// 解散群组
         pub async fn dismiss(
             &mut self,
-            request: impl tonic::IntoRequest<super::IdReq>,
+            request: impl tonic::IntoRequest<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<()>, tonic::Status> {
             self.inner
                 .ready()
@@ -291,7 +284,7 @@ pub mod shard_rpc_service_client {
         /// 获取全部成员
         pub async fn get_member(
             &mut self,
-            request: impl tonic::IntoRequest<super::IdReq>,
+            request: impl tonic::IntoRequest<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<super::MemberListResp>, tonic::Status> {
             self.inner
                 .ready()
@@ -399,7 +392,7 @@ pub mod shard_rpc_service_client {
         /// 获取在线成员
         pub async fn get_online_member(
             &mut self,
-            request: impl tonic::IntoRequest<super::IdReq>,
+            request: impl tonic::IntoRequest<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<super::UserIdListResp>, tonic::Status> {
             self.inner
                 .ready()
@@ -453,7 +446,7 @@ pub mod shard_rpc_service_client {
         /// 获取在线管理员（异步）
         pub async fn get_admin_member(
             &mut self,
-            request: impl tonic::IntoRequest<super::IdReq>,
+            request: impl tonic::IntoRequest<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<super::UserIdListResp>, tonic::Status> {
             self.inner
                 .ready()
@@ -480,7 +473,7 @@ pub mod shard_rpc_service_client {
         /// 获取用户群组
         pub async fn get_user_groups(
             &mut self,
-            request: impl tonic::IntoRequest<super::IdReq>,
+            request: impl tonic::IntoRequest<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<super::GetGroupsResp>, tonic::Status> {
             self.inner
                 .ready()
@@ -522,12 +515,12 @@ pub mod shard_rpc_service_server {
         /// 创建群组
         async fn create(
             &self,
-            request: tonic::Request<super::IdReq>,
+            request: tonic::Request<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<()>, tonic::Status>;
         /// 解散群组
         async fn dismiss(
             &self,
-            request: tonic::Request<super::IdReq>,
+            request: tonic::Request<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<()>, tonic::Status>;
         /// 添加成员
         async fn add_member(
@@ -542,7 +535,7 @@ pub mod shard_rpc_service_server {
         /// 获取全部成员
         async fn get_member(
             &self,
-            request: tonic::Request<super::IdReq>,
+            request: tonic::Request<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<super::MemberListResp>, tonic::Status>;
         /// 获取分页成员
         async fn get_member_page(
@@ -562,7 +555,7 @@ pub mod shard_rpc_service_server {
         /// 获取在线成员
         async fn get_online_member(
             &self,
-            request: tonic::Request<super::IdReq>,
+            request: tonic::Request<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<super::UserIdListResp>, tonic::Status>;
         /// 修改用户角色
         async fn change_role(
@@ -572,12 +565,12 @@ pub mod shard_rpc_service_server {
         /// 获取在线管理员（异步）
         async fn get_admin_member(
             &self,
-            request: tonic::Request<super::IdReq>,
+            request: tonic::Request<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<super::UserIdListResp>, tonic::Status>;
         /// 获取用户群组
         async fn get_user_groups(
             &self,
-            request: tonic::Request<super::IdReq>,
+            request: tonic::Request<super::super::super::common::IdReq>,
         ) -> std::result::Result<tonic::Response<super::GetGroupsResp>, tonic::Status>;
     }
     #[derive(Debug)]
@@ -659,7 +652,9 @@ pub mod shard_rpc_service_server {
                 "/protocol.shard_service.ShardRpcService/Create" => {
                     #[allow(non_camel_case_types)]
                     struct CreateSvc<T: ShardRpcService>(pub Arc<T>);
-                    impl<T: ShardRpcService> tonic::server::UnaryService<super::IdReq>
+                    impl<
+                        T: ShardRpcService,
+                    > tonic::server::UnaryService<super::super::super::common::IdReq>
                     for CreateSvc<T> {
                         type Response = ();
                         type Future = BoxFuture<
@@ -668,7 +663,7 @@ pub mod shard_rpc_service_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::IdReq>,
+                            request: tonic::Request<super::super::super::common::IdReq>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
@@ -702,7 +697,9 @@ pub mod shard_rpc_service_server {
                 "/protocol.shard_service.ShardRpcService/Dismiss" => {
                     #[allow(non_camel_case_types)]
                     struct DismissSvc<T: ShardRpcService>(pub Arc<T>);
-                    impl<T: ShardRpcService> tonic::server::UnaryService<super::IdReq>
+                    impl<
+                        T: ShardRpcService,
+                    > tonic::server::UnaryService<super::super::super::common::IdReq>
                     for DismissSvc<T> {
                         type Response = ();
                         type Future = BoxFuture<
@@ -711,7 +708,7 @@ pub mod shard_rpc_service_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::IdReq>,
+                            request: tonic::Request<super::super::super::common::IdReq>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
@@ -835,7 +832,9 @@ pub mod shard_rpc_service_server {
                 "/protocol.shard_service.ShardRpcService/GetMember" => {
                     #[allow(non_camel_case_types)]
                     struct GetMemberSvc<T: ShardRpcService>(pub Arc<T>);
-                    impl<T: ShardRpcService> tonic::server::UnaryService<super::IdReq>
+                    impl<
+                        T: ShardRpcService,
+                    > tonic::server::UnaryService<super::super::super::common::IdReq>
                     for GetMemberSvc<T> {
                         type Response = super::MemberListResp;
                         type Future = BoxFuture<
@@ -844,7 +843,7 @@ pub mod shard_rpc_service_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::IdReq>,
+                            request: tonic::Request<super::super::super::common::IdReq>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
@@ -1014,7 +1013,9 @@ pub mod shard_rpc_service_server {
                 "/protocol.shard_service.ShardRpcService/GetOnlineMember" => {
                     #[allow(non_camel_case_types)]
                     struct GetOnlineMemberSvc<T: ShardRpcService>(pub Arc<T>);
-                    impl<T: ShardRpcService> tonic::server::UnaryService<super::IdReq>
+                    impl<
+                        T: ShardRpcService,
+                    > tonic::server::UnaryService<super::super::super::common::IdReq>
                     for GetOnlineMemberSvc<T> {
                         type Response = super::UserIdListResp;
                         type Future = BoxFuture<
@@ -1023,7 +1024,7 @@ pub mod shard_rpc_service_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::IdReq>,
+                            request: tonic::Request<super::super::super::common::IdReq>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
@@ -1103,7 +1104,9 @@ pub mod shard_rpc_service_server {
                 "/protocol.shard_service.ShardRpcService/GetAdminMember" => {
                     #[allow(non_camel_case_types)]
                     struct GetAdminMemberSvc<T: ShardRpcService>(pub Arc<T>);
-                    impl<T: ShardRpcService> tonic::server::UnaryService<super::IdReq>
+                    impl<
+                        T: ShardRpcService,
+                    > tonic::server::UnaryService<super::super::super::common::IdReq>
                     for GetAdminMemberSvc<T> {
                         type Response = super::UserIdListResp;
                         type Future = BoxFuture<
@@ -1112,7 +1115,7 @@ pub mod shard_rpc_service_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::IdReq>,
+                            request: tonic::Request<super::super::super::common::IdReq>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
@@ -1147,7 +1150,9 @@ pub mod shard_rpc_service_server {
                 "/protocol.shard_service.ShardRpcService/GetUserGroups" => {
                     #[allow(non_camel_case_types)]
                     struct GetUserGroupsSvc<T: ShardRpcService>(pub Arc<T>);
-                    impl<T: ShardRpcService> tonic::server::UnaryService<super::IdReq>
+                    impl<
+                        T: ShardRpcService,
+                    > tonic::server::UnaryService<super::super::super::common::IdReq>
                     for GetUserGroupsSvc<T> {
                         type Response = super::GetGroupsResp;
                         type Future = BoxFuture<
@@ -1156,7 +1161,7 @@ pub mod shard_rpc_service_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::IdReq>,
+                            request: tonic::Request<super::super::super::common::IdReq>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {

@@ -1,7 +1,8 @@
-use crate::protocol::rpc::arb_models::{NodeInfo, NodeType};
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use crate::protocol::arb::arb_models::{NodeInfo, NodeType};
+
 #[derive(Debug)]
 pub struct NodeUtil {
     pub node_address_list: DashMap<NodeType, Vec<NodeInfo>>,

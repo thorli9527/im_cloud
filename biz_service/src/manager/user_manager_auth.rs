@@ -29,11 +29,11 @@ pub enum ResetPasswordType {
 }
 
 use crate::entitys::client_entity::ClientEntity;
-use crate::protocol::msg::auth::{AuthType, DeviceType};
 use async_trait::async_trait;
 use common::UserId;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
+use crate::protocol::msg::auth::{AuthType, DeviceType};
 
 #[derive(Clone, Debug)]
 pub struct UserManagerAuth {}

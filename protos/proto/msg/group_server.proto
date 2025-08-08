@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package protocol.group_msg_server;
+
+import "common.proto";          // 通用结构定义，如 CommonResp、IdReq
+import "msg/message.proto";     // 通用消息结构定义，如 Segment
+
+// ------------------ 消息结构定义 ------------------
+
+/**
+ * 创建群组请求
+ * 用于创建一个新群组，由 creator_uid 发起。
+ */
+message CreateGroupReq {
+  uint64 message_id = 1;           // 消息唯一 ID（用于日志追踪、幂等等）
+  string creator_uid = 2;          // 创建者的用户 ID，自动成为群主
+  string name = 3;                 // 群名称
+  repeated string members = 4;     // 初始群成员 UID 列表（不包含自己）
+  optional string avatar = 5;      // 群头像（可选）
+  optional string intro = 6;       // 群简介（可选）
+}
+
+/**
+ * 修改群资料请求
+ * 包括名称、头像、简介的更新，操作者需要有权限（如群主、管理员）。
+ */
+message UpdateGroupProfileReq {
+  uint64 message_id = 1;           // 请求 ID
+  string operator_uid = 2;         // 操作者 UID（必须具备权限）
+  string group_id = 3;             // 目标群 ID
+  optional string name = 4;        // 新的群名称（可选）
+  optional string avatar = 5;      // 新头像（可选）
+  optional string intro = 6;       // 新简介（可选）
+}
+
+/**
+ * 加入群请求
+ * 用户主动发起入群申请，等待管理员审核。
+ */
+message JoinGroupReq {
+  uint64 message_id = 1;
+  string uid = 2;                  // 请求加入的用户 ID
+  string group_id = 3;            // 目标群 ID
+  string reason = 4;              // 入群理由（显示给群主/管理员）
+}
+
+/**
+ * 退出群组请求
+ * 用户主动退出群聊。
+ */
+message QuitGroupReq {
+  uint64 message_id = 1;
+  string uid = 2;                  // 用户 UID
+  string group_id = 3;            // 群组 ID
+}
+
+/**
+ * 解散群请求
+ * 仅群主可调用该接口，执行后群组彻底删除。
+ */
+message DismissGroupReq {
+  uint64 message_id = 1;
+  string owner_uid = 2;           // 群主 UID
+  string group_id = 3;
+}
+
+/**
+ * 踢人请求
+ * 管理员或群主将某成员移出群聊。
+ */
+message KickMemberReq {
+  uint64 message_id = 1;
+  string operator_uid = 2;         // 执行踢人的用户（管理员/群主）
+  string group_id = 3;
+  string target_uid = 4;           // 被踢用户的 UID
+}
+
+/**
+ * 邀请成员入群
+ * 管理员/群成员邀请他人入群。
+ */
+message InviteMemberReq {
+  uint64 message_id = 1;
+  string inviter_uid = 2;          // 邀请者 UID
+  string group_id = 3;
+  repeated string invitee_uid = 4; // 被邀请成员 UID 列表
+}
+
+/**
+ * 群消息发送结构体
+ * 由成员发送消息至群组，支持结构化内容（文字、图片等）。
+ */
+message GroupMessageReq {
+  uint64 message_id = 1;
+  string from_uid = 2;             // 发送者 UID
+  string group_id = 3;             // 群组 ID
+  repeated message.Segment contents = 4; // 消息内容（段结构）
+}
+
+// ------------------ 服务接口定义 ------------------
+
+service GroupRpcService {
+
+  // 创建群组（发起方自动成为群主）
+  rpc CreateGroup(CreateGroupReq) returns (common.CommonResp);
+
+  // 修改群资料（头像、名称、简介）
+  rpc UpdateGroupProfile(UpdateGroupProfileReq) returns (common.CommonResp);
+
+  // 解散群组（仅群主）
+  rpc DismissGroup(DismissGroupReq) returns (common.CommonResp);
+
+  // 加入群组（成员主动发起）
+  rpc JoinGroup(JoinGroupReq) returns (common.CommonResp);
+
+  // 退出群组（成员离开）
+  rpc QuitGroup(QuitGroupReq) returns (common.CommonResp);
+
+  // 移除成员（踢人）
+  rpc KickMember(KickMemberReq) returns (common.CommonResp);
+
+  // 邀请用户入群
+  rpc InviteMember(InviteMemberReq) returns (common.CommonResp);
+  // 群消息发送（结构化聊天消息）
+  rpc SendGroupMessage(GroupMessageReq) returns (common.CommonResp);
+
+}

@@ -3,9 +3,9 @@ use crate::db::member::simple_member_list::SimpleMemberList;
 use crate::error::member_list_error::MemberListError;
 use arc_swap::ArcSwap;
 use biz_service::protocol::common::GroupRoleType;
-use biz_service::protocol::rpc::arb_models::MemberRef;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use biz_service::protocol::arb::arb_models::MemberRef;
 
 /// 每 10_000 个成员一个 shard，超过阈值后按照 hysteresis 规则平滑升级 / 扩容 / 收缩 / 降级。
 const ITEMS_PER_SHARD: usize = 10_000;

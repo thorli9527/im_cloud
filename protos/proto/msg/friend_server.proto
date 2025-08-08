@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package protocol.friend_msg_server;
+
+// 引入通用结构定义
+import "common.proto";          // 定义 CommonResp, IdReq 等
+import "msg/message.proto";     // 定义 Segment 消息内容结构
+
+// -------------------- 消息结构定义 --------------------
+
+/**
+ * 添加好友请求消息
+ * 由发起方（from_uid）发送给接收方（to_uid）
+ */
+message AddFriendReqMsg {
+  uint64 message_id = 1;     // 当前消息的唯一 ID（用于 ACK、幂等判断）
+  string from_uid = 2;       // 发起添加请求的用户 ID（申请人）
+  string to_uid = 3;         // 目标用户 ID（被加好友对象）
+  string reason = 4;         // 添加理由（附加消息）
+}
+
+/**
+ * 接受或拒绝好友请求消息
+ * 由接收方（acceptor_uid）处理请求
+ */
+message AcceptFriendReqMsg {
+  uint64 message_id = 1;     // 当前消息的唯一 ID
+  string acceptor_uid = 2;   // 接受请求的用户 ID
+  string requestor_uid = 3;  // 发起好友请求的用户 ID
+  bool accept = 4;           // 是否接受（true：接受；false：拒绝）
+  string reason = 5;         // 拒绝理由或备注
+}
+
+/**
+ * 删除好友请求
+ * 可由任何一方单向发起删除
+ */
+message DeleteFriendReqMsg {
+  uint64 message_id = 1;     // 当前消息的唯一 ID
+  string from_uid = 2;       // 发起删除操作的用户 ID
+  string to_uid = 3;         // 被删除的用户 ID
+}
+
+/**
+ * 返回好友 UID 列表
+ */
+message FriendListRespMsg {
+  repeated string uid = 1;   // 好友用户 ID 列表
+}
+
+/**
+ * 好友消息发送结构体（用于消息中转层）
+ */
+message SendMessageRespMsg {
+  uint64 message_id = 1;             // 消息 ID
+  string from_uid = 2;               // 发送者 UID
+  string to_uid = 3;                 // 接收者 UID
+  repeated message.Segment contents = 10; // 消息内容结构（段落组合，支持文本、图片等）
+}
+
+/**
+ * 修改好友信息
+ * 备注、别名等字段，影响当前用户视角
+ */
+message ChangeFriendReqMsg {
+  uint64 message_id = 1;         // 请求 ID
+  string from_uid = 2;           // 修改者（当前用户）
+  string to_uid = 3;             // 被修改的好友
+  optional string name = 4;      // 自定义名称
+  optional string remark = 5;    // 备注内容
+}
+
+// -------------------- gRPC 服务定义 --------------------
+
+service FriendRpcService {
+
+  // 添加好友请求（发起申请）
+  rpc AddFriendReq(AddFriendReqMsg) returns (common.CommonResp);
+
+  // 接受或拒绝好友请求
+  rpc AcceptFriendReq(AcceptFriendReqMsg) returns (common.CommonResp);
+
+  // 删除好友（双向或单向解除）
+  rpc DeleteFriend(DeleteFriendReqMsg) returns (common.CommonResp);
+
+  // 获取当前用户的好友列表
+  rpc GetFriendList(common.IdReq) returns (FriendListRespMsg);
+
+  // 向好友发送消息（聊天）
+  rpc SendMessage(SendMessageRespMsg) returns (common.CommonResp);
+
+  // 修改好友信息（备注名、别名）
+  rpc ChangeFriend(ChangeFriendReqMsg) returns (common.CommonResp);
+}

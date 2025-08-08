@@ -4,9 +4,6 @@ import "google/protobuf/empty.proto";
 import "common.proto";
 import "arb/arb_models.proto"; // 引入 Arb 模型定义
 
-message IdReq {
-  string ref_id = 1;
-}
 
 message AddMemberReq {
   string group_id = 1;
@@ -62,10 +59,10 @@ message GetGroupsResp {
 
 service ShardRpcService {
   // 创建群组
-  rpc Create(IdReq) returns (google.protobuf.Empty);
+  rpc Create(common.IdReq) returns (google.protobuf.Empty);
 
   // 解散群组
-  rpc Dismiss(IdReq) returns (google.protobuf.Empty);
+  rpc Dismiss(common.IdReq) returns (google.protobuf.Empty);
 
   // 添加成员
   rpc AddMember(AddMemberReq) returns (google.protobuf.Empty);
@@ -74,7 +71,7 @@ service ShardRpcService {
   rpc RemoveMember(RemoveMemberReq) returns (google.protobuf.Empty);
 
   // 获取全部成员
-  rpc GetMember(IdReq) returns (MemberListResp);
+  rpc GetMember(common.IdReq) returns (MemberListResp);
 
   // 获取分页成员
   rpc GetMemberPage(GetMemberPageReq) returns (MemberListResp);
@@ -86,13 +83,13 @@ service ShardRpcService {
   rpc Online(OnlineReq) returns (google.protobuf.Empty);
 
   // 获取在线成员
-  rpc GetOnlineMember(IdReq) returns (UserIdListResp);
+  rpc GetOnlineMember(common.IdReq) returns (UserIdListResp);
 
   // 修改用户角色
   rpc ChangeRole(ChangeRoleReq) returns (google.protobuf.Empty);
 
   // 获取在线管理员（异步）
-  rpc GetAdminMember(IdReq) returns (UserIdListResp);
+  rpc GetAdminMember(common.IdReq) returns (UserIdListResp);
   // 获取用户群组
-  rpc GetUserGroups(IdReq) returns (GetGroupsResp);
+  rpc GetUserGroups(common.IdReq) returns (GetGroupsResp);
 }

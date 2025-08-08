@@ -1,8 +1,8 @@
-use crate::protocol::rpc::arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 use common::config::AppConfig;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use crate::protocol::arb::arb_server::arb_server_rpc_service_client::ArbServerRpcServiceClient;
 
 #[derive(Debug)]
 pub struct ArbServerRpcServiceClientService {

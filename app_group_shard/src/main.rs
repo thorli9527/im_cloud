@@ -6,13 +6,13 @@ use actix_web::web::service;
 use actix_web::{App, HttpServer};
 use biz_service::biz_service::init_service;
 use biz_service::manager;
-use biz_service::protocol::rpc::arb_client::arb_client_service_server::ArbClientServiceServer;
-use biz_service::protocol::rpc::shard_service::shard_rpc_service_server::ShardRpcServiceServer;
 use common::config::AppConfig;
 use log::warn;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
+use biz_service::protocol::arb::arb_client::arb_client_service_server::ArbClientServiceServer;
+use biz_service::protocol::arb::shard_service::shard_rpc_service_server::ShardRpcServiceServer;
 
 mod db;
 mod error;

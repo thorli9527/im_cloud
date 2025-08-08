@@ -3,11 +3,11 @@ use anyhow::Result;
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use biz_service::protocol::common::GroupRoleType;
-use biz_service::protocol::rpc::arb_models::{MemberRef, ShardState};
 use common::config::ShardConfig;
 use common::{GroupId, UserId};
 use std::hash::Hash;
 use tokio::sync::RwLock;
+use biz_service::protocol::arb::arb_models::{MemberRef, ShardState};
 
 pub const GROUP_SHARD_SIZE: usize = 64;
 pub const MEMBER_SHARD_SIZE: usize = 16;

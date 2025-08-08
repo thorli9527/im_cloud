@@ -6,13 +6,13 @@ use biz_service::biz_service::group_member_service::GroupMemberService;
 use biz_service::biz_service::group_service::GroupService;
 use biz_service::entitys::group_member_entity::GroupMemberEntity;
 use biz_service::protocol::common::GroupRoleType;
-use biz_service::protocol::rpc::arb_models::{MemberRef, NodeType, QueryNodeReq};
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use common::{GroupId, UserId};
 use futures_util::StreamExt;
 use mongodb::bson::doc;
 use mongodb::options::FindOptions;
+use biz_service::protocol::arb::arb_models::{MemberRef, NodeType, QueryNodeReq};
 
 #[async_trait]
 impl ShardManagerOpt for ShardManager {

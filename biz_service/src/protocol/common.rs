@@ -108,6 +108,13 @@ pub struct GroupMemberEntity {
     #[prost(uint64, tag = "9")]
     pub update_time: u64,
 }
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct IdReq {
+    #[prost(string, tag = "1")]
+    pub ref_id: ::prost::alloc::string::String,
+}
 /// *
 /// 群成员角色类型
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

@@ -1,5 +1,4 @@
 use crate::entitys::client_entity::ClientEntity;
-use crate::protocol::msg::auth::DeviceType;
 use anyhow::Result;
 use async_trait::async_trait;
 use common::{ClientTokenDto, UserId};
@@ -7,6 +6,7 @@ use dashmap::DashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Notify;
+use crate::protocol::msg::auth::DeviceType;
 
 /// 全局用户管理器
 #[derive(Debug, Clone)]

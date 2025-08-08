@@ -102,6 +102,9 @@ message GroupMemberEntity {
   uint64 update_time = 9;    // 更新时间
 }
 
+message IdReq {
+  string ref_id = 1;
+}
 
 // ======================================
 // 📋 通用协议定义文件

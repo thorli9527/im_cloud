@@ -1,0 +1,1 @@
+pub mod group_msg_entity;

@@ -1,11 +1,11 @@
 use biz_service::kafka_util::kafka_producer::KafkaInstanceService;
 use biz_service::kafka_util::node_util::NodeUtil;
-use biz_service::protocol::rpc::arb_models::NodeType;
 use common::kafka::topic_info::{MSG_SEND_TOPIC_INFO, ONLINE_TOPIC_INFO, USER_PRESENCE_TOPIC_INFO};
 use log::warn;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use biz_service::protocol::arb::arb_models::NodeType;
 
 #[derive(Debug)]
 pub struct KafkaService {

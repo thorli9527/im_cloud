@@ -3,7 +3,6 @@ use crate::db::member::member_list_wrapper::MemberListWrapper;
 use crate::error::member_list_error::MemberListError;
 use arc_swap::ArcSwap;
 use biz_service::protocol::common::GroupRoleType;
-use biz_service::protocol::rpc::arb_models::MemberRef;
 use dashmap::{DashMap, DashSet};
 use rand::{rng, Rng};
 use std::hash::Hasher;
@@ -11,6 +10,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use twox_hash::XxHash64;
+use biz_service::protocol::arb::arb_models::MemberRef;
 
 /// 无锁分片 map，用于管理 group -> MemberListWrapper
 #[derive(Debug)]

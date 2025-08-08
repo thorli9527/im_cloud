@@ -4,3 +4,31 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+common = { path = "../common" }
+biz_service = { path = "../biz_service" }
+mongo_macro = { path = "../mongo_macro" }
+actix-web.workspace = true
+actix-files.workspace = true
+actix-service.workspace = true
+validator.workspace = true
+config = { workspace = true }
+serde.workspace = true
+rdkafka.workspace = true
+serde_json.workspace = true
+deadpool-redis.workspace = true
+dashmap.workspace = true
+log.workspace = true
+mongodb.workspace = true
+env_logger.workspace = true
+utoipa.workspace = true
+anyhow.workspace = true
+moka.workspace = true
+
+once_cell.workspace = true
+chrono.workspace = true
+tokio.workspace = true
+tonic.workspace = true
+prost.workspace = true
+regex = "1.11.1"
+tracing = "0.1.41"
+

@@ -648,20 +648,11 @@ pub struct Segment {
     /// 消息段内容（如文本、图片等，使用 oneof 封装）：段的具体内容
     #[prost(message, optional, tag = "1")]
     pub body: ::core::option::Option<MessageContent>,
-    /// 段唯一标识（客户端生成或服务端补全）：段的唯一ID
-    #[prost(string, tag = "2")]
-    pub segment_id: ::prost::alloc::string::String,
     /// 消息内顺序编号（用于前端渲染排序）：段在消息中的顺序
-    #[prost(uint64, tag = "3")]
+    #[prost(uint64, tag = "2")]
     pub seq_in_msg: u64,
-    /// 是否为编辑后的段落（true 表示被修改）：段的编辑状态
-    #[prost(bool, tag = "4")]
-    pub edited: bool,
-    /// 是否允许客户端渲染该段（false 可用于隐藏草稿等）：段的可见性
-    #[prost(bool, tag = "5")]
-    pub visible: bool,
     /// 通用扩展字段（以字符串键值对存储 JSON 扁平数据）：段的元数据
-    #[prost(map = "string, string", tag = "6")]
+    #[prost(map = "string, string", tag = "3")]
     pub metadata: ::std::collections::HashMap<
         ::prost::alloc::string::String,
         ::prost::alloc::string::String,

@@ -1,10 +1,10 @@
 use crate::handlers::common_handler::status;
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
-use biz_service::protocol::rpc::arb_models::NodeType;
 use common::errors::AppError;
 use common::util::common_utils::hash_index;
 use serde::Serialize;
 use biz_service::kafka_util::node_util::NodeUtil;
+use biz_service::protocol::arb::arb_models::NodeType;
 
 #[derive(Serialize)]
 pub struct SocketAddrResponse {

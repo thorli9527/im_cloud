@@ -4,7 +4,6 @@ use common::config::AppConfig;
 
 use actix_web::{App, HttpServer};
 use app_api::service::rpc::arb_client_service_impl::ArbClientServiceImpl;
-use biz_service::protocol::rpc::arb_client::arb_client_service_server::ArbClientServiceServer;
 use log::warn;
 
 #[actix_web::main]

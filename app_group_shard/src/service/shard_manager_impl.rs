@@ -1,8 +1,6 @@
 use crate::db::hash_shard_map::HashShardMap;
 use crate::service::shard_manager::{MemData, ShardInfo, ShardManager, ShardManagerOpt, GROUP_SHARD_SIZE, MEMBER_SHARD_SIZE};
 use arc_swap::ArcSwap;
-use biz_service::protocol::rpc::arb_client::arb_client_service_client::ArbClientServiceClient;
-use biz_service::protocol::rpc::arb_models::ShardState;
 use common::config::AppConfig;
 use common::util::common_utils::hash_index;
 use once_cell::sync::OnceCell;
@@ -12,6 +10,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tonic::transport::Channel;
 use twox_hash::XxHash64;
+use biz_service::protocol::arb::arb_client::arb_client_service_client::ArbClientServiceClient;
+use biz_service::protocol::arb::arb_models::ShardState;
 
 impl ShardManager {
     pub fn new() -> Self {
